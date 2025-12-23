@@ -43,12 +43,32 @@ def main_wrapper():
 
         # --- Logic: Dev Tools & CLI Service ---
         class DevService:
+            # UPDATED CLI MAP based on correct documentation
             CLI_MAP = {
-                "Claude CLI": {"cmd": ["npm", "install", "@anthropic-ai/claude-code"], "type": "npm", "package": "@anthropic-ai/claude-code", "bin": "claude"},
-                "Gemini CLI": {"cmd": ["pip", "install", "-U", "google-generativeai"], "type": "pip", "package": "google-generativeai"},
-                "Codex CLI (OpenAI)": {"cmd": ["pip", "install", "openai"], "type": "pip", "package": "openai", "bin": "openai"},
-                "Grok CLI": {"cmd": ["pip", "install", "xai-sdk"], "type": "pip", "package": "xai-sdk"},
-                "DeepSeek CLI": {"cmd": ["pip", "install", "deepseek"], "type": "pip", "package": "deepseek"}
+                "Claude CLI": {
+                    "cmd": ["npm", "install", "@anthropic-ai/claude-code"],
+                    "type": "npm",
+                    "package": "@anthropic-ai/claude-code",
+                    "bin": "claude"
+                },
+                "Gemini CLI": {
+                    "cmd": ["npm", "install", "@google/gemini-cli"],
+                    "type": "npm",
+                    "package": "@google/gemini-cli",
+                    "bin": "gemini"
+                },
+                "Codex CLI": {
+                    "cmd": ["npm", "install", "@openai/codex"],
+                    "type": "npm",
+                    "package": "@openai/codex",
+                    "bin": "codex"
+                },
+                "Grok CLI": {
+                    "cmd": ["npm", "install", "@vibe-kit/grok-cli"],
+                    "type": "npm",
+                    "package": "@vibe-kit/grok-cli",
+                    "bin": "grok"
+                }
             }
 
             @staticmethod
@@ -61,44 +81,23 @@ def main_wrapper():
             @staticmethod
             def check_cmd_output(cmd):
                 try:
-                    # Run without looking at stderr, just return True if exit code 0
                     subprocess.check_call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=(platform.system()=="Windows"))
                     return True
-                except:
-                    return False
+                except: return False
 
             @staticmethod
             def is_installed(tool_name):
                 tool = DevService.CLI_MAP.get(tool_name)
                 if not tool: return False
                 
-                # --- NPM Strategy ---
+                # Check Binary in PATH (Fastest & Most Reliable for Global Tools)
+                if "bin" in tool and shutil.which(tool["bin"]): return True
+                
+                # Check NPM Global List
                 if tool["type"] == "npm":
                     if not DevService.is_npm_installed(): return False
-                    if "bin" in tool and shutil.which(tool["bin"]): return True
-                    # Check global packages
                     return DevService.check_cmd_output(["npm", "list", "-g", tool["package"], "--depth=0"])
-                    
-                # --- Pip Strategy ---
-                if tool["type"] == "pip":
-                    # 1. Check Binary in PATH (Fastest)
-                    if "bin" in tool and shutil.which(tool["bin"]): return True
-                    
-                    pkg = tool["package"]
-                    
-                    # 2. Check System Python (Breaking out of venv)
-                    # Windows: Try 'py' launcher which usually points to global python
-                    if platform.system() == "Windows":
-                        if DevService.check_cmd_output(["py", "-m", "pip", "show", pkg]): return True
-                        if DevService.check_cmd_output(["python", "-m", "pip", "show", pkg]): return True
-                    else:
-                        # Unix: Try python3 and python
-                        if DevService.check_cmd_output(["python3", "-m", "pip", "show", pkg]): return True
-                        if DevService.check_cmd_output(["python", "-m", "pip", "show", pkg]): return True
-
-                    # 3. Check Current Environment (Just in case)
-                    if DevService.check_cmd_output([sys.executable, "-m", "pip", "show", pkg]): return True
-
+                
                 return False
 
             @staticmethod
@@ -116,15 +115,9 @@ def main_wrapper():
 
                 cmd = list(tool["cmd"])
                 if tool["type"] == "npm":
-                    if scope == "system": cmd.insert(2, "-g")
-                elif tool["type"] == "pip":
-                    # If we are installing to system, we want to try to use the global python, not the venv
-                    # But executing pip from inside venv usually installs TO venv.
-                    # We will prefix with 'py -m' if windows system scope is requested to hit global.
-                    if scope == "system" and platform.system() == "Windows":
-                        cmd = ["py", "-m"] + cmd
-                    elif scope == "user": 
-                        cmd.insert(2, "--user")
+                    if scope == "system":
+                        cmd.insert(2, "-g") # Global
+                    # else: npm install local (no flag needed)
                 return cmd
 
         class ComfyService:
@@ -237,7 +230,7 @@ def main_wrapper():
                 self.scope_var = ctk.StringVar(value="user")
                 ctk.CTkLabel(opt, text="Scope:").pack(side="left")
                 ctk.CTkRadioButton(opt, text="User (Local)", variable=self.scope_var, value="user").pack(side="left", padx=10)
-                ctk.CTkRadioButton(opt, text="System (Global)", variable=self.scope_var, value="system").pack(side="left", padx=10)
+                ctk.CTkRadioButton(opt, text="System (Global -g)", variable=self.scope_var, value="system").pack(side="left", padx=10)
                 ctk.CTkButton(cli_frame, text="Install Selected CLIs", fg_color="green", command=self.install_clis).pack(pady=20)
                 return frame
 
