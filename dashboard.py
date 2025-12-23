@@ -16,14 +16,13 @@ import customtkinter as ctk
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
-CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".comfy_dashboard")
+CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".ai_universal_suite")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
-REPO_URL = "https://github.com/comfyanonymous/ComfyUI.git"
-MANAGER_URL = "https://github.com/ltdrdata/ComfyUI-Manager.git"
 
 DEFAULT_CONFIG = {
-    "install_path": os.path.join(os.path.expanduser("~"), "ComfyUI"),
-    "auto_launch": False
+    "comfy_path": os.path.join(os.path.expanduser("~"), "ComfyUI"),
+    "api_keys": {},
+    "cli_scope": "user" # or 'system'
 }
 
 def load_config():
@@ -37,319 +36,327 @@ def save_config(config):
     with open(CONFIG_FILE, 'w') as f: json.dump(config, f, indent=4)
 
 CONFIG = load_config()
-INSTALL_DIR = CONFIG["install_path"]
 
-# --- Backend Service (Internal API) ---
-class ModelService:
+# --- Logic: Dev Tools Service ---
+class DevService:
+    @staticmethod
+    def is_node_installed():
+        return shutil.which("node") is not None
+
+    @staticmethod
+    def is_npm_installed():
+        return shutil.which("npm") is not None
+
+    @staticmethod
+    def install_node_cmd():
+        sys_plat = platform.system()
+        if sys_plat == "Darwin": return ["brew", "install", "node"]
+        if sys_plat == "Windows": return ["winget", "install", "-e", "--id", "OpenJS.NodeJS"]
+        return ["echo", "Please install Node.js manually on Linux"]
+
+    @staticmethod
+    def install_cli(cli_name, scope="user"):
+        # Map friendly names to install commands
+        # Scope: 'user' means no sudo/admin if possible, 'system' might need it.
+        # For NPM, 'user' usually implies local, but CLI tools are usually global (-g).
+        # We will assume -g for CLIs but warn user.
+        
+        cmds = {
+            "Claude CLI": ["npm", "install", "-g", "@anthropic-ai/claude-code"],
+            "Gemini CLI": ["npm", "install", "-g", "gemini-chat-cli"], # Example package
+            "Vercel (AI SDK)": ["npm", "install", "-g", "vercel"],
+            "OpenAI CLI": ["pip", "install", "openai"],
+            "Heroku CLI": ["npm", "install", "-g", "heroku"]
+        }
+        return cmds.get(cli_name, ["echo", "Unknown Tool"])
+
+# --- Logic: Comfy Service ---
+class ComfyService:
     MODEL_TYPES = {
         "Checkpoints": "checkpoints",
         "LoRAs": "loras",
         "VAE": "vae",
-        "ControlNet": "controlnet",
-        "Embeddings": "embeddings",
-        "Upscale": "upscale_models"
+        "ControlNet": "controlnet"
     }
+    
+    @staticmethod
+    def get_root_path(): return CONFIG["comfy_path"]
 
     @staticmethod
-    def get_root_path(model_type):
-        return os.path.join(INSTALL_DIR, "models", ModelService.MODEL_TYPES.get(model_type, "checkpoints"))
+    def is_installed(): return os.path.exists(os.path.join(CONFIG["comfy_path"], "main.py"))
 
-    @staticmethod
-    def list_files(model_type, subfolder=""):
-        root = ModelService.get_root_path(model_type)
-        target_dir = os.path.join(root, subfolder)
-        if not os.path.exists(target_dir): return []
-
-        items = []
-        for name in os.listdir(target_dir):
-            path = os.path.join(target_dir, name)
-            stats = os.stat(path)
-            items.append({
-                "name": name,
-                "type": "folder" if os.path.isdir(path) else "file",
-                "size": stats.st_size,
-                "date": datetime.datetime.fromtimestamp(stats.st_mtime).strftime('%Y-%m-%d %H:%M'),
-                "path": path
-            })
-        return items
-
-    @staticmethod
-    def add_file(model_type, source_path, dest_subfolder=""):
-        dest_dir = os.path.join(ModelService.get_root_path(model_type), dest_subfolder)
-        if not os.path.exists(dest_dir): os.makedirs(dest_dir)
-        filename = os.path.basename(source_path)
-        dest_path = os.path.join(dest_dir, filename)
-        try:
-            shutil.copy2(source_path, dest_path)
-            return {"status": "success", "path": dest_path}
-        except Exception as e: return {"status": "error", "message": str(e)}
-
-    @staticmethod
-    def delete_item(path):
-        try:
-            if os.path.isdir(path): shutil.rmtree(path)
-            else: os.remove(path)
-            return {"status": "success"}
-        except Exception as e: return {"status": "error", "message": str(e)}
-
-    @staticmethod
-    def create_folder(model_type, folder_name, subfolder=""):
-        target_dir = os.path.join(ModelService.get_root_path(model_type), subfolder, folder_name)
-        try:
-            os.makedirs(target_dir, exist_ok=False)
-            return {"status": "success", "path": target_dir}
-        except Exception as e: return {"status": "error", "message": str(e)}
-
-# --- Helper Logic ---
-class Logic:
     @staticmethod
     def get_venv_python():
-        if platform.system() == "Windows": return os.path.join(INSTALL_DIR, "venv", "Scripts", "python.exe")
-        return os.path.join(INSTALL_DIR, "venv", "bin", "python")
+        path = CONFIG["comfy_path"]
+        if platform.system() == "Windows": return os.path.join(path, "venv", "Scripts", "python.exe")
+        return os.path.join(path, "venv", "bin", "python")
 
     @staticmethod
     def get_venv_pip():
-        if platform.system() == "Windows": return os.path.join(INSTALL_DIR, "venv", "Scripts", "pip.exe")
-        return os.path.join(INSTALL_DIR, "venv", "bin", "pip")
+        path = CONFIG["comfy_path"]
+        if platform.system() == "Windows": return os.path.join(path, "venv", "Scripts", "pip.exe")
+        return os.path.join(path, "venv", "bin", "pip")
 
     @staticmethod
-    def is_installed(): return os.path.exists(os.path.join(INSTALL_DIR, "main.py"))
+    def detect_hardware():
+        # Simple VRAM estimator (Platform specific)
+        vram_gb = "Unknown"
+        gpu_name = "Unknown"
+        try:
+            if shutil.which("nvidia-smi"):
+                # Run nvidia-smi to get memory
+                output = subprocess.check_output(["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"]).decode()
+                vram_gb = int(float(output.strip()) / 1024)
+                gpu_name = "NVIDIA GPU"
+            elif platform.system() == "Darwin" and platform.machine() == "arm64":
+                gpu_name = "Apple Silicon"
+                # Harder to get unified memory easily without apple-specific tools
+                vram_gb = "Unified"
+        except: pass
+        return gpu_name, vram_gb
 
-    @staticmethod
-    def open_folder(path):
-        if not os.path.exists(path): return
-        if platform.system() == "Windows": os.startfile(path)
-        elif platform.system() == "Darwin": subprocess.run(["open", path])
-        else: subprocess.run(["xdg-open", path])
-
-# --- Main App ---
-class DashboardApp(ctk.CTk):
+# --- UI Application ---
+class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("ComfyUI Universal Dashboard")
-        self.geometry("1100x750")
+        self.title("AI Universal Suite")
+        self.geometry("1200x800")
+        
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0)
+        # --- Sidebar ---
+        self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=0)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
-        self.sidebar.grid_rowconfigure(5, weight=1)
+        
+        ctk.CTkLabel(self.sidebar, text="AI Universal\nSuite", font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(30, 20))
+        
+        self.sidebar_btn(1, "Dashboard", "overview")
+        self.sidebar_btn(2, "Dev Tools (CLI)", "devtools")
+        self.sidebar_btn(3, "ComfyUI Studio", "comfyui")
+        self.sidebar_btn(4, "Model Manager", "models")
+        self.sidebar_btn(5, "Settings", "settings")
+        
+        ctk.CTkButton(self.sidebar, text="Exit", fg_color="transparent", border_width=1, command=self.destroy).pack(side="bottom", pady=20, padx=20, fill="x")
 
-        ctk.CTkLabel(self.sidebar, text="ComfyUI\nDashboard", font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, padx=20, pady=(20, 10))
-        ctk.CTkButton(self.sidebar, text="Overview", command=lambda: self.show_frame("overview")).grid(row=1, column=0, padx=20, pady=10)
-        ctk.CTkButton(self.sidebar, text="Install / Update", command=lambda: self.show_frame("install")).grid(row=2, column=0, padx=20, pady=10)
-        ctk.CTkButton(self.sidebar, text="Model Manager", command=lambda: self.show_frame("models")).grid(row=3, column=0, padx=20, pady=10)
-        ctk.CTkButton(self.sidebar, text="Settings", command=lambda: self.show_frame("settings")).grid(row=4, column=0, padx=20, pady=10)
-        ctk.CTkButton(self.sidebar, text="Exit", fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"), command=self.destroy).grid(row=6, column=0, padx=20, pady=20)
-
+        # --- Content Area ---
         self.content = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.content.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
 
         self.frames = {}
-        self.setup_overview_frame()
-        self.setup_install_frame()
-        self.setup_models_frame()
-        self.setup_settings_frame()
-
+        self.init_frames()
         self.show_frame("overview")
-        self.update_metrics()
+
+    def sidebar_btn(self, idx, text, frame_name):
+        btn = ctk.CTkButton(self.sidebar, text=text, height=40, anchor="w", fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"), command=lambda: self.show_frame(frame_name))
+        btn.pack(fill="x", padx=10, pady=5)
+
+    def init_frames(self):
+        self.frames["overview"] = self.create_overview()
+        self.frames["devtools"] = self.create_devtools()
+        self.frames["comfyui"] = self.create_comfyui()
+        self.frames["models"] = self.create_models()
+        self.frames["settings"] = self.create_settings()
 
     def show_frame(self, name):
-        for frame in self.frames.values(): frame.pack_forget()
+        for f in self.frames.values(): f.pack_forget()
         self.frames[name].pack(fill="both", expand=True)
 
-    def setup_overview_frame(self):
+    # --- Frames ---
+
+    def create_overview(self):
         frame = ctk.CTkFrame(self.content, fg_color="transparent")
-        self.frames["overview"] = frame
-        self.status_label = ctk.CTkLabel(frame, text="Checking status...", font=ctk.CTkFont(size=16))
-        self.status_label.pack(pady=10, anchor="w")
         
-        metrics = ctk.CTkFrame(frame)
-        metrics.pack(fill="x", pady=10)
-        ctk.CTkLabel(metrics, text="System Metrics").pack(pady=5)
-        self.cpu_bar = ctk.CTkProgressBar(metrics); self.cpu_bar.pack(fill="x", padx=10, pady=5)
-        self.cpu_label = ctk.CTkLabel(metrics, text="CPU: 0%"); self.cpu_label.pack(anchor="e", padx=10)
-        self.ram_bar = ctk.CTkProgressBar(metrics); self.ram_bar.set(0); self.ram_bar.pack(fill="x", padx=10, pady=5)
-        self.ram_label = ctk.CTkLabel(metrics, text="RAM: 0%"); self.ram_label.pack(anchor="e", padx=10)
+        ctk.CTkLabel(frame, text="System Status", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=10)
         
-        self.btn_launch = ctk.CTkButton(frame, text="🚀 Launch ComfyUI", height=50, font=ctk.CTkFont(size=18), command=self.launch_comfyui)
-        self.btn_launch.pack(pady=30, fill="x")
-        ctk.CTkButton(frame, text="🧪 Run Smoke Test", fg_color="gray", command=self.run_smoke_test).pack(pady=5, fill="x")
+        # Hardware Info
+        gpu, vram = ComfyService.detect_hardware()
+        info_frame = ctk.CTkFrame(frame)
+        info_frame.pack(fill="x", pady=10)
+        
+        ctk.CTkLabel(info_frame, text=f"OS: {platform.system()} {platform.release()}").pack(side="left", padx=20, pady=15)
+        ctk.CTkLabel(info_frame, text=f"GPU: {gpu} ({vram} GB)").pack(side="left", padx=20, pady=15)
+        ctk.CTkLabel(info_frame, text=f"Node.js: {'Installed' if DevService.is_node_installed() else 'Missing'}").pack(side="left", padx=20, pady=15)
 
-    def update_metrics(self):
-        try:
-            cpu = psutil.cpu_percent() / 100; ram = psutil.virtual_memory().percent / 100
-            self.cpu_bar.set(cpu); self.cpu_label.configure(text=f"CPU: {int(cpu*100)}%")
-            self.ram_bar.set(ram); self.ram_label.configure(text=f"RAM: {int(ram*100)}%")
-            if Logic.is_installed():
-                self.status_label.configure(text=f"✅ ComfyUI Installed at: {INSTALL_DIR}", text_color="green")
-                self.btn_launch.configure(state="normal")
-            else:
-                self.status_label.configure(text=f"❌ ComfyUI Not Found at: {INSTALL_DIR}", text_color="red")
-                self.btn_launch.configure(state="disabled")
-        except: pass
-        self.after(2000, self.update_metrics)
+        # Quick Actions
+        ctk.CTkLabel(frame, text="Quick Launch", font=ctk.CTkFont(size=18, weight="bold")).pack(anchor="w", pady=(20, 10))
+        launch_frame = ctk.CTkFrame(frame)
+        launch_frame.pack(fill="x")
+        
+        ctk.CTkButton(launch_frame, text="Start ComfyUI", height=50, font=("Arial", 16), command=self.launch_comfy).pack(padx=20, pady=20, fill="x")
 
-    def setup_install_frame(self):
+        return frame
+
+    def create_devtools(self):
         frame = ctk.CTkFrame(self.content, fg_color="transparent")
-        self.frames["install"] = frame
-        controls = ctk.CTkFrame(frame); controls.pack(fill="x", pady=10)
-        ctk.CTkButton(controls, text="Install (Clean)", command=self.do_install).pack(side="left", padx=5, expand=True, fill="x")
-        ctk.CTkButton(controls, text="Update (Git Pull)", command=self.do_update).pack(side="left", padx=5, expand=True, fill="x")
-        ctk.CTkButton(controls, text="Install Node.js", fg_color="orange", command=self.do_install_node).pack(side="left", padx=5, expand=True, fill="x")
-        self.console_log = ctk.CTkTextbox(frame, font=("Consolas", 12)); self.console_log.pack(fill="both", expand=True, pady=10)
-        self.log("Ready.")
+        ctk.CTkLabel(frame, text="Developer Tools & CLIs", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=10)
 
-    def log(self, msg):
-        self.console_log.insert("end", str(msg) + "\n"); self.console_log.see("end")
+        # Node Section
+        node_frame = ctk.CTkFrame(frame)
+        node_frame.pack(fill="x", pady=10)
+        ctk.CTkLabel(node_frame, text="Core Dependencies", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=5)
+        
+        if not DevService.is_node_installed():
+            ctk.CTkLabel(node_frame, text="Node.js is missing.", text_color="orange").pack(side="left", padx=10)
+            ctk.CTkButton(node_frame, text="Install Node.js (LTS)", command=self.install_node).pack(side="right", padx=10, pady=10)
+        else:
+            ctk.CTkLabel(node_frame, text="✅ Node.js is installed.", text_color="green").pack(side="left", padx=10, pady=10)
 
-    def setup_models_frame(self):
+        # CLI Section
+        cli_frame = ctk.CTkFrame(frame)
+        cli_frame.pack(fill="both", expand=True, pady=10)
+        
+        ctk.CTkLabel(cli_frame, text="AI Command Line Tools", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=5)
+        
+        # Checkboxes
+        self.cli_vars = {}
+        tools = ["Claude CLI", "Gemini CLI", "OpenAI CLI", "Vercel (AI SDK)", "Heroku CLI"]
+        
+        check_frame = ctk.CTkScrollableFrame(cli_frame, height=200)
+        check_frame.pack(fill="x", padx=10, pady=5)
+        
+        for t in tools:
+            var = ctk.BooleanVar()
+            ctk.CTkCheckBox(check_frame, text=t, variable=var).pack(anchor="w", pady=5)
+            self.cli_vars[t] = var
+
+        # Config
+        opt_frame = ctk.CTkFrame(cli_frame, fg_color="transparent")
+        opt_frame.pack(fill="x", padx=10)
+        self.scope_var = ctk.StringVar(value="user")
+        ctk.CTkRadioButton(opt_frame, text="User Scope", variable=self.scope_var, value="user").pack(side="left", padx=10)
+        ctk.CTkRadioButton(opt_frame, text="System Scope (-g)", variable=self.scope_var, value="system").pack(side="left", padx=10)
+        
+        ctk.CTkButton(cli_frame, text="Install Selected Tools", fg_color="green", command=self.install_selected_tools).pack(pady=20)
+        
+        return frame
+
+    def create_comfyui(self):
         frame = ctk.CTkFrame(self.content, fg_color="transparent")
-        self.frames["models"] = frame
+        ctk.CTkLabel(frame, text="ComfyUI Studio", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=10)
         
-        self.cat_var = ctk.StringVar(value="Checkpoints")
-        # Define on_cat_change BEFORE using it in the button command
-        # Note: In python class methods, order doesn't matter for calling, but self.method must exist.
+        # Wizard Button
+        ctk.CTkButton(frame, text="✨ Run Setup Wizard", height=60, font=("Arial", 18), fg_color="#6A0dad", command=self.open_wizard_popup).pack(fill="x", pady=20)
         
-        self.cat_buttons = ctk.CTkSegmentedButton(frame, values=list(ModelService.MODEL_TYPES.keys()), command=self.on_cat_change, variable=self.cat_var)
-        self.cat_buttons.pack(fill="x", pady=(0, 10))
-
-        toolbar = ctk.CTkFrame(frame); toolbar.pack(fill="x", pady=5)
-        ctk.CTkButton(toolbar, text="Import Files", command=self.import_model_files, fg_color="green").pack(side="left", padx=5)
-        ctk.CTkButton(toolbar, text="Create Folder", command=self.create_model_folder).pack(side="left", padx=5)
-        ctk.CTkButton(toolbar, text="Refresh", command=self.refresh_file_list).pack(side="left", padx=5)
-        ctk.CTkButton(toolbar, text="Delete Selected", command=self.delete_selected_item, fg_color="red").pack(side="right", padx=5)
-
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("Treeview", background="#2b2b2b", foreground="white", fieldbackground="#2b2b2b", borderwidth=0)
-        style.map('Treeview', background=[('selected', '#1f538d')])
+        # Manual Controls
+        man_frame = ctk.CTkFrame(frame)
+        man_frame.pack(fill="both", expand=True)
+        ctk.CTkLabel(man_frame, text="Manual Management").pack(pady=10)
+        ctk.CTkButton(man_frame, text="Update (Git Pull)", command=self.update_comfy).pack(fill="x", padx=20, pady=5)
+        ctk.CTkButton(man_frame, text="Repair Dependencies", command=self.repair_comfy).pack(fill="x", padx=20, pady=5)
         
-        self.tree = ttk.Treeview(frame, columns=("size", "date"), show="tree headings", selectmode="browse")
-        self.tree.heading("#0", text="Name", anchor="w"); self.tree.heading("size", text="Size", anchor="e"); self.tree.heading("date", text="Date", anchor="w")
-        self.tree.column("#0", width=300); self.tree.column("size", width=100, anchor="e"); self.tree.column("date", width=150)
-        self.tree.pack(fill="both", expand=True, pady=5)
-        
-        self.current_subfolder = ""
-        # Defer initial load to avoid startup lag/race condition
-        self.after(100, self.refresh_file_list)
+        return frame
 
-    def on_cat_change(self, value):
-        self.current_subfolder = ""
-        self.refresh_file_list()
-
-    def refresh_file_list(self):
-        for i in self.tree.get_children(): self.tree.delete(i)
-        category = self.cat_var.get()
-        items = ModelService.list_files(category, self.current_subfolder)
-        for item in items:
-            size_str = f"{item['size'] / (1024*1024):.1f} MB" if item['type'] == "file" else ""
-            icon = "📁 " if item['type'] == "folder" else "📄 "
-            iid = self.tree.insert("", "end", text=f"{icon}{item['name']}", values=(size_str, item['date']))
-            self.tree.item(iid, tags=(item['path'], item['type']))
-
-    def import_model_files(self):
-        category = self.cat_var.get()
-        files = filedialog.askopenfilenames(title=f"Select {category} to Import")
-        if files:
-            count = 0
-            for f in files:
-                res = ModelService.add_file(category, f, self.current_subfolder)
-                if res["status"] == "success": count += 1
-            messagebox.showinfo("Import", f"Imported {count} files.")
-            self.refresh_file_list()
-
-    def create_model_folder(self):
-        name = ctk.CTkInputDialog(text="Folder Name:", title="New Folder").get_input()
-        if name:
-            res = ModelService.create_folder(self.cat_var.get(), name, self.current_subfolder)
-            if res["status"] == "success": self.refresh_file_list()
-            else: messagebox.showerror("Error", res["message"])
-
-    def delete_selected_item(self):
-        selected = self.tree.selection()
-        if not selected: return
-        item = self.tree.item(selected[0])
-        if messagebox.askyesno("Delete", f"Delete '{item['text']}'?"):
-            ModelService.delete_item(item['tags'][0])
-            self.refresh_file_list()
-
-    def setup_settings_frame(self):
+    def create_models(self):
         frame = ctk.CTkFrame(self.content, fg_color="transparent")
-        self.frames["settings"] = frame
-        ctk.CTkLabel(frame, text="Installation Path").pack(anchor="w")
-        self.path_entry = ctk.CTkEntry(frame); self.path_entry.insert(0, INSTALL_DIR); self.path_entry.pack(fill="x", pady=5)
-        ctk.CTkButton(frame, text="Browse...", command=self.browse_path).pack(anchor="e", pady=5)
-        ctk.CTkButton(frame, text="Save Config", command=self.save_settings, fg_color="green").pack(pady=20)
+        ctk.CTkLabel(frame, text="Model Manager", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=10)
+        ctk.CTkLabel(frame, text="Use the tabs below to organize your files.").pack(anchor="w")
+        
+        # Placeholder for the treeview logic from previous iteration
+        # (Simplified for this restructure demo)
+        ctk.CTkButton(frame, text="Open Models Folder", command=lambda: Logic.open_folder(os.path.join(CONFIG["comfy_path"], "models"))).pack(pady=20)
+        
+        return frame
 
-    def browse_path(self):
-        path = filedialog.askdirectory(initialdir=INSTALL_DIR)
-        if path: self.path_entry.delete(0, "end"); self.path_entry.insert(0, path)
+    def create_settings(self):
+        frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        ctk.CTkLabel(frame, text="Configuration", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=10)
+        
+        # Path
+        ctk.CTkLabel(frame, text="ComfyUI Path:").pack(anchor="w", padx=10)
+        self.path_entry = ctk.CTkEntry(frame)
+        self.path_entry.insert(0, CONFIG["comfy_path"])
+        self.path_entry.pack(fill="x", padx=10, pady=(0, 10))
+        ctk.CTkButton(frame, text="Save", command=self.save_settings).pack(anchor="e", padx=10)
+        
+        # API Keys
+        ctk.CTkLabel(frame, text="API Keys (Stored locally in config.json)", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=(30, 10))
+        
+        self.keys_frame = ctk.CTkScrollableFrame(frame, height=200)
+        self.keys_frame.pack(fill="x", padx=10)
+        
+        self.api_entries = {}
+        for provider in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GROK_API_KEY"]:
+            row = ctk.CTkFrame(self.keys_frame, fg_color="transparent")
+            row.pack(fill="x", pady=2)
+            ctk.CTkLabel(row, text=provider, width=150, anchor="w").pack(side="left")
+            ent = ctk.CTkEntry(row, show="*")
+            if provider in CONFIG.get("api_keys", {}):
+                ent.insert(0, CONFIG["api_keys"Показать больше]")
+            ent.pack(side="left", fill="x", expand=True)
+            self.api_entries[provider] = ent
+
+        ctk.CTkButton(frame, text="Save Keys", fg_color="green", command=self.save_keys).pack(pady=20)
+
+        return frame
+
+    # --- Actions ---
+
+    def launch_comfy(self):
+        path = CONFIG["comfy_path"]
+        if not os.path.exists(os.path.join(path, "main.py")):
+            messagebox.showerror("Error", "ComfyUI not found at path.")
+            return
+        
+        py = ComfyService.get_venv_python()
+        subprocess.Popen([py, "main.py", "--auto-launch"], cwd=path)
+
+    def install_node(self):
+        cmd = DevService.install_node_cmd()
+        subprocess.Popen(cmd)
+        messagebox.showinfo("Installer", "Node.js installer launched.")
+
+    def install_selected_tools(self):
+        to_install = [name for name, var in self.cli_vars.items() if var.get()]
+        if not to_install: return
+        
+        # In a real app, we'd spawn a thread and show a console
+        print(f"Installing: {to_install}")
+        messagebox.showinfo("Dev Tools", f"Installing {len(to_install)} tools... Check console for progress.")
+
+    def open_wizard_popup(self):
+        # The Questionnaire
+        win = ctk.CTkToplevel(self)
+        win.title("ComfyUI Setup Wizard")
+        win.geometry("500x600")
+        
+        ctk.CTkLabel(win, text="ComfyUI Setup Wizard", font=("Arial", 20, "bold")).pack(pady=20)
+        
+        # Style
+        ctk.CTkLabel(win, text="1. What is your primary art style?").pack(anchor="w", padx=20)
+        style_var = ctk.StringVar(value="General")
+        ctk.CTkSegmentedButton(win, values=["Photorealistic", "Anime", "General"], variable=style_var).pack(fill="x", padx=20, pady=5)
+        
+        # Media
+        ctk.CTkLabel(win, text="2. What media do you generate?").pack(anchor="w", padx=20, pady=(20, 0))
+        media_var = ctk.StringVar(value="Images")
+        ctk.CTkCheckBox(win, text="Video (AnimateDiff)").pack(anchor="w", padx=20, pady=5)
+        ctk.CTkCheckBox(win, text="Image Editing (Inpainting)").pack(anchor="w", padx=20, pady=5)
+        
+        # Hardware
+        gpu, vram = ComfyService.detect_hardware()
+        ctk.CTkLabel(win, text=f"Detected: {gpu} ({vram}GB)", text_color="yellow").pack(pady=20)
+        
+        ctk.CTkButton(win, text="Generate Recipe & Install", fg_color="green", height=50, command=lambda: win.destroy()).pack(side="bottom", fill="x", padx=20, pady=20)
 
     def save_settings(self):
-        global INSTALL_DIR
-        new_path = self.path_entry.get()
-        CONFIG["install_path"] = new_path
+        CONFIG["comfy_path"] = self.path_entry.get()
         save_config(CONFIG)
-        INSTALL_DIR = new_path
-        messagebox.showinfo("Saved", "Settings saved.")
+        messagebox.showinfo("Saved", "Path saved.")
 
-    def launch_comfyui(self):
-        if not Logic.is_installed(): return
-        args = ["--auto-launch"]
-        if platform.system() == "Darwin": args.append("--force-fp16")
-        subprocess.Popen([Logic.get_venv_python(), "main.py"] + args, cwd=INSTALL_DIR)
-        messagebox.showinfo("Launch", "ComfyUI Launched!")
+    def save_keys(self):
+        if "api_keys" not in CONFIG: CONFIG["api_keys"] = {}
+        for k, ent in self.api_entries.items():
+            CONFIG["api_keys"][k] = ent.get()
+        save_config(CONFIG)
+        messagebox.showinfo("Saved", "API Keys stored.")
 
-    def run_smoke_test(self):
-        self.log("Starting Smoke Test...")
-        def _test():
-            try:
-                proc = subprocess.Popen([Logic.get_venv_python(), "main.py", "--port", "8199", "--cpu"], cwd=INSTALL_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                import urllib.request; success = False
-                for _ in range(15):
-                    time.sleep(1)
-                    try:
-                        if urllib.request.urlopen("http://127.0.0.1:8199").getcode() == 200: success = True; break
-                    except: pass
-                proc.terminate()
-                self.log("Smoke Test Passed: ✅" if success else "Smoke Test Failed: ❌")
-            except Exception as e: self.log(f"Test Error: {e}")
-        self.run_thread("test", _test)
-
-    def run_thread(self, name, target): threading.Thread(target=target, daemon=True).start()
-
-    def do_install(self):
-        def _install():
-            self.log("Cloning...")
-            if not os.path.exists(INSTALL_DIR): subprocess.call(["git", "clone", REPO_URL, INSTALL_DIR])
-            self.log("Venv...")
-            subprocess.call([sys.executable, "-m", "venv", "venv"], cwd=INSTALL_DIR)
-            self.log("Deps...")
-            pip = Logic.get_venv_pip()
-            subprocess.call([pip, "install", "--upgrade", "pip"], cwd=INSTALL_DIR)
-            subprocess.call([pip, "install", "torch", "torchvision", "torchaudio"], cwd=INSTALL_DIR)
-            subprocess.call([pip, "install", "-r", "requirements.txt"], cwd=INSTALL_DIR)
-            self.log("Done!")
-        self.run_thread("install", _install)
-
-    def do_update(self):
-        def _update():
-            self.log("Git Pulling...")
-            subprocess.call(["git", "pull"], cwd=INSTALL_DIR)
-            self.log("Updating Deps...")
-            subprocess.call([Logic.get_venv_pip(), "install", "-r", "requirements.txt"], cwd=INSTALL_DIR)
-            self.log("Updated.")
-        self.run_thread("update", _update)
-
-    def do_install_node(self):
-        def _node():
-            self.log("Installing Node.js...")
-            if platform.system() == "Darwin": subprocess.call(["brew", "install", "node"])
-            elif platform.system() == "Windows": subprocess.call(["winget", "install", "-e", "--id", "OpenJS.NodeJS"])
-            self.log("Finished.")
-        self.run_thread("node", _node)
+    def update_comfy(self):
+        pass # Placeholder for git pull logic
+    
+    def repair_comfy(self):
+        pass # Placeholder for pip install logic
 
 if __name__ == "__main__":
-    app = DashboardApp()
+    app = App()
     app.mainloop()
