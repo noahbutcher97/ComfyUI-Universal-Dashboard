@@ -1,71 +1,116 @@
 #!/bin/bash
 
 # ==============================================================================
-# ComfyUI Automated Installer for macOS
-# Robust, Resilient, Apple Silicon Optimized
-# With Interactive Folder Selection
+# ComfyUI GUI Installer for macOS
 # ==============================================================================
 
-# --- Configuration ---
+# --- Configuration & Defaults ---
 COMFY_REPO_URL="https://github.com/comfyanonymous/ComfyUI.git"
 MANAGER_REPO_URL="https://github.com/ltdrdata/ComfyUI-Manager.git"
+IMPACT_PACK_REPO_URL="https://github.com/ltdrdata/ComfyUI-Impact-Pack.git"
 PYTHON_VERSION="python@3.10"
 
-# --- Logging & Error Handling ---
-log() { echo -e "\033[1;32m[INFO]\033[0m $1"; }
-warn() { echo -e "\033[1;33m[WARN]\033[0m $1"; }
-error() { echo -e "\033[1;31m[ERROR]\033[0m $1"; exit 1; }
-check_error() { if [ $? -ne 0 ]; then error "$1"; fi; }
+# --- Helper: Run AppleScript ---
+# Executes a snippet of AppleScript and returns the result
+osascript_cmd() {
+    osascript -e "$1" 2>/dev/null
+}
 
-# --- 1. OS & Arch Detection ---
-log "Checking Environment..."
-[[ "$(uname)" != "Darwin" ]] && error "macOS only."
-ARCH_NAME="$(uname -m)"
-log "Architecture: $ARCH_NAME"
+# --- Helper: GUI Dialogs ---
+show_alert() {
+    osascript_cmd "display dialog \"$1\" buttons {\"OK\"} default button \"OK\" with icon note with title \"ComfyUI Installer\""
+}
 
-# --- 2. Interactive Install Location Selection ---
-log "Launching Finder to select installation folder..."
-echo "Please look at the popup window to select a folder."
+ask_confirmation() {
+    RESULT=$(osascript_cmd "display dialog \"$1\" buttons {\"Cancel\", \"$2\"} default button \"$2\" with icon caution with title \"ComfyUI Installer\"")
+    if [[ "$RESULT" != *"button returned:$2"* ]]; then
+        echo "User Cancelled."
+        exit 0
+    fi
+}
 
-# Uses AppleScript to pop up a native folder selection dialog
-PARENT_DIR=$(osascript -e 'POSIX path of (choose folder with prompt "Select the folder where you want to install ComfyUI (a new ComfyUI folder will be created inside):")' 2>/dev/null)
+# --- 1. Welcome Screen ---
+clear
+echo "=========================================="
+echo "   ComfyUI macOS Installer - GUI Mode"
+echo "=========================================="
+
+ask_confirmation "Welcome to the ComfyUI Installer for Mac.\n\nThis will guide you through setting up Python, ComfyUI, and necessary dependencies.\n\nClick 'Start' to begin." "Start"
+
+# --- 2. Configuration Options ---
+# Returns a comma-separated list of selected items
+OPTIONS_SELECTED=$(osascript_cmd 'set myOptions to {"Install ComfyUI Manager", "Create Desktop Shortcut", "Auto-Launch after Install", "Install Impact Pack (Optional)"}
+set selectedOptions to choose from list myOptions with title "Configuration" with prompt "Select features to install (Cmd+Click to select multiple):" default items {"Install ComfyUI Manager", "Create Desktop Shortcut", "Auto-Launch after Install"} with multiple selections allowed
+if selectedOptions is false then return "CANCEL"
+return selectedOptions')
+
+if [[ "$OPTIONS_SELECTED" == "CANCEL" ]]; then
+    echo "User cancelled configuration."
+    exit 0
+fi
+
+# Parse Options
+DO_INSTALL_MANAGER=false
+DO_CREATE_SHORTCUT=false
+DO_AUTO_LAUNCH=false
+DO_INSTALL_IMPACT=false
+
+[[ "$OPTIONS_SELECTED" == *"Install ComfyUI Manager"* ]] && DO_INSTALL_MANAGER=true
+[[ "$OPTIONS_SELECTED" == *"Create Desktop Shortcut"* ]] && DO_CREATE_SHORTCUT=true
+[[ "$OPTIONS_SELECTED" == *"Auto-Launch after Install"* ]] && DO_AUTO_LAUNCH=true
+[[ "$OPTIONS_SELECTED" == *"Install Impact Pack"* ]] && DO_INSTALL_IMPACT=true
+
+# --- 3. Install Location ---
+PARENT_DIR=$(osascript_cmd 'POSIX path of (choose folder with prompt "Select the folder where you want to install ComfyUI:")')
 
 if [ -z "$PARENT_DIR" ]; then
-    warn "User cancelled or no folder selected. Defaulting to Home directory ($HOME)."
-    PARENT_DIR="$HOME"
+    echo "No folder selected. Exiting."
+    exit 0
 fi
 
-# Remove trailing slash if present to avoid //
-PARENT_DIR="${PARENT_DIR%/}"
+PARENT_DIR="${PARENT_DIR%/}" # Strip trailing slash
 INSTALL_DIR="$PARENT_DIR/ComfyUI"
 
-log "✅ ComfyUI will be installed to: $INSTALL_DIR"
+echo "Target Directory: $INSTALL_DIR"
 
-# --- 3. Homebrew Check/Install ---
+# --- 4. Main Installation Logic ---
+
+# (We keep the terminal output visible here so the user sees progress)
+
+echo "----------------------------------------------------------------"
+echo "Starting Installation..."
+echo "----------------------------------------------------------------"
+
+# A. Homebrew
 if ! command -v brew &> /dev/null; then
-    log "Installing Homebrew..."
+    echo "🍺 Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    [[ "$ARCH_NAME" == "arm64" ]] && eval "$(/opt/homebrew/bin/brew shellenv)" || eval "$(/usr/local/bin/brew shellenv)"
+    
+    # Add to path
+    ARCH_NAME="$(uname -m)"
+    if [[ "$ARCH_NAME" == "arm64" ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    else
+        eval "$(/usr/local/bin/brew shellenv)"
+    fi
 fi
 
-# --- 4. Install Dependencies ---
-log "Installing Python 3.10 and Git..."
+# B. Dependencies
+echo "📦 Installing System Dependencies (Git, Python 3.10)..."
 brew install git $PYTHON_VERSION
-check_error "Dependency install failed."
 
-# --- 5. Clone / Update Repository ---
+# C. Clone
 if [ -d "$INSTALL_DIR" ]; then
-    log "Updating existing installation at $INSTALL_DIR..."
+    echo "🔄 Updating existing ComfyUI..."
     cd "$INSTALL_DIR" && git pull
 else
-    log "Cloning ComfyUI to $INSTALL_DIR..."
+    echo "⬇️  Cloning ComfyUI..."
     git clone "$COMFY_REPO_URL" "$INSTALL_DIR"
-    check_error "Clone failed."
     cd "$INSTALL_DIR"
 fi
 
-# --- 6. Virtual Environment ---
-log "Setting up Virtual Environment..."
+# D. Virtual Env
+echo "🐍 Setting up Python Environment..."
 PYTHON_EXEC="$(brew --prefix $PYTHON_VERSION)/bin/python3"
 [[ ! -f "$PYTHON_EXEC" ]] && PYTHON_EXEC="python3"
 
@@ -73,38 +118,67 @@ PYTHON_EXEC="$(brew --prefix $PYTHON_VERSION)/bin/python3"
 source venv/bin/activate
 pip install --upgrade pip
 
-# --- 7. Install PyTorch & Requirements ---
-log "Installing PyTorch (MPS/Metal optimized)..."
+# E. Requirements
+echo "🔥 Installing PyTorch & Requirements..."
 pip install torch torchvision torchaudio
 pip install -r requirements.txt
-check_error "Python requirements failed."
 
-# --- 8. Install ComfyUI Manager ---
-log "Installing Manager..."
+# F. Custom Nodes
 mkdir -p custom_nodes
 cd custom_nodes
-if [ ! -d "ComfyUI-Manager" ]; then
-    git clone "$MANAGER_REPO_URL"
-else
-    cd ComfyUI-Manager && git pull && cd ..
+
+if [ "$DO_INSTALL_MANAGER" = true ]; then
+    echo "🔧 Installing ComfyUI Manager..."
+    if [ ! -d "ComfyUI-Manager" ]; then
+        git clone "$MANAGER_REPO_URL"
+    else
+        cd ComfyUI-Manager && git pull && cd ..
+    fi
+fi
+
+if [ "$DO_INSTALL_IMPACT" = true ]; then
+    echo "💥 Installing Impact Pack..."
+    if [ ! -d "ComfyUI-Impact-Pack" ]; then
+        git clone "$IMPACT_PACK_REPO_URL"
+        # Impact pack has its own requirements
+        echo "   Installing Impact Pack requirements..."
+        cd ComfyUI-Impact-Pack
+        pip install -r requirements.txt
+        # Run install.py if it exists
+        if [ -f "install.py" ]; then python install.py; fi
+        cd ..
+    else
+        cd ComfyUI-Impact-Pack && git pull && cd ..
+    fi
 fi
 cd ..
 
-# --- 9. Create Desktop Launcher ---
-LAUNCHER="$HOME/Desktop/Run_ComfyUI.command"
-cat <<EOF > "$LAUNCHER"
+# G. Shortcut
+if [ "$DO_CREATE_SHORTCUT" = true ]; then
+    echo "📝 Creating Desktop Shortcut..."
+    LAUNCHER="$HOME/Desktop/Run_ComfyUI.command"
+    cat <<EOF > "$LAUNCHER"
 #!/bin/bash
 cd "$INSTALL_DIR"
 source venv/bin/activate
 echo "Launching ComfyUI..."
 python main.py --force-fp16 --auto-launch
 EOF
-chmod +x "$LAUNCHER"
+    chmod +x "$LAUNCHER"
+fi
 
-echo ""
-echo "============================================================"
-echo "✅ SETUP COMPLETE"
-echo "============================================================"
-echo "ComfyUI Installed at: $INSTALL_DIR"
-echo "Launch it using the 'Run_ComfyUI.command' shortcut on your Desktop."
-echo "============================================================"
+# --- 5. Completion ---
+
+echo "----------------------------------------------------------------"
+echo "✅ Installation Complete!"
+echo "----------------------------------------------------------------"
+
+FINAL_MSG="Installation successful!\n\nLocation: $INSTALL_DIR"
+
+if [ "$DO_AUTO_LAUNCH" = true ]; then
+    FINAL_MSG="$FINAL_MSG\n\nLaunching ComfyUI now..."
+    show_alert "$FINAL_MSG"
+    open "$HOME/Desktop/Run_ComfyUI.command"
+else
+    show_alert "$FINAL_MSG"
+fi
