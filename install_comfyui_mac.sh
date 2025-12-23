@@ -11,6 +11,12 @@ IMPACT_PACK_REPO_URL="https://github.com/ltdrdata/ComfyUI-Impact-Pack.git"
 GGUF_REPO_URL="https://github.com/city96/ComfyUI-GGUF.git"
 PYTHON_VERSION="python@3.10"
 
+# --- Models URLs ---
+MODEL_SD15_URL="https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors"
+MODEL_SDXL_BASE_URL="https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"
+MODEL_SDXL_REFINER_URL="https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0/resolve/main/sd_xl_refiner_1.0.safetensors"
+MODEL_REALITY_URL="https://civitai.com/api/download/models/130072?type=Model&format=SafeTensor&size=pruned&fp=fp16" # RealityVision 5.1
+
 # --- Helper: AppleScript Wrappers ---
 osascript_cmd() {
     osascript -e "$1" 2>/dev/null
@@ -21,8 +27,8 @@ show_alert() {
 }
 
 ask_confirmation() {
-    RESULT=$(osascript_cmd "display dialog \"$1\" buttons {\"Cancel\", \"$2\"} default button \"$2\" with icon caution with title \"ComfyUI Installer\"")
-    if [[ "$RESULT" != *"button returned:$2"* ]]; then
+    RESULT=$(osascript_cmd "display dialog \"$1\" buttons {\"Cancel\", \"$2\"} default button \"$2\" with icon caution with title \"ComfyUI Installer\"" 2>&1)
+    if [[ \"$?" -ne 0 ]]; then
         echo "User Cancelled."
         exit 0
     fi
@@ -33,7 +39,6 @@ send_notification() {
 }
 
 # --- Helper: Progress Bar ---
-# Usage: progress_bar <current_step> <total_steps> <description>
 progress_bar() {
     local current=$1
     local total=$2
@@ -46,7 +51,7 @@ progress_bar() {
     # Clear line
     printf "\r\033[K"
     
-    # Draw Bar: [====>      ] 40% - Task Description
+    # Draw Bar
     printf "["
     if [ $filled -gt 0 ]; then printf "%0.s=" $(seq 1 $filled); fi
     if [ $filled -lt $width ]; then printf ">"; fi
