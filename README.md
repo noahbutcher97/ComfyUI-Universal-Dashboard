@@ -1,35 +1,39 @@
-# ComfyUI Mac Installer
+# ComfyUI Universal Dashboard
 
-A robust, automated installer for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) specifically designed for macOS (Apple Silicon M1/M2/M3 & Intel). 
-
-This script handles the entire setup process, ensuring a clean, isolated environment with the correct dependencies for optimal performance on Mac.
+A cross-platform (Windows, macOS, Linux) installer and management dashboard for [ComfyUI](https://github.com/comfyanonymous/ComfyUI).
 
 ## Features
 
-- **🍏 Apple Silicon Optimized:** Automatically detects M-series chips and installs PyTorch with MPS (Metal Performance Shaders) support for GPU acceleration.
-- **📂 Interactive Install Location:** Uses a native macOS Finder dialog to let you choose exactly where to install ComfyUI.
-- **🛡️ Isolated Environment:** Sets up a dedicated Python `venv` so it doesn't mess with your system Python.
-- **📦 Dependency Management:** Checks for and installs Homebrew, Python 3.10, Git, and all required Python packages.
-- **🚀 One-Click Launcher:** Creates a clickable `.command` file on your Desktop to launch ComfyUI instantly.
-- **🔧 ComfyUI Manager:** Automatically installs [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager) for easy node installation.
+- **🖥️ Universal Dashboard:** A beautiful terminal-based UI that works on all operating systems.
+- **🚀 One-Click Install:** Automatically sets up Python, Virtual Environment, and Git.
+- **🧠 Smart Detection:** 
+    - **Windows:** Detects NVIDIA GPUs and installs CUDA-enabled PyTorch.
+    - **macOS:** Installs Metal (MPS) optimized PyTorch for Apple Silicon.
+- **⚡ Management:** Install Manager, Download Models, and Update with one click.
+- **🧪 Smoke Test:** Verifies the server actually starts and responds before you try to use it.
 
-## Usage
+## Quick Start
 
-1.  **Download the script** (`install_comfyui_mac.sh`) to your Mac.
-2.  Open your **Terminal** app.
-3.  Navigate to the download location and make the script executable:
-    ```bash
-    cd ~/Downloads
-    chmod +x install_comfyui_mac.sh
-    ```
-4.  **Run the script:**
-    ```bash
-    ./install_comfyui_mac.sh
-    ```
-5.  Follow the prompts to select your install folder.
-6.  Once finished, use the **Run_ComfyUI.command** shortcut on your Desktop to start the application.
+### Windows
+Double-click **`launch.cmd`**.
+
+### macOS / Linux
+Open your terminal and run:
+```bash
+bash launch.cmd
+```
+
+## Dashboard Preview
+
+The dashboard provides real-time system metrics (CPU/RAM/Disk) and allows you to manage your ComfyUI installation.
+
+1.  **Install/Update:** Clones the repo and sets up the venv.
+2.  **Smoke Test:** Starts a background instance to verify health.
+3.  **Launch:** Starts ComfyUI with the best flags for your OS.
 
 ## Requirements
 
-- macOS (12.0+ recommended for best MPS support)
-- Internet connection (for downloading dependencies)
+- **Internet Connection**
+- **Windows:** Python 3.10+ (Check "Add to PATH" during install)
+- **macOS:** Homebrew (The script will attempt to install it if missing)
+- **Linux:** `python3-venv`, `python3-pip`, `git`
