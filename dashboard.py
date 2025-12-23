@@ -12,6 +12,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import customtkinter as ctk
 
+# --- Config & Constants ---
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
@@ -36,43 +37,47 @@ def save_config(config):
 
 CONFIG = load_config()
 
+# --- Logic: Dev Tools & CLI Service ---
 class DevService:
-    # CLI_MAP: Name -> {install_cmd, type, check_cmd}
+    # CLI_MAP: Name -> {install_cmd, type, package_name, binary_name}
     CLI_MAP = {
-        "Gemini CLI": {"cmd": ["pip", "install", "-U", "google-generativeai"], "type": "pip", "bin": "gemini"}, 
-        # Note: 'google-generativeai' is the lib, but usually user scripts it. 
-        # For detection, we check if the package is installed via pip list, or if a binary exists.
-        # Since these are often libs, we'll check pip freeze for pip packages.
-        
+        "Claude CLI": {"cmd": ["npm", "install", "@anthropic-ai/claude-code"], "type": "npm", "package": "@anthropic-ai/claude-code", "bin": "claude"},
+        "Gemini CLI": {"cmd": ["pip", "install", "-U", "google-generativeai"], "type": "pip", "package": "google-generativeai"},
         "Codex CLI (OpenAI)": {"cmd": ["pip", "install", "openai"], "type": "pip", "package": "openai"},
-        "Claude CLI": {"cmd": ["npm", "install", "@anthropic-ai/claude-code"], "type": "npm", "bin": "claude"},
         "Grok CLI": {"cmd": ["pip", "install", "xai-sdk"], "type": "pip", "package": "xai-sdk"},
         "DeepSeek CLI": {"cmd": ["pip", "install", "deepseek"], "type": "pip", "package": "deepseek"}
     }
+
+    @staticmethod
+    def is_node_installed(): return shutil.which("node") is not None
+    @staticmethod
+    def is_npm_installed(): return shutil.which("npm") is not None
+    @staticmethod
+    def is_npx_installed(): return shutil.which("npx") is not None
 
     @staticmethod
     def is_installed(tool_name):
         tool = DevService.CLI_MAP.get(tool_name)
         if not tool: return False
         
-        # Strategy 1: Check binary in PATH (npm global / pip scripts)
-        if "bin" in tool:
-            if shutil.which(tool["bin"]): return True
-            
-        # Strategy 2: Check Pip Package
-        if tool["type"] == "pip" and "package" in tool:
+        # Strategy for NPM packages
+        if tool["type"] == "npm":
+            # Check binary first
+            if "bin" in tool and shutil.which(tool["bin"]): return True
+            # Then check global npm list
             try:
-                # Fast check using pip show
+                subprocess.check_call(["npm", "list", "-g", tool["package"], "--depth=0"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=(platform.system()=="Windows"))
+                return True
+            except: return False
+            
+        # Strategy for Pip packages
+        if tool["type"] == "pip":
+            try:
                 subprocess.check_call([sys.executable, "-m", "pip", "show", tool["package"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 return True
             except: return False
             
         return False
-
-    @staticmethod
-    def is_node_installed(): return shutil.which("node") is not None
-    @staticmethod
-    def is_npm_installed(): return shutil.which("npm") is not None
 
     @staticmethod
     def install_node_cmd():
@@ -93,6 +98,7 @@ class DevService:
         
         return cmd
 
+# --- Logic: Comfy Service & Wizard ---
 class ComfyService:
     @staticmethod
     def detect_hardware():
@@ -125,16 +131,16 @@ class ComfyService:
         if answers["style"] == "Photorealistic":
             if model_tier == "flux": recipe["checkpoints"].append(("Flux1-Dev", "https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/flux1-dev.safetensors"))
             elif model_tier == "sdxl": recipe["checkpoints"].append(("Juggernaut XL", "https://civitai.com/api/download/models/JuggernautXL"))
-            else: recipe["checkpoints"].append(("Realistic Vision 6", "https://civitai.com/api/download/models/RealisticVision"))
+            else: recipe["checkpoints"].append(("Realistic Vision 6", "https://civitai.com/api/download/models/RealisticVision")
             
         elif answers["style"] == "Anime":
             if model_tier in ["sdxl", "flux"]: recipe["checkpoints"].append(("Pony Diffusion V6 XL", "https://civitai.com/api/download/models/PonyDiffusion"))
-            else: recipe["checkpoints"].append(("Anything V5", "https://civitai.com/api/download/models/AnythingV5"))
+            else: recipe["checkpoints"].append(("Anything V5", "https://civitai.com/api/download/models/AnythingV5")
             
         else: # General
             if model_tier == "flux": recipe["checkpoints"].append(("Flux1-Schnell", "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/flux1-schnell.safetensors"))
             elif model_tier == "sdxl": recipe["checkpoints"].append(("SDXL Base 1.0", "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"))
-            else: recipe["checkpoints"].append(("SD 1.5 Pruned", "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors"))
+            else: recipe["checkpoints"].append(("SD 1.5 Pruned", "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors")
 
         if answers["media"] == "Video" or answers["media"] == "Mixed":
             recipe["custom_nodes"].append("https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved.git")
@@ -148,6 +154,7 @@ class ComfyService:
 
         return recipe
 
+# --- UI Application ---
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -156,6 +163,7 @@ class App(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
+        # Sidebar
         self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=0)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         ctk.CTkLabel(self.sidebar, text="AI Universal\nSuite", font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(30, 20))
@@ -167,6 +175,7 @@ class App(ctk.CTk):
         
         ctk.CTkButton(self.sidebar, text="Exit", fg_color="transparent", border_width=1, command=self.destroy).pack(side="bottom", pady=20, padx=20, fill="x")
 
+        # Content
         self.content = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.content.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
 
@@ -187,47 +196,57 @@ class App(ctk.CTk):
         for f in self.frames.values(): f.pack_forget()
         self.frames[name].pack(fill="both", expand=True)
 
+    # --- Frames ---
     def create_overview(self):
         frame = ctk.CTkFrame(self.content, fg_color="transparent")
         ctk.CTkLabel(frame, text="System Status", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=10)
+        
         gpu, vram = ComfyService.detect_hardware()
         info = ctk.CTkFrame(frame)
         info.pack(fill="x", pady=10)
         ctk.CTkLabel(info, text=f"OS: {platform.system()}").pack(side="left", padx=20, pady=15)
         ctk.CTkLabel(info, text=f"GPU: {gpu} ({vram}GB)").pack(side="left", padx=20, pady=15)
+        
         return frame
 
     def create_devtools(self):
         frame = ctk.CTkFrame(self.content, fg_color="transparent")
         ctk.CTkLabel(frame, text="Developer Tools & CLIs", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=10)
 
-        # Node
+        # Runtime Status
         node_frame = ctk.CTkFrame(frame); node_frame.pack(fill="x", pady=10)
         ctk.CTkLabel(node_frame, text="Runtime Environment", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=5)
-        status = "✅ Installed" if DevService.is_node_installed() else "❌ Missing"
-        ctk.CTkLabel(node_frame, text=f"Node.js: {status}").pack(side="left", padx=10, pady=10)
+        
+        # Node/NPM/NPX Status Row
+        status_row = ctk.CTkFrame(node_frame, fg_color="transparent"); status_row.pack(fill="x", padx=10, pady=10)
+        
+        node_stat = "✅ node" if DevService.is_node_installed() else "❌ node"
+        npm_stat = "✅ npm" if DevService.is_npm_installed() else "❌ npm"
+        npx_stat = "✅ npx" if DevService.is_npx_installed() else "❌ npx"
+        
+        ctk.CTkLabel(status_row, text=node_stat).pack(side="left", padx=10)
+        ctk.CTkLabel(status_row, text=npm_stat).pack(side="left", padx=10)
+        ctk.CTkLabel(status_row, text=npx_stat).pack(side="left", padx=10)
+        
         if not DevService.is_node_installed():
-            ctk.CTkButton(node_frame, text="Install Node.js (LTS)", command=self.install_node).pack(side="right", padx=10)
+            ctk.CTkButton(node_frame, text="Install Node.js (LTS)", command=self.install_node).pack(side="right", padx=10, pady=5)
 
         # CLIs
         cli_frame = ctk.CTkFrame(frame); cli_frame.pack(fill="both", expand=True, pady=10)
-        ctk.CTkLabel(cli_frame, text="AI Providers (CLI)", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=5)
+        ctk.CTkLabel(cli_frame, text="AI Providers (CLI Tools)", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=5)
         
         self.cli_vars = {}
         for tool in DevService.CLI_MAP.keys():
             is_inst = DevService.is_installed(tool)
-            
-            row = ctk.CTkFrame(cli_frame, fg_color="transparent")
-            row.pack(fill="x", pady=2, padx=20)
+            row = ctk.CTkFrame(cli_frame, fg_color="transparent"); row.pack(fill="x", pady=2, padx=20)
             
             var = ctk.BooleanVar(value=is_inst)
-            chk = ctk.CTkCheckBox(row, text=tool, variable=var)
-            chk.pack(side="left")
+            chk = ctk.CTkCheckBox(row, text=tool, variable=var); chk.pack(side="left")
             self.cli_vars[tool] = var
             
             if is_inst:
                 ctk.CTkLabel(row, text="✅ Installed", text_color="green", width=100).pack(side="left", padx=10)
-                chk.configure(state="disabled") # Prevent re-installing accidentally? Optional.
+                chk.configure(state="disabled")
             else:
                 ctk.CTkLabel(row, text="Not Installed", text_color="gray", width=100).pack(side="left", padx=10)
             
@@ -262,6 +281,7 @@ class App(ctk.CTk):
         ctk.CTkButton(frame, text="Save Keys", command=self.save_keys).pack(pady=20)
         return frame
 
+    # --- Actions ---
     def install_node(self):
         cmd = DevService.install_node_cmd()
         subprocess.Popen(cmd)
@@ -295,35 +315,24 @@ class App(ctk.CTk):
         win = ctk.CTkToplevel(self)
         win.title("ComfyUI Wizard")
         win.geometry("500x650")
-        
         gpu, vram = ComfyService.detect_hardware()
         ctk.CTkLabel(win, text="System Scan", font=("Arial", 14, "bold")).pack(pady=10)
         ctk.CTkLabel(win, text=f"Detected: {gpu} ({vram} GB VRAM)", text_color="yellow").pack()
-        
         ctk.CTkLabel(win, text="1. Art Style?", font=("Arial", 12, "bold")).pack(anchor="w", padx=20, pady=(20,5))
         style_var = ctk.StringVar(value="General")
         ctk.CTkSegmentedButton(win, values=["Photorealistic", "Anime", "General"], variable=style_var).pack(fill="x", padx=20)
-        
         ctk.CTkLabel(win, text="2. Media Type?", font=("Arial", 12, "bold")).pack(anchor="w", padx=20, pady=(20,5))
         media_var = ctk.StringVar(value="Image")
         ctk.CTkSegmentedButton(win, values=["Image", "Video", "Mixed"], variable=media_var).pack(fill="x", padx=20)
-        
-        consistency_var = ctk.BooleanVar()
-        ctk.CTkCheckBox(win, text="Need Character Consistency? (FaceID/IPAdapter)", variable=consistency_var).pack(anchor="w", padx=20, pady=(20,5))
-        
-        editing_var = ctk.BooleanVar()
-        ctk.CTkCheckBox(win, text="Need Image Editing? (Inpainting/ControlNet)", variable=editing_var).pack(anchor="w", padx=20, pady=5)
-        
+        consistency_var = ctk.BooleanVar(); ctk.CTkCheckBox(win, text="Character Consistency", variable=consistency_var).pack(anchor="w", padx=20, pady=(20,5))
+        editing_var = ctk.BooleanVar(); ctk.CTkCheckBox(win, text="Image Editing", variable=editing_var).pack(anchor="w", padx=20, pady=5)
         def generate():
-            answers = {"style": style_var.get(), "media": media_var.get(), "consistency": consistency_var.get(), "editing": editing_var.get()}
-            recipe = ComfyService.generate_recipe(answers, vram)
-            self.execute_recipe(recipe)
-            win.destroy()
-        ctk.CTkButton(win, text="Generate Recipe & Install", fg_color="green", height=50, command=generate).pack(side="bottom", fill="x", padx=20, pady=20)
+            recipe = ComfyService.generate_recipe({"style": style_var.get(), "media": media_var.get(), "consistency": consistency_var.get(), "editing": editing_var.get()}, vram)
+            self.execute_recipe(recipe); win.destroy()
+        ctk.CTkButton(win, text="Generate & Install", fg_color="green", height=50, command=generate).pack(side="bottom", fill="x", padx=20, pady=20)
 
     def execute_recipe(self, recipe):
-        msg = f"Recipe Generated!\n\nModels: {len(recipe['checkpoints'])}\nNodes: {len(recipe['custom_nodes'])}\n\nStarting downloads in background..."
-        messagebox.showinfo("Wizard", msg)
+        messagebox.showinfo("Wizard", "Recipe Generated! Check console for log.")
         print("Recipe:", recipe)
 
     def save_keys(self):
