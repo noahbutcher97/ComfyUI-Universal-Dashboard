@@ -1,6 +1,4 @@
 #!/bin/bash
-# Linux Launcher
-
 cd "$(dirname "$0")"
-chmod +x ./start_dashboard.sh
-./start_dashboard.sh
+chmod +x bin/boot_unix.sh
+./bin/boot_unix.sh
