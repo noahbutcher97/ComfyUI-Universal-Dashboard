@@ -4,104 +4,119 @@ import time
 import shutil
 import subprocess
 import platform
-import threading
 import psutil
+import webbrowser
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
-from rich.live import Live
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
-from rich.text import Text
 from rich.prompt import Prompt, Confirm
 
-# --- Configuration ---
-INSTALL_DIR = os.path.expanduser("~/ComfyUI")
+# --- Global Context ---
+CONSOLE = Console()
+OS_SYSTEM = platform.system() # 'Windows', 'Darwin', 'Linux'
+IS_WINDOWS = OS_SYSTEM == "Windows"
+IS_MAC = OS_SYSTEM == "Darwin"
+
+# --- Paths ---
+# Windows: C:\Users\Name\ComfyUI, Unix: ~/ComfyUI
+INSTALL_DIR = os.path.join(os.path.expanduser("~"), "ComfyUI")
 REPO_URL = "https://github.com/comfyanonymous/ComfyUI.git"
 MANAGER_URL = "https://github.com/ltdrdata/ComfyUI-Manager.git"
 
-console = Console()
+# --- Platform Handler ---
+class PlatformHandler:
+    @staticmethod
+    def get_venv_python():
+        if IS_WINDOWS:
+            return os.path.join(INSTALL_DIR, "venv", "Scripts", "python.exe")
+        return os.path.join(INSTALL_DIR, "venv", "bin", "python")
 
-# --- Helper Functions ---
+    @staticmethod
+    def get_venv_pip():
+        if IS_WINDOWS:
+            return os.path.join(INSTALL_DIR, "venv", "Scripts", "pip.exe")
+        return os.path.join(INSTALL_DIR, "venv", "bin", "pip")
+
+    @staticmethod
+    def open_folder(path):
+        if IS_WINDOWS:
+            os.startfile(path)
+        elif IS_MAC:
+            subprocess.run(["open", path])
+        else: # Linux
+            subprocess.run(["xdg-open", path])
+
+    @staticmethod
+    def has_nvidia_gpu():
+        if shutil.which("nvidia-smi"):
+            return True
+        return False
+
+# --- Core Logic ---
 
 def get_system_metrics():
-    cpu = psutil.cpu_percent(interval=None)
-    memory = psutil.virtual_memory()
-    disk = psutil.disk_usage(os.path.expanduser("~"))
-    return cpu, memory.percent, disk.percent
+    try:
+        cpu = psutil.cpu_percent(interval=None)
+        memory = psutil.virtual_memory().percent
+        disk = psutil.disk_usage(os.path.expanduser("~")).percent
+        return cpu, memory, disk
+    except:
+        return 0, 0, 0
 
 def is_installed():
     return os.path.exists(os.path.join(INSTALL_DIR, "main.py"))
 
 def check_health():
-    """Returns a dict of component status"""
     health = {
-        "Python": "OK" if sys.version_info >= (3, 10) else "Outdated",
-        "Git": "OK" if shutil.which("git") else "Missing",
-        "ComfyUI": "Installed" if is_installed() else "Not Found",
-        "Venv": "OK" if os.path.exists(os.path.join(INSTALL_DIR, "venv")) else "Missing"
+        "OS": f"{OS_SYSTEM} {platform.release()}",
+        "Python": f"{sys.version_info.major}.{sys.version_info.minor}",
+        "Git": "Installed" if shutil.which("git") else "[bold red]Missing[/]",
+        "ComfyUI": "Installed" if is_installed() else "[yellow]Not Found[/]",
+        "Venv": "OK" if os.path.exists(os.path.dirname(PlatformHandler.get_venv_python())) else "Missing"
     }
     return health
 
-def run_command(cmd, shell=True, cwd=None):
+def run_cmd(cmd_list, cwd=None, description=None):
+    """Runs a command safely, hiding output unless error"""
     try:
-        subprocess.check_call(cmd, shell=shell, cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # On Windows, shell=True is often needed for some cmds, but list args are safer
+        # We use list args and shell=False generally, unless it's a raw string
+        subprocess.check_call(cmd_list, cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
     except subprocess.CalledProcessError:
         return False
+    except FileNotFoundError:
+        return False
 
-# --- UI Components ---
+# --- Installation Logic ---
 
-def generate_header():
-    grid = Table.grid(expand=True)
-    grid.add_column(justify="left")
-    grid.add_column(justify="right")
-    grid.add_row(
-        "[b magenta]ComfyUI System Dashboard[/b magenta]", 
-        f"[dim]{platform.system()} {platform.release()} | {platform.machine()}[/dim]"
-    )
-    return Panel(grid, style="white on blue")
-
-def generate_stats():
-    cpu, ram, disk = get_system_metrics()
+def install_torch(progress_task, progress_obj):
+    pip_cmd = PlatformHandler.get_venv_pip()
     
-    table = Table(title="System Metrics", expand=True, border_style="dim")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", justify="right")
+    # 1. Determine correct torch command
+    cmd = [pip_cmd, "install", "torch", "torchvision", "torchaudio"]
     
-    table.add_row("CPU Usage", f"{cpu}%")
-    table.add_row("RAM Usage", f"{ram}%")
-    table.add_row("Disk Usage", f"{disk}%")
+    if IS_WINDOWS or OS_SYSTEM == "Linux":
+        if PlatformHandler.has_nvidia_gpu():
+            # CUDA 12.1 is standard for modern ComfyUI
+            progress_obj.update(progress_task, description="[cyan]Detected NVIDIA GPU. Installing CUDA Torch...[/]")
+            cmd.extend(["--index-url", "https://download.pytorch.org/whl/cu121"])
+        else:
+            progress_obj.update(progress_task, description="[yellow]No NVIDIA GPU detected. Installing CPU Torch...[/]")
+            # Standard install usually defaults to CPU or basic CUDA, but explicit CPU is safer if no GPU
+            # But let's stick to standard to allow possible AMD support if configured later
+            pass 
+    elif IS_MAC:
+        progress_obj.update(progress_task, description="[cyan]macOS Detected. Installing MPS-ready Torch...[/]")
+        # Standard pip install is fine for Mac ARM64 now
     
-    return Panel(table, title="Real-time Stats", border_style="blue")
-
-def generate_health_panel():
-    health = check_health()
-    table = Table(title="Component Health", expand=True, border_style="dim")
-    table.add_column("Component")
-    table.add_column("Status")
-    
-    for k, v in health.items():
-        color = "green" if v in ["OK", "Installed"] else "red"
-        table.add_row(k, f"[{color}]{v}[/{color}]")
-        
-    return Panel(table, title="Health Check", border_style="green")
-
-def generate_menu():
-    table = Table(title="Actions", expand=True, show_header=False, border_style="dim")
-    table.add_row("[1] [bold green]Install / Repair ComfyUI[/]")
-    table.add_row("[2] [bold yellow]Update ComfyUI & Manager[/]")
-    table.add_row("[3] [bold cyan]Smoke Test (Verify Install)[/]")
-    table.add_row("[4] [bold blue]Download Models[/]")
-    table.add_row("[5] [bold white]Launch ComfyUI[/]")
-    table.add_row("[Q] [bold red]Quit[/]")
-    return Panel(table, title="Control Panel", border_style="white")
-
-# --- Actions ---
+    run_cmd(cmd, cwd=INSTALL_DIR)
 
 def install_comfyui():
-    console.clear()
-    console.print(Panel("[bold green]Installing ComfyUI...[/]", title="Installer"))
+    CONSOLE.clear()
+    CONSOLE.print(Panel("[bold green]Installing ComfyUI...[/]", title="Installer"))
     
     with Progress(
         SpinnerColumn(),
@@ -110,68 +125,71 @@ def install_comfyui():
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
     ) as progress:
         
-        # Step 1
+        # Step 1: Clone
         task1 = progress.add_task("[cyan]Cloning Repository...", total=100)
         if not os.path.exists(INSTALL_DIR):
-            run_command(f"git clone {REPO_URL} {INSTALL_DIR}")
+            run_cmd(["git", "clone", REPO_URL, INSTALL_DIR])
         else:
-            run_command("git pull", cwd=INSTALL_DIR)
+            run_cmd(["git", "pull"], cwd=INSTALL_DIR)
         progress.update(task1, completed=100)
         
-        # Step 2
-        task2 = progress.add_task("[cyan]Creating Venv...", total=100)
-        venv_path = os.path.join(INSTALL_DIR, "venv")
-        if not os.path.exists(venv_path):
-            run_command(f"{sys.executable} -m venv venv", cwd=INSTALL_DIR)
+        # Step 2: Venv
+        task2 = progress.add_task("[cyan]Creating Virtual Environment...", total=100)
+        if not os.path.exists(os.path.join(INSTALL_DIR, "venv")):
+            run_cmd([sys.executable, "-m", "venv", "venv"], cwd=INSTALL_DIR)
         progress.update(task2, completed=100)
         
-        # Step 3
-        task3 = progress.add_task("[cyan]Installing Requirements (PyTorch)...", total=100)
-        pip_cmd = os.path.join(venv_path, "bin", "pip")
-        run_command(f"{pip_cmd} install --upgrade pip", cwd=INSTALL_DIR)
-        run_command(f"{pip_cmd} install torch torchvision torchaudio", cwd=INSTALL_DIR)
-        run_command(f"{pip_cmd} install -r requirements.txt", cwd=INSTALL_DIR)
+        # Step 3: Requirements
+        task3 = progress.add_task("[cyan]Installing Core Dependencies...", total=100)
+        pip_cmd = PlatformHandler.get_venv_pip()
+        
+        run_cmd([pip_cmd, "install", "--upgrade", "pip"], cwd=INSTALL_DIR)
+        install_torch(task3, progress) # Handle GPU logic
+        
+        progress.update(task3, description="[cyan]Installing requirements.txt...", advance=50)
+        run_cmd([pip_cmd, "install", "-r", "requirements.txt"], cwd=INSTALL_DIR)
         progress.update(task3, completed=100)
         
-        # Step 4
-        task4 = progress.add_task("[cyan]Installing Manager...", total=100)
+        # Step 4: Manager
+        task4 = progress.add_task("[cyan]Installing ComfyUI Manager...", total=100)
         custom_nodes = os.path.join(INSTALL_DIR, "custom_nodes")
         os.makedirs(custom_nodes, exist_ok=True)
-        manager_path = os.path.join(custom_nodes, "ComfyUI-Manager")
-        if not os.path.exists(manager_path):
-            run_command(f"git clone {MANAGER_URL}", cwd=custom_nodes)
+        if not os.path.exists(os.path.join(custom_nodes, "ComfyUI-Manager")):
+            run_cmd(["git", "clone", MANAGER_URL], cwd=custom_nodes)
         progress.update(task4, completed=100)
 
-    console.print("[bold green]Installation Complete![/]")
+    CONSOLE.print("[bold green]Installation Complete![/]")
     time.sleep(2)
 
 def smoke_test():
-    console.clear()
-    console.print(Panel("[bold cyan]Running Smoke Test...[/]", title="Diagnostics"))
+    CONSOLE.clear()
+    CONSOLE.print(Panel("[bold cyan]Running Smoke Test...[/]", title="Diagnostics"))
     
     if not is_installed():
-        console.print("[bold red]ComfyUI is not installed. Cannot test.[/]")
+        CONSOLE.print("[bold red]ComfyUI is not installed.[/]")
         time.sleep(2)
         return
 
-    venv_python = os.path.join(INSTALL_DIR, "venv", "bin", "python")
-    # Start ComfyUI in background
-    console.print("[dim]Starting server on port 8189 for testing...[/]")
+    python_exec = PlatformHandler.get_venv_python()
+    CONSOLE.print("[dim]Attempting to start server on port 8199 (test mode)...[/]")
+    
+    # We use a non-standard port to avoid conflicts
+    cmd = [python_exec, "main.py", "--port", "8199", "--cpu"] # Force CPU for quick test stability
+    
     try:
         proc = subprocess.Popen(
-            [venv_python, "main.py", "--port", "8189"], 
+            cmd, 
             cwd=INSTALL_DIR, 
             stdout=subprocess.DEVNULL, 
             stderr=subprocess.DEVNULL
         )
         
-        # Poll for 15 seconds
         import urllib.request
         success = False
-        for i in range(15):
+        for i in range(20):
             time.sleep(1)
             try:
-                code = urllib.request.urlopen("http://127.0.0.1:8189").getcode()
+                code = urllib.request.urlopen("http://127.0.0.1:8199").getcode()
                 if code == 200:
                     success = True
                     break
@@ -181,72 +199,103 @@ def smoke_test():
         proc.terminate()
         
         if success:
-            console.print(Panel("[bold green]PASS: Server started and responded to HTTP requests.[/]", border_style="green"))
+            CONSOLE.print(Panel("[bold green]PASS: Server responded successfully![/)", border_style="green"))
         else:
-            console.print(Panel("[bold red]FAIL: Server did not respond within 15 seconds.[/]", border_style="red"))
+            CONSOLE.print(Panel("[bold red]FAIL: Server did not respond.[/]", border_style="red"))
             
     except Exception as e:
-        console.print(f"[bold red]Error running test: {e}[/]")
+        CONSOLE.print(f"[bold red]Error: {e}[/]")
     
-    console.input("\nPress Enter to return...")
+    CONSOLE.input("\nPress Enter to return...")
 
 def launch_app():
     if not is_installed():
-        console.print("[red]Not installed![/]")
+        CONSOLE.print("[red]Not installed![/]")
         time.sleep(1)
         return
         
-    console.print("[green]Launching ComfyUI... (Press Ctrl+C in terminal to stop)[/]")
-    venv_python = os.path.join(INSTALL_DIR, "venv", "bin", "python")
-    os.system(f"cd {INSTALL_DIR} && {venv_python} main.py --auto-launch --force-fp16")
+    python_exec = PlatformHandler.get_venv_python()
+    CONSOLE.print("[green]Launching ComfyUI...[/]")
+    
+    # Arguments
+    args = ["--auto-launch"]
+    if IS_MAC:
+        args.append("--force-fp16") # Optimization for Mac
+    
+    cmd = [python_exec, "main.py"] + args
+    
+    # Launch and let go
+    subprocess.Popen(cmd, cwd=INSTALL_DIR)
+    CONSOLE.print("[dim]ComfyUI is running in the background.[/]")
+    time.sleep(2)
 
-# --- Main Loop ---
+# --- UI Layout ---
 
-def main():
+def get_layout():
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=3),
         Layout(name="body"),
         Layout(name="footer", size=3)
     )
-    layout["body"].split_row(
-        Layout(name="left"),
-        Layout(name="right"),
-    )
+    layout["body"].split_row(Layout(name="left"), Layout(name="right"))
+    return layout
+
+def main():
+    layout = get_layout()
     
     while True:
-        # Update Dynamic Content
-        layout["header"].update(generate_header())
-        layout["left"].update(generate_stats())
-        layout["right"].update(generate_health_panel())
-        layout["footer"].update(generate_menu())
+        # Header
+        grid = Table.grid(expand=True)
+        grid.add_column(justify="left")
+        grid.add_column(justify="right")
+        grid.add_row(
+            "[b magenta]ComfyUI Universal Dashboard[/b magenta]", 
+            f"[dim]{OS_SYSTEM} | {platform.machine()}[/dim]"
+        )
+        layout["header"].update(Panel(grid, style="white on blue"))
         
-        # Render Frame
-        console.clear()
-        console.print(layout)
+        # Stats
+        cpu, ram, disk = get_system_metrics()
+        t_stats = Table(title="Metrics", expand=True, border_style="dim")
+        t_stats.add_column("Metric"); t_stats.add_column("Value", justify="right")
+        t_stats.add_row("CPU", f"{cpu}%")
+        t_stats.add_row("RAM", f"{ram}%")
+        t_stats.add_row("Disk", f"{disk}%")
+        layout["left"].update(Panel(t_stats, title="System", border_style="blue"))
         
-        # Input Handling
-        choice = Prompt.ask("Select Option", choices=["1", "2", "3", "4", "5", "q", "Q"], default="q")
+        # Health
+        health = check_health()
+        t_health = Table(title="Status", expand=True, border_style="dim")
+        t_health.add_column("Component"); t_health.add_column("State")
+        for k,v in health.items():
+            t_health.add_row(k, v)
+        layout["right"].update(Panel(t_health, title="Health", border_style="green"))
+        
+        # Menu
+        t_menu = Table(show_header=False, expand=True, box=None)
+        t_menu.add_row("[1] Install / Update", "[3] Smoke Test", "[5] Launch ComfyUI")
+        t_menu.add_row("[2] Download Models", "[4] Open Folder", "[Q] Quit")
+        layout["footer"].update(Panel(t_menu, title="Actions", border_style="white"))
+        
+        CONSOLE.clear()
+        CONSOLE.print(layout)
+        
+        choice = Prompt.ask("Select", choices=["1", "2", "3", "4", "5", "q", "Q"], default="q")
         
         if choice in ["q", "Q"]:
-            console.print("Goodbye!")
             break
         elif choice == "1":
             install_comfyui()
-        elif choice == "2":
-            install_comfyui() # Logic is same (pulls changes)
         elif choice == "3":
             smoke_test()
-        elif choice == "4":
-            console.print("[dim]Use the 'Manager' inside ComfyUI to download models easily.[/]")
-            time.sleep(2)
         elif choice == "5":
             launch_app()
-            # Loop continues after launch closes
-            
+        elif choice == "4":
+            PlatformHandler.open_folder(INSTALL_DIR if os.path.exists(INSTALL_DIR) else os.path.expanduser("~"))
+
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        console.print("\nExiting...")
-        sys.exit(0)
+        pass
