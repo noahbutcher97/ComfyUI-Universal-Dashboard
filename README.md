@@ -2,6 +2,18 @@
 
 A cross-platform (Windows, macOS, Linux) installer and management dashboard for [ComfyUI](https://github.com/comfyanonymous/ComfyUI).
 
+## 🚀 Quick Start
+
+Download this repository, unzip it, and double-click the file for your system:
+
+| Operating System | File to Double-Click |
+| :--- | :--- |
+| **Windows** | **`Run_Windows.bat`** |
+| **macOS** | **`Run_Mac.command`** |
+| **Linux** | **`Run_Linux.sh`** |
+
+*(Note for Mac Users: If it says "Unidentified Developer", right-click the file -> Open -> Open).*
+
 ## Features
 
 - **🖥️ Universal Dashboard:** A beautiful terminal-based UI that works on all operating systems.
@@ -11,25 +23,6 @@ A cross-platform (Windows, macOS, Linux) installer and management dashboard for 
     - **macOS:** Installs Metal (MPS) optimized PyTorch for Apple Silicon.
 - **⚡ Management:** Install Manager, Download Models, and Update with one click.
 - **🧪 Smoke Test:** Verifies the server actually starts and responds before you try to use it.
-
-## Quick Start
-
-### Windows
-Double-click **`launch.cmd`**.
-
-### macOS / Linux
-Open your terminal and run:
-```bash
-bash launch.cmd
-```
-
-## Dashboard Preview
-
-The dashboard provides real-time system metrics (CPU/RAM/Disk) and allows you to manage your ComfyUI installation.
-
-1.  **Install/Update:** Clones the repo and sets up the venv.
-2.  **Smoke Test:** Starts a background instance to verify health.
-3.  **Launch:** Starts ComfyUI with the best flags for your OS.
 
 ## Requirements
 
