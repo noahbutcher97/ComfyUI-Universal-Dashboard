@@ -1,28 +1,20 @@
 import os
 import sys
-import time
 import shutil
 import subprocess
 import platform
 import psutil
-import webbrowser
 import json
-import tkinter as tk
+import threading
+import time
+import customtkinter as ctk
 from tkinter import filedialog
-from rich.console import Console
-from rich.layout import Layout
-from rich.panel import Panel
-from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
-from rich.prompt import Prompt, Confirm
+import shutil
 
-# --- Global Context ---
-CONSOLE = Console()
-OS_SYSTEM = platform.system()
-IS_WINDOWS = OS_SYSTEM == "Windows"
-IS_MAC = OS_SYSTEM == "Darwin"
+# --- Config & Constants ---
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
 
-# --- Config & State ---
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".comfy_dashboard")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 REPO_URL = "https://github.com/comfyanonymous/ComfyUI.git"
@@ -46,235 +38,285 @@ def save_config(config):
 CONFIG = load_config()
 INSTALL_DIR = CONFIG["install_path"]
 
-# --- GUI Helpers ---
-def pick_folder(initial=None, title="Select Folder"):
-    """Opens a native OS folder picker dialog"""
-    try:
-        root = tk.Tk()
-        root.withdraw() # Hide the main window
-        root.attributes('-topmost', True) # Bring to front
-        path = filedialog.askdirectory(initialdir=initial, title=title)
-        root.destroy()
-        return path
-    except Exception as e:
-        CONSOLE.print(f"[red]GUI Picker failed ({e}). Falling back to text input.[/]")
-        return Prompt.ask(f"{title} (Enter Path)")
-
-# --- Platform Handler ---
-class PlatformHandler:
+# --- Helper Logic ---
+class Logic:
     @staticmethod
     def get_venv_python():
-        if IS_WINDOWS: return os.path.join(INSTALL_DIR, "venv", "Scripts", "python.exe")
+        if platform.system() == "Windows":
+            return os.path.join(INSTALL_DIR, "venv", "Scripts", "python.exe")
         return os.path.join(INSTALL_DIR, "venv", "bin", "python")
 
     @staticmethod
     def get_venv_pip():
-        if IS_WINDOWS: return os.path.join(INSTALL_DIR, "venv", "Scripts", "pip.exe")
+        if platform.system() == "Windows":
+            return os.path.join(INSTALL_DIR, "venv", "Scripts", "pip.exe")
         return os.path.join(INSTALL_DIR, "venv", "bin", "pip")
 
     @staticmethod
-    def open_folder(path):
-        if not os.path.exists(path):
-            CONSOLE.print(f"[red]Path does not exist: {path}[/]")
-            return
-        if IS_WINDOWS: os.startfile(path)
-        elif IS_MAC: subprocess.run(["open", path])
-        else: subprocess.run(["xdg-open", path])
+    def is_installed():
+        return os.path.exists(os.path.join(INSTALL_DIR, "main.py"))
 
     @staticmethod
-    def has_nvidia_gpu():
-        return shutil.which("nvidia-smi") is not None
+    def open_folder(path):
+        if not os.path.exists(path): return
+        if platform.system() == "Windows": os.startfile(path)
+        elif platform.system() == "Darwin": subprocess.run(["open", path])
+        else: subprocess.run(["xdg-open", path])
 
-# --- Core Logic ---
-def get_system_metrics():
-    try:
-        cpu = psutil.cpu_percent(interval=None)
-        memory = psutil.virtual_memory().percent
-        disk = psutil.disk_usage(INSTALL_DIR if os.path.exists(INSTALL_DIR) else os.path.expanduser("~")).percent
-        return cpu, memory, disk
-    except: return 0, 0, 0
+# --- Main App ---
+class DashboardApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
 
-def is_installed():
-    return os.path.exists(os.path.join(INSTALL_DIR, "main.py"))
+        self.title("ComfyUI Universal Dashboard")
+        self.geometry("1000x700")
 
-def check_health():
-    node_status = "Installed" if shutil.which("node") else "[bold red]Missing[/]"
-    
-    health = {
-        "OS": f"{OS_SYSTEM} {platform.release()}",
-        "Path": f"[blue]{INSTALL_DIR}[/]",
-        "ComfyUI": "Installed" if is_installed() else "[yellow]Not Found[/]",
-        "Venv": "OK" if os.path.exists(os.path.dirname(PlatformHandler.get_venv_python())) else "Missing",
-        "Node.js": node_status
-    }
-    return health
+        # Grid Layout
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
-def run_cmd(cmd_list, cwd=None):
-    try:
-        subprocess.check_call(cmd_list, cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
-    except: return False
+        # Sidebar
+        self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0)
+        self.sidebar.grid(row=0, column=0, sticky="nsew")
+        self.sidebar.grid_rowconfigure(5, weight=1)
 
-# --- Actions ---
+        self.logo = ctk.CTkLabel(self.sidebar, text="ComfyUI\nDashboard", font=ctk.CTkFont(size=20, weight="bold"))
+        self.logo.grid(row=0, column=0, padx=20, pady=(20, 10))
 
-def change_install_path():
-    global INSTALL_DIR
-    CONSOLE.print(Panel("[bold cyan]Configure Installation Path[/]", title="Settings"))
-    CONSOLE.print("[dim]Opening folder picker...[/]")
-    
-    # Use Native GUI Picker
-    new_path = pick_folder(initial=INSTALL_DIR, title="Select ComfyUI Installation Folder")
-    
-    if new_path:
+        self.btn_overview = ctk.CTkButton(self.sidebar, text="Overview", command=lambda: self.show_frame("overview"))
+        self.btn_overview.grid(row=1, column=0, padx=20, pady=10)
+
+        self.btn_install = ctk.CTkButton(self.sidebar, text="Install / Update", command=lambda: self.show_frame("install"))
+        self.btn_install.grid(row=2, column=0, padx=20, pady=10)
+
+        self.btn_models = ctk.CTkButton(self.sidebar, text="Model Browser", command=lambda: self.show_frame("models"))
+        self.btn_models.grid(row=3, column=0, padx=20, pady=10)
+        
+        self.btn_settings = ctk.CTkButton(self.sidebar, text="Settings", command=lambda: self.show_frame("settings"))
+        self.btn_settings.grid(row=4, column=0, padx=20, pady=10)
+
+        self.btn_exit = ctk.CTkButton(self.sidebar, text="Exit", fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"), command=self.destroy)
+        self.btn_exit.grid(row=6, column=0, padx=20, pady=20)
+
+        # Content Area
+        self.content = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.content.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+
+        # Init Frames
+        self.frames = {}
+        self.setup_overview_frame()
+        self.setup_install_frame()
+        self.setup_models_frame()
+        self.setup_settings_frame()
+
+        self.show_frame("overview")
+        
+        # Start Metrics Thread
+        self.update_metrics()
+
+    def show_frame(self, name):
+        # Hide all
+        for frame in self.frames.values():
+            frame.pack_forget()
+        # Show selected
+        self.frames[name].pack(fill="both", expand=True)
+
+    # --- Overview Tab ---
+    def setup_overview_frame(self):
+        frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        self.frames["overview"] = frame
+
+        # Status Banner
+        self.status_label = ctk.CTkLabel(frame, text="Checking status...", font=ctk.CTkFont(size=16))
+        self.status_label.pack(pady=10, anchor="w")
+
+        # Metrics
+        self.metrics_frame = ctk.CTkFrame(frame)
+        self.metrics_frame.pack(fill="x", pady=10)
+        
+        ctk.CTkLabel(self.metrics_frame, text="System Metrics").pack(pady=5)
+        
+        self.cpu_bar = ctk.CTkProgressBar(self.metrics_frame)
+        self.cpu_bar.pack(fill="x", padx=10, pady=5)
+        self.cpu_label = ctk.CTkLabel(self.metrics_frame, text="CPU: 0%")
+        self.cpu_label.pack(anchor="e", padx=10)
+
+        self.ram_bar = ctk.CTkProgressBar(self.metrics_frame)
+        self.ram_bar.set(0)
+        self.ram_bar.pack(fill="x", padx=10, pady=5)
+        self.ram_label = ctk.CTkLabel(self.metrics_frame, text="RAM: 0%")
+        self.ram_label.pack(anchor="e", padx=10)
+
+        # Launch Button
+        self.btn_launch = ctk.CTkButton(frame, text="🚀 Launch ComfyUI", height=50, font=ctk.CTkFont(size=18), command=self.launch_comfyui)
+        self.btn_launch.pack(pady=30, fill="x")
+
+        self.btn_smoke = ctk.CTkButton(frame, text="🧪 Run Smoke Test", fg_color="gray", command=self.run_smoke_test)
+        self.btn_smoke.pack(pady=5, fill="x")
+
+    def update_metrics(self):
+        try:
+            cpu = psutil.cpu_percent() / 100
+            ram = psutil.virtual_memory().percent / 100
+            self.cpu_bar.set(cpu)
+            self.cpu_label.configure(text=f"CPU: {int(cpu*100)}%")
+            self.ram_bar.set(ram)
+            self.ram_label.configure(text=f"RAM: {int(ram*100)}%")
+            
+            # Status Check
+            if Logic.is_installed():
+                self.status_label.configure(text=f"✅ ComfyUI Installed at: {INSTALL_DIR}", text_color="green")
+                self.btn_launch.configure(state="normal")
+            else:
+                self.status_label.configure(text=f"❌ ComfyUI Not Found at: {INSTALL_DIR}", text_color="red")
+                self.btn_launch.configure(state="disabled")
+                
+        except: pass
+        self.after(2000, self.update_metrics)
+
+    # --- Install Tab ---
+    def setup_install_frame(self):
+        frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        self.frames["install"] = frame
+
+        controls = ctk.CTkFrame(frame)
+        controls.pack(fill="x", pady=10)
+
+        ctk.CTkButton(controls, text="Install (Clean)", command=self.do_install).pack(side="left", padx=5, expand=True, fill="x")
+        ctk.CTkButton(controls, text="Update (Git Pull)", command=self.do_update).pack(side="left", padx=5, expand=True, fill="x")
+        ctk.CTkButton(controls, text="Install Node.js", fg_color="orange", command=self.do_install_node).pack(side="left", padx=5, expand=True, fill="x")
+
+        # Console Log
+        self.console_log = ctk.CTkTextbox(frame, font=("Consolas", 12))
+        self.console_log.pack(fill="both", expand=True, pady=10)
+        self.log("Ready for tasks.")
+
+    def log(self, message):
+        self.console_log.insert("end", str(message) + "\n")
+        self.console_log.see("end")
+
+    def run_thread(self, target):
+        threading.Thread(target=target, daemon=True).start()
+
+    # --- Model Browser Tab ---
+    def setup_models_frame(self):
+        frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        self.frames["models"] = frame
+
+        ctk.CTkLabel(frame, text="Installed Models (Checkpoints)", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w")
+
+        self.model_list = ctk.CTkTextbox(frame, state="disabled")
+        self.model_list.pack(fill="both", expand=True, pady=10)
+        
+        ctk.CTkButton(frame, text="Refresh List", command=self.refresh_models).pack(pady=5)
+        ctk.CTkButton(frame, text="Open Models Folder", command=lambda: Logic.open_folder(os.path.join(INSTALL_DIR, "models"))).pack(pady=5)
+
+    def refresh_models(self):
+        self.model_list.configure(state="normal")
+        self.model_list.delete("0.0", "end")
+        
+        ckpt_path = os.path.join(INSTALL_DIR, "models", "checkpoints")
+        if not os.path.exists(ckpt_path):
+            self.model_list.insert("end", "Models folder not found.\n")
+        else:
+            files = os.listdir(ckpt_path)
+            if not files: self.model_list.insert("end", "No checkpoints found.\n")
+            for f in files:
+                if f.endswith((".safetensors", ".ckpt")):
+                    size_mb = os.path.getsize(os.path.join(ckpt_path, f)) / (1024 * 1024)
+                    self.model_list.insert("end", f"• {f}  ({int(size_mb)} MB)\n")
+        
+        self.model_list.configure(state="disabled")
+
+    # --- Settings Tab ---
+    def setup_settings_frame(self):
+        frame = ctk.CTkFrame(self.content, fg_color="transparent")
+        self.frames["settings"] = frame
+        
+        ctk.CTkLabel(frame, text="Installation Path").pack(anchor="w")
+        
+        self.path_entry = ctk.CTkEntry(frame)
+        self.path_entry.insert(0, INSTALL_DIR)
+        self.path_entry.pack(fill="x", pady=5)
+        
+        ctk.CTkButton(frame, text="Browse...", command=self.browse_path).pack(anchor="e", pady=5)
+        ctk.CTkButton(frame, text="Save Config", command=self.save_settings, fg_color="green").pack(pady=20)
+
+    def browse_path(self):
+        path = filedialog.askdirectory(initialdir=INSTALL_DIR)
+        if path:
+            self.path_entry.delete(0, "end")
+            self.path_entry.insert(0, path)
+
+    def save_settings(self):
+        global INSTALL_DIR
+        new_path = self.path_entry.get()
         CONFIG["install_path"] = new_path
         save_config(CONFIG)
         INSTALL_DIR = new_path
-        CONSOLE.print(f"[green]Path updated to: {INSTALL_DIR}[/]")
-        time.sleep(1)
-    else:
-        CONSOLE.print("[yellow]Selection cancelled.[/]")
-        time.sleep(1)
+        self.log(f"Path updated to: {INSTALL_DIR}")
 
-def install_node():
-    CONSOLE.print(Panel("[bold cyan]Installing Node.js...[/]", title="Node.js Setup"))
-    if shutil.which("node"):
-        CONSOLE.print("[green]Node.js is already installed![/]"); time.sleep(1); return
-
-    if IS_MAC: run_cmd(["brew", "install", "node"])
-    elif IS_WINDOWS: run_cmd(["winget", "install", "-e", "--id", "OpenJS.NodeJS"])
-    else: CONSOLE.print("[yellow]Please install 'nodejs' via your package manager.[/]")
-    time.sleep(2)
-
-def install_torch(progress_task, progress_obj):
-    pip_cmd = PlatformHandler.get_venv_pip()
-    cmd = [pip_cmd, "install", "torch", "torchvision", "torchaudio"]
-    
-    if IS_WINDOWS or OS_SYSTEM == "Linux":
-        if PlatformHandler.has_nvidia_gpu():
-            progress_obj.update(progress_task, description="[cyan]GPU Detected. Installing CUDA 12.1 Torch...[/]")
-            cmd.extend(["--index-url", "https://download.pytorch.org/whl/cu121"])
-        else:
-            progress_obj.update(progress_task, description="[yellow]No GPU. Installing CPU Torch...[/]")
-    elif IS_MAC:
-        progress_obj.update(progress_task, description="[cyan]macOS. Installing MPS Torch...[/]")
-    
-    run_cmd(cmd, cwd=INSTALL_DIR)
-
-def run_installation():
-    CONSOLE.clear()
-    CONSOLE.print(Panel("[bold green]Installing ComfyUI...[/]", title="Installer"))
-    
-    if os.path.exists(INSTALL_DIR) and os.listdir(INSTALL_DIR):
-        if not Confirm.ask(f"[red]Folder '{INSTALL_DIR}' is not empty. Continue?[/]"): return
-
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), BarColumn(), TextColumn("{task.percentage:>3.0f}%")) as progress:
-        task = progress.add_task("[cyan]Cloning Repo...", total=100)
+    # --- Actions ---
+    def launch_comfyui(self):
+        if not Logic.is_installed(): return
+        args = ["--auto-launch"]
+        if platform.system() == "Darwin": args.append("--force-fp16")
         
-        if not os.path.exists(INSTALL_DIR): run_cmd(["git", "clone", REPO_URL, INSTALL_DIR])
-        progress.update(task, completed=25, description="[cyan]Creating Venv...")
-        
-        run_cmd([sys.executable, "-m", "venv", "venv"], cwd=INSTALL_DIR)
-        progress.update(task, completed=50, description="[cyan]Installing Dependencies...")
-        
-        run_cmd([PlatformHandler.get_venv_pip(), "install", "--upgrade", "pip"], cwd=INSTALL_DIR)
-        install_torch(task, progress)
-        run_cmd([PlatformHandler.get_venv_pip(), "install", "-r", "requirements.txt"], cwd=INSTALL_DIR)
-        
-        progress.update(task, completed=75, description="[cyan]Installing Manager...")
-        custom_nodes = os.path.join(INSTALL_DIR, "custom_nodes")
-        os.makedirs(custom_nodes, exist_ok=True)
-        run_cmd(["git", "clone", MANAGER_URL], cwd=custom_nodes)
-        progress.update(task, completed=100)
+        subprocess.Popen([Logic.get_venv_python(), "main.py"] + args, cwd=INSTALL_DIR)
+        self.log("ComfyUI Launched!")
 
-    CONSOLE.print("[bold green]Install Complete![/]"); time.sleep(2)
-
-def update_comfyui():
-    CONSOLE.clear()
-    CONSOLE.print(Panel("[bold yellow]Updating ComfyUI...[/]", title="Updater"))
-    if not is_installed(): CONSOLE.print("[red]Not installed![/]"); time.sleep(2); return
-
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), BarColumn(), TextColumn("{task.percentage:>3.0f}%")) as progress:
-        task = progress.add_task("[cyan]Git Pull...", total=100)
-        run_cmd(["git", "pull"], cwd=INSTALL_DIR)
-        progress.update(task, completed=50, description="[cyan]Updating Deps...")
-        run_cmd([PlatformHandler.get_venv_pip(), "install", "-r", "requirements.txt"], cwd=INSTALL_DIR)
-        progress.update(task, completed=100)
-        
-    CONSOLE.print("[bold green]Update Complete![/]"); time.sleep(2)
-
-def smoke_test():
-    CONSOLE.clear()
-    CONSOLE.print(Panel("[bold cyan]Running Smoke Test...[/]", title="Diagnostics"))
-    if not is_installed(): CONSOLE.print("[red]Not installed.[/]"); time.sleep(1); return
-
-    python_exec = PlatformHandler.get_venv_python()
-    CONSOLE.print("[dim]Starting server on port 8199 (test mode)...[/]")
-    cmd = [python_exec, "main.py", "--port", "8199", "--cpu"]
-    
-    try:
-        proc = subprocess.Popen(cmd, cwd=INSTALL_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        import urllib.request
-        success = False
-        for i in range(15):
-            time.sleep(1)
+    def run_smoke_test(self):
+        self.log("Starting Smoke Test...")
+        def _test():
             try:
-                if urllib.request.urlopen("http://127.0.0.1:8199").getcode() == 200: success = True; break
-            except: pass
-        proc.terminate()
-        
-        if success: CONSOLE.print(Panel("[bold green]PASS: Server responded![/]", border_style="green"))
-        else: CONSOLE.print(Panel("[bold red]FAIL: No response.[/]", border_style="red"))
-    except Exception as e: CONSOLE.print(f"[bold red]Error: {e}[/]")
-    Prompt.ask("Press Enter to return")
+                proc = subprocess.Popen([Logic.get_venv_python(), "main.py", "--port", "8199", "--cpu"], cwd=INSTALL_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                import urllib.request
+                success = False
+                for _ in range(15):
+                    time.sleep(1)
+                    try:
+                        if urllib.request.urlopen("http://127.0.0.1:8199").getcode() == 200: success = True; break
+                    except: pass
+                proc.terminate()
+                self.log("Smoke Test Passed: ✅" if success else "Smoke Test Failed: ❌")
+            except Exception as e: self.log(f"Test Error: {e}")
+        self.run_thread(_test)
 
-def launch_app():
-    if not is_installed(): CONSOLE.print("[red]Not installed![/]"); time.sleep(1); return
-    args = ["--auto-launch"]
-    if IS_MAC: args.append("--force-fp16")
-    subprocess.Popen([PlatformHandler.get_venv_python(), "main.py"] + args, cwd=INSTALL_DIR)
-    CONSOLE.print("[green]Launched![/]"); time.sleep(2)
+    def do_install(self):
+        def _install():
+            self.log("Cloning Repo...")
+            if not os.path.exists(INSTALL_DIR):
+                subprocess.call(["git", "clone", REPO_URL, INSTALL_DIR])
+            
+            self.log("Creating Venv...")
+            subprocess.call([sys.executable, "-m", "venv", "venv"], cwd=INSTALL_DIR)
+            
+            self.log("Installing Deps (this may take time)...")
+            pip = Logic.get_venv_pip()
+            subprocess.call([pip, "install", "--upgrade", "pip"], cwd=INSTALL_DIR)
+            subprocess.call([pip, "install", "torch", "torchvision", "torchaudio"], cwd=INSTALL_DIR)
+            subprocess.call([pip, "install", "-r", "requirements.txt"], cwd=INSTALL_DIR)
+            
+            self.log("Done!")
+        self.run_thread(_install)
 
-# --- UI Layout ---
-def main():
-    while True:
-        layout = Layout()
-        layout.split_column(Layout(name="header", size=3), Layout(name="stats", size=6), Layout(name="menu"))
+    def do_update(self):
+        def _update():
+            self.log("Git Pulling...")
+            subprocess.call(["git", "pull"], cwd=INSTALL_DIR)
+            self.log("Updating Requirements...")
+            subprocess.call([Logic.get_venv_pip(), "install", "-r", "requirements.txt"], cwd=INSTALL_DIR)
+            self.log("Updated.")
+        self.run_thread(_update)
 
-        grid = Table.grid(expand=True)
-        grid.add_column(justify="left"); grid.add_column(justify="right")
-        grid.add_row("[b magenta]ComfyUI Universal Dashboard[/b magenta]", f"[dim]{OS_SYSTEM}[/dim]")
-        layout["header"].update(Panel(grid, style="white on blue"))
-
-        cpu, ram, disk = get_system_metrics()
-        health = check_health()
-        t_stats = Table(expand=True, box=None)
-        t_stats.add_column("System Metrics", justify="center"); t_stats.add_column("Component Health", justify="center")
-        t_sys = Table(show_header=False, box=None)
-        t_sys.add_row("CPU", f"{cpu}%"); t_sys.add_row("RAM", f"{ram}%"); t_sys.add_row("Disk", f"{disk}%")
-        t_hlth = Table(show_header=False, box=None)
-        t_hlth.add_row("Install Path", health["Path"]); t_hlth.add_row("ComfyUI", health["ComfyUI"]); t_hlth.add_row("Node.js", health["Node.js"])
-        t_stats.add_row(t_sys, t_hlth)
-        layout["stats"].update(Panel(t_stats, title="Overview", border_style="blue"))
-
-        menu_grid = Table(expand=True, box=None, show_header=True)
-        menu_grid.add_column("Installation", style="cyan"); menu_grid.add_column("Management", style="yellow"); menu_grid.add_column("System", style="white")
-        menu_grid.add_row("[1] Install (Clean)", "[3] Install Node.js", "[5] Open Folder")
-        menu_grid.add_row("[2] Update (Git Pull)", "[4] Smoke Test", "[6] Settings (Change Path)")
-        menu_grid.add_row("", "", "[7] Launch ComfyUI")
-        layout["menu"].update(Panel(menu_grid, title="Actions", border_style="white"))
-        
-        CONSOLE.clear(); CONSOLE.print(layout)
-        choice = Prompt.ask("Select Option", choices=["1", "2", "3", "4", "5", "6", "7", "q", "Q"], default="q")
-        
-        if choice.lower() == "q": break
-        if choice == "1": run_installation()
-        if choice == "2": update_comfyui()
-        if choice == "3": install_node()
-        if choice == "4": smoke_test()
-        if choice == "5": PlatformHandler.open_folder(INSTALL_DIR)
-        if choice == "6": change_install_path()
-        if choice == "7": launch_app()
+    def do_install_node(self):
+        def _node():
+            self.log("Installing Node.js...")
+            if platform.system() == "Darwin": subprocess.call(["brew", "install", "node"])
+            elif platform.system() == "Windows": subprocess.call(["winget", "install", "-e", "--id", "OpenJS.NodeJS"])
+            self.log("Node Install command finished. Restart app to verify.")
+        self.run_thread(_node)
 
 if __name__ == "__main__":
-    try: main()
-    except KeyboardInterrupt: pass
+    app = DashboardApp()
+    app.mainloop()

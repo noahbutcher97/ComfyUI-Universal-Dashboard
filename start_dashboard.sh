@@ -13,7 +13,7 @@ OS_TYPE="$(uname)"
 if [ "$OS_TYPE" == "Darwin" ]; then
     # macOS: Use Homebrew
     if ! command -v brew &> /dev/null; then
-        echo "Installing Homebrew (Required for macOS dependencies)..."
+        echo "Installing Homebrew..."
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         ARCH_NAME="$(uname -m)"
         if [[ "$ARCH_NAME" == "arm64" ]]; then
@@ -24,29 +24,24 @@ if [ "$OS_TYPE" == "Darwin" ]; then
     fi
     
     if ! command -v python3 &> /dev/null; then
-        echo "Installing Python 3.10..."
         brew install python@3.10
     fi
+    
+    # Install standard tkinter if missing (mac usually has it, but good to ensure)
+    brew install python-tk@3.10 2>/dev/null
 
 elif [ "$OS_TYPE" == "Linux" ]; then
-    # Linux: Check for Python
     if ! command -v python3 &> /dev/null; then
         echo "Python3 not found. Please install python3-venv and python3-pip."
         exit 1
     fi
-    
-    # Check for Tkinter (Required for GUI Picker)
+    # Check for Tkinter
     python3 -c "import tkinter" >/dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo "Missing 'tkinter'. Installing..."
-        if command -v apt &> /dev/null; then
-            sudo apt update && sudo apt install -y python3-tk
-        elif command -v pacman &> /dev/null; then
-            sudo pacman -S --noconfirm tk
-        elif command -v dnf &> /dev/null; then
-            sudo dnf install -y python3-tkinter
-        else
-            echo "Please install python3-tk manually."
+        if command -v apt &> /dev/null; then sudo apt update && sudo apt install -y python3-tk
+        elif command -v pacman &> /dev/null; then sudo pacman -S --noconfirm tk
+        elif command -v dnf &> /dev/null; then sudo dnf install -y python3-tkinter
         fi
     fi
 fi
@@ -64,7 +59,8 @@ fi
 source "$DASHBOARD_DIR/venv/bin/activate"
 
 # --- Install & Run ---
-pip install rich psutil >/dev/null 2>&1
+# Install customtkinter instead of rich
+pip install customtkinter psutil >/dev/null 2>&1
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 python3 "$SCRIPT_DIR/dashboard.py"

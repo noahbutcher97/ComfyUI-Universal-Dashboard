@@ -10,8 +10,7 @@ ECHO ========================================================
 python --version >nul 2>&1
 IF %ERRORLEVEL% NEQ 0 (
     ECHO [ERROR] Python is not installed or not in PATH.
-    ECHO Please install Python 3.10+ from python.org and try again.
-    ECHO Make sure to check "Add Python to PATH" during installation.
+    ECHO Please install Python 3.10+ from python.org.
     PAUSE
     EXIT /B 1
 )
@@ -27,10 +26,8 @@ IF NOT EXIST "%DASH_DIR%\venv" (
 
 :: 3. Install Dependencies
 ECHO [INIT] Checking dependencies...
-"%DASH_DIR%\venv\Scripts\pip.exe" install rich psutil >nul 2>&1
+"%DASH_DIR%\venv\Scripts\pip.exe" install customtkinter psutil >nul 2>&1
 
 :: 4. Run Dashboard
 ECHO [INFO] Launching Dashboard...
 "%DASH_DIR%\venv\Scripts\python.exe" dashboard.py
-
-PAUSE
