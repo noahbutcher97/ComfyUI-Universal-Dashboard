@@ -60,8 +60,11 @@ class DevService:
         tool = DevService.CLI_MAP.get(tool_name)
         if not tool: return False
         
-        # Strategy for NPM packages
+        # SAFETY CHECK: If it's an NPM tool, ensure NPM exists first
         if tool["type"] == "npm":
+            if not DevService.is_npm_installed():
+                return False # Cannot be installed if npm is missing
+            
             # Check binary first
             if "bin" in tool and shutil.which(tool["bin"]): return True
             # Then check global npm list
@@ -89,6 +92,10 @@ class DevService:
     def install_tool(tool_name, scope="user"):
         tool = DevService.CLI_MAP.get(tool_name)
         if not tool: return ["echo", f"Unknown tool: {tool_name}"]
+
+        # SAFETY CHECK: Prevent generating install cmds if runtime missing
+        if tool["type"] == "npm" and not DevService.is_npm_installed():
+            return ["echo", f"Error: Cannot install {tool_name}. NPM is missing."]
 
         cmd = list(tool["cmd"])
         if tool["type"] == "npm":
@@ -131,16 +138,16 @@ class ComfyService:
         if answers["style"] == "Photorealistic":
             if model_tier == "flux": recipe["checkpoints"].append(("Flux1-Dev", "https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/flux1-dev.safetensors"))
             elif model_tier == "sdxl": recipe["checkpoints"].append(("Juggernaut XL", "https://civitai.com/api/download/models/JuggernautXL"))
-            else: recipe["checkpoints"].append(("Realistic Vision 6", "https://civitai.com/api/download/models/RealisticVision")
+            else: recipe["checkpoints"].append(("Realistic Vision 6", "https://civitai.com/api/download/models/RealisticVision"))
             
         elif answers["style"] == "Anime":
             if model_tier in ["sdxl", "flux"]: recipe["checkpoints"].append(("Pony Diffusion V6 XL", "https://civitai.com/api/download/models/PonyDiffusion"))
-            else: recipe["checkpoints"].append(("Anything V5", "https://civitai.com/api/download/models/AnythingV5")
+            else: recipe["checkpoints"].append(("Anything V5", "https://civitai.com/api/download/models/AnythingV5"))
             
         else: # General
             if model_tier == "flux": recipe["checkpoints"].append(("Flux1-Schnell", "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/flux1-schnell.safetensors"))
             elif model_tier == "sdxl": recipe["checkpoints"].append(("SDXL Base 1.0", "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors"))
-            else: recipe["checkpoints"].append(("SD 1.5 Pruned", "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors")
+            else: recipe["checkpoints"].append(("SD 1.5 Pruned", "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors"))
 
         if answers["media"] == "Video" or answers["media"] == "Mixed":
             recipe["custom_nodes"].append("https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved.git")
@@ -217,10 +224,10 @@ class App(ctk.CTk):
         node_frame = ctk.CTkFrame(frame); node_frame.pack(fill="x", pady=10)
         ctk.CTkLabel(node_frame, text="Runtime Environment", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=5)
         
-        # Node/NPM/NPX Status Row
         status_row = ctk.CTkFrame(node_frame, fg_color="transparent"); status_row.pack(fill="x", padx=10, pady=10)
+        node_inst = DevService.is_node_installed()
         
-        node_stat = "✅ node" if DevService.is_node_installed() else "❌ node"
+        node_stat = "✅ node" if node_inst else "❌ node"
         npm_stat = "✅ npm" if DevService.is_npm_installed() else "❌ npm"
         npx_stat = "✅ npx" if DevService.is_npx_installed() else "❌ npx"
         
@@ -228,7 +235,7 @@ class App(ctk.CTk):
         ctk.CTkLabel(status_row, text=npm_stat).pack(side="left", padx=10)
         ctk.CTkLabel(status_row, text=npx_stat).pack(side="left", padx=10)
         
-        if not DevService.is_node_installed():
+        if not node_inst:
             ctk.CTkButton(node_frame, text="Install Node.js (LTS)", command=self.install_node).pack(side="right", padx=10, pady=5)
 
         # CLIs
@@ -236,19 +243,28 @@ class App(ctk.CTk):
         ctk.CTkLabel(cli_frame, text="AI Providers (CLI Tools)", font=("Arial", 14, "bold")).pack(anchor="w", padx=10, pady=5)
         
         self.cli_vars = {}
-        for tool in DevService.CLI_MAP.keys():
-            is_inst = DevService.is_installed(tool)
+        for tool_name, tool_data in DevService.CLI_MAP.items():
+            is_inst = DevService.is_installed(tool_name)
             row = ctk.CTkFrame(cli_frame, fg_color="transparent"); row.pack(fill="x", pady=2, padx=20)
             
             var = ctk.BooleanVar(value=is_inst)
-            chk = ctk.CTkCheckBox(row, text=tool, variable=var); chk.pack(side="left")
-            self.cli_vars[tool] = var
+            chk = ctk.CTkCheckBox(row, text=tool_name, variable=var)
+            chk.pack(side="left")
+            self.cli_vars[tool_name] = var
             
             if is_inst:
                 ctk.CTkLabel(row, text="✅ Installed", text_color="green", width=100).pack(side="left", padx=10)
                 chk.configure(state="disabled")
             else:
-                ctk.CTkLabel(row, text="Not Installed", text_color="gray", width=100).pack(side="left", padx=10)
+                status_txt = "Not Installed"
+                status_col = "gray"
+                # If dependency missing, show error
+                if tool_data["type"] == "npm" and not node_inst:
+                    status_txt = "Requires Node.js"
+                    status_col = "orange"
+                    chk.configure(state="disabled")
+                
+                ctk.CTkLabel(row, text=status_txt, text_color=status_col, width=120).pack(side="left", padx=10)
             
         opt_frame = ctk.CTkFrame(cli_frame, fg_color="transparent"); opt_frame.pack(fill="x", padx=10, pady=10)
         self.scope_var = ctk.StringVar(value="user")
