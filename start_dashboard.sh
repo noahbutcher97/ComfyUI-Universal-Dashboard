@@ -31,9 +31,23 @@ if [ "$OS_TYPE" == "Darwin" ]; then
 elif [ "$OS_TYPE" == "Linux" ]; then
     # Linux: Check for Python
     if ! command -v python3 &> /dev/null; then
-        echo "Python3 not found. Please install python3-venv and python3-pip using your package manager."
-        echo "Example: sudo apt install python3 python3-venv python3-pip git"
+        echo "Python3 not found. Please install python3-venv and python3-pip."
         exit 1
+    fi
+    
+    # Check for Tkinter (Required for GUI Picker)
+    python3 -c "import tkinter" >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Missing 'tkinter'. Installing..."
+        if command -v apt &> /dev/null; then
+            sudo apt update && sudo apt install -y python3-tk
+        elif command -v pacman &> /dev/null; then
+            sudo pacman -S --noconfirm tk
+        elif command -v dnf &> /dev/null; then
+            sudo dnf install -y python3-tkinter
+        else
+            echo "Please install python3-tk manually."
+        fi
     fi
 fi
 
