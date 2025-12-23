@@ -69,10 +69,13 @@ def is_installed():
     return os.path.exists(os.path.join(INSTALL_DIR, "main.py"))
 
 def check_health():
+    node_status = "Installed" if shutil.which("node") else "[bold red]Missing[/]"
+    
     health = {
         "OS": f"{OS_SYSTEM} {platform.release()}",
         "Python": f"{sys.version_info.major}.{sys.version_info.minor}",
         "Git": "Installed" if shutil.which("git") else "[bold red]Missing[/]",
+        "Node.js": node_status,
         "ComfyUI": "Installed" if is_installed() else "[yellow]Not Found[/]",
         "Venv": "OK" if os.path.exists(os.path.dirname(PlatformHandler.get_venv_python())) else "Missing"
     }
@@ -81,8 +84,6 @@ def check_health():
 def run_cmd(cmd_list, cwd=None, description=None):
     """Runs a command safely, hiding output unless error"""
     try:
-        # On Windows, shell=True is often needed for some cmds, but list args are safer
-        # We use list args and shell=False generally, unless it's a raw string
         subprocess.check_call(cmd_list, cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
     except subprocess.CalledProcessError:
@@ -92,6 +93,39 @@ def run_cmd(cmd_list, cwd=None, description=None):
 
 # --- Installation Logic ---
 
+def install_node():
+    CONSOLE.print(Panel("[bold cyan]Installing Node.js...[/]", title="Node.js Setup"))
+    
+    if shutil.which("node"):
+        CONSOLE.print("[green]Node.js is already installed![/]")
+        time.sleep(1)
+        return
+
+    if IS_MAC:
+        CONSOLE.print("[cyan]Using Homebrew to install Node.js...[/]")
+        if run_cmd(["brew", "install", "node"]):
+            CONSOLE.print("[bold green]Success![/]")
+        else:
+            CONSOLE.print("[bold red]Failed to install via Homebrew.[/]")
+    
+    elif IS_WINDOWS:
+        CONSOLE.print("[cyan]Attempting to install via Winget...[/]")
+        # Try winget (standard on modern Windows 10/11)
+        success = run_cmd(["winget", "install", "-e", "--id", "OpenJS.NodeJS"])
+        if success:
+            CONSOLE.print("[bold green]Success! You may need to restart the dashboard to pick up the path.[/]")
+        else:
+            CONSOLE.print("[yellow]Winget failed or is not available.[/]")
+            if Confirm.ask("Open Node.js download page?"):
+                webbrowser.open("https://nodejs.org/")
+    
+    else: # Linux
+        CONSOLE.print("[yellow]Please install Node.js using your package manager.[/]")
+        CONSOLE.print("Debian/Ubuntu: [bold]sudo apt install nodejs npm[/]")
+        CONSOLE.print("Arch: [bold]sudo pacman -S nodejs npm[/]")
+    
+    time.sleep(2)
+
 def install_torch(progress_task, progress_obj):
     pip_cmd = PlatformHandler.get_venv_pip()
     
@@ -100,17 +134,13 @@ def install_torch(progress_task, progress_obj):
     
     if IS_WINDOWS or OS_SYSTEM == "Linux":
         if PlatformHandler.has_nvidia_gpu():
-            # CUDA 12.1 is standard for modern ComfyUI
             progress_obj.update(progress_task, description="[cyan]Detected NVIDIA GPU. Installing CUDA Torch...[/]")
             cmd.extend(["--index-url", "https://download.pytorch.org/whl/cu121"])
         else:
             progress_obj.update(progress_task, description="[yellow]No NVIDIA GPU detected. Installing CPU Torch...[/]")
-            # Standard install usually defaults to CPU or basic CUDA, but explicit CPU is safer if no GPU
-            # But let's stick to standard to allow possible AMD support if configured later
             pass 
     elif IS_MAC:
         progress_obj.update(progress_task, description="[cyan]macOS Detected. Installing MPS-ready Torch...[/]")
-        # Standard pip install is fine for Mac ARM64 now
     
     run_cmd(cmd, cwd=INSTALL_DIR)
 
@@ -144,7 +174,7 @@ def install_comfyui():
         pip_cmd = PlatformHandler.get_venv_pip()
         
         run_cmd([pip_cmd, "install", "--upgrade", "pip"], cwd=INSTALL_DIR)
-        install_torch(task3, progress) # Handle GPU logic
+        install_torch(task3, progress)
         
         progress.update(task3, description="[cyan]Installing requirements.txt...", advance=50)
         run_cmd([pip_cmd, "install", "-r", "requirements.txt"], cwd=INSTALL_DIR)
@@ -159,6 +189,12 @@ def install_comfyui():
         progress.update(task4, completed=100)
 
     CONSOLE.print("[bold green]Installation Complete![/]")
+    
+    # Check Node.js
+    if not shutil.which("node"):
+        if Confirm.ask("Node.js is missing. Install it now?"):
+            install_node()
+
     time.sleep(2)
 
 def smoke_test():
@@ -173,8 +209,7 @@ def smoke_test():
     python_exec = PlatformHandler.get_venv_python()
     CONSOLE.print("[dim]Attempting to start server on port 8199 (test mode)...[/]")
     
-    # We use a non-standard port to avoid conflicts
-    cmd = [python_exec, "main.py", "--port", "8199", "--cpu"] # Force CPU for quick test stability
+    cmd = [python_exec, "main.py", "--port", "8199", "--cpu"]
     
     try:
         proc = subprocess.Popen(
@@ -217,14 +252,12 @@ def launch_app():
     python_exec = PlatformHandler.get_venv_python()
     CONSOLE.print("[green]Launching ComfyUI...[/]")
     
-    # Arguments
     args = ["--auto-launch"]
     if IS_MAC:
-        args.append("--force-fp16") # Optimization for Mac
+        args.append("--force-fp16")
     
     cmd = [python_exec, "main.py"] + args
     
-    # Launch and let go
     subprocess.Popen(cmd, cwd=INSTALL_DIR)
     CONSOLE.print("[dim]ComfyUI is running in the background.[/]")
     time.sleep(2)
@@ -275,7 +308,7 @@ def main():
         # Menu
         t_menu = Table(show_header=False, expand=True, box=None)
         t_menu.add_row("[1] Install / Update", "[3] Smoke Test", "[5] Launch ComfyUI")
-        t_menu.add_row("[2] Download Models", "[4] Open Folder", "[Q] Quit")
+        t_menu.add_row("[2] Install Node.js", "[4] Open Folder", "[Q] Quit")
         layout["footer"].update(Panel(t_menu, title="Actions", border_style="white"))
         
         CONSOLE.clear()
@@ -287,6 +320,8 @@ def main():
             break
         elif choice == "1":
             install_comfyui()
+        elif choice == "2":
+            install_node()
         elif choice == "3":
             smoke_test()
         elif choice == "5":
