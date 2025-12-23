@@ -26,8 +26,6 @@ if [ "$OS_TYPE" == "Darwin" ]; then
     if ! command -v python3 &> /dev/null; then
         brew install python@3.10
     fi
-    
-    # Install standard tkinter if missing (mac usually has it, but good to ensure)
     brew install python-tk@3.10 2>/dev/null
 
 elif [ "$OS_TYPE" == "Linux" ]; then
@@ -35,7 +33,6 @@ elif [ "$OS_TYPE" == "Linux" ]; then
         echo "Python3 not found. Please install python3-venv and python3-pip."
         exit 1
     fi
-    # Check for Tkinter
     python3 -c "import tkinter" >/dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo "Missing 'tkinter'. Installing..."
@@ -59,8 +56,17 @@ fi
 source "$DASHBOARD_DIR/venv/bin/activate"
 
 # --- Install & Run ---
-# Install customtkinter instead of rich
 pip install customtkinter psutil >/dev/null 2>&1
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 python3 "$SCRIPT_DIR/dashboard.py"
+
+# --- Error Catch ---
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+    echo ""
+    echo "========================================================"
+    echo "ERROR: Dashboard crashed with exit code $EXIT_CODE"
+    echo "========================================================"
+    read -p "Press Enter to exit..."
+fi

@@ -28,6 +28,13 @@ IF NOT EXIST "%DASH_DIR%\venv" (
 ECHO [INIT] Checking dependencies...
 "%DASH_DIR%\venv\Scripts\pip.exe" install customtkinter psutil >nul 2>&1
 
-:: 4. Run Dashboard
+:: 4. Run Dashboard with strict Pause on Error
 ECHO [INFO] Launching Dashboard...
 "%DASH_DIR%\venv\Scripts\python.exe" dashboard.py
+
+:: 5. Pause if python exited with error
+IF %ERRORLEVEL% NEQ 0 (
+    ECHO.
+    ECHO [ERROR] Dashboard exited with error code %ERRORLEVEL%.
+    PAUSE
+)
