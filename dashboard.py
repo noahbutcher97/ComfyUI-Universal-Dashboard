@@ -84,7 +84,6 @@ def get_system_metrics():
     try:
         cpu = psutil.cpu_percent(interval=None)
         memory = psutil.virtual_memory().percent
-        # FIX: Ensure dot is present
         disk = psutil.disk_usage(INSTALL_DIR if os.path.exists(INSTALL_DIR) else os.path.expanduser("~")).percent
         return cpu, memory, disk
     except:
@@ -115,24 +114,24 @@ def run_cmd(cmd_list, cwd=None):
 # --- Actions ---
 
 def change_install_path():
+    global INSTALL_DIR  # FIXED: Declared global at the start of the function
     CONSOLE.print(Panel("[bold cyan]Configure Installation Path[/]", title="Settings"))
     CONSOLE.print(f"Current Path: [blue]{INSTALL_DIR}[/blue]")
     CONSOLE.print("\nEnter the full path to your ComfyUI folder (or where you want to install it).")
-    CONSOLE.print("[dim]Example: D:\\AI\\ComfyUI[/]")
+    CONSOLE.print("[dim]Example: D:\\AI\\ComfyUI[/dim]")
     
     new_path = Prompt.ask("New Path").strip().strip('"') # Remove quotes if user pasted path
     if new_path:
         CONFIG["install_path"] = new_path
         save_config(CONFIG)
-        global INSTALL_DIR
         INSTALL_DIR = new_path
-        CONSOLE.print("[green]Path updated! Reloading...[/]")
+        CONSOLE.print("[green]Path updated! Reloading...[/green]")
         time.sleep(1)
 
 def install_node():
     CONSOLE.print(Panel("[bold cyan]Installing Node.js...[/]", title="Node.js Setup"))
     if shutil.which("node"):
-        CONSOLE.print("[green]Node.js is already installed![/]")
+        CONSOLE.print("[green]Node.js is already installed![/green]")
         time.sleep(1); return
 
     if IS_MAC:
@@ -140,7 +139,7 @@ def install_node():
     elif IS_WINDOWS:
         run_cmd(["winget", "install", "-e", "--id", "OpenJS.NodeJS"])
     else:
-        CONSOLE.print("[yellow]Please install 'nodejs' and 'npm' via your package manager.[/]")
+        CONSOLE.print("[yellow]Please install 'nodejs' and 'npm' via your package manager.[/yellow]")
     time.sleep(2)
 
 def install_torch(progress_task, progress_obj):
@@ -152,7 +151,7 @@ def install_torch(progress_task, progress_obj):
             progress_obj.update(progress_task, description="[cyan]GPU Detected. Installing CUDA 12.1 Torch...[/]")
             cmd.extend(["--index-url", "https://download.pytorch.org/whl/cu121"])
         else:
-            progress_obj.update(progress_task, description="[yellow]No GPU. Installing CPU Torch...[/]")
+            progress_obj.update(progress_task, description="[yellow]No GPU. Installing CPU Torch...[/yellow]")
     elif IS_MAC:
         progress_obj.update(progress_task, description="[cyan]macOS. Installing MPS Torch...[/]")
     
@@ -220,7 +219,7 @@ def smoke_test():
         time.sleep(1); return
 
     python_exec = PlatformHandler.get_venv_python()
-    CONSOLE.print("[dim]Starting server on port 8199 (test mode)...[/]")
+    CONSOLE.print("[dim]Starting server on port 8199 (test mode)...[/dim]")
     
     cmd = [python_exec, "main.py", "--port", "8199", "--cpu"]
     
@@ -233,7 +232,8 @@ def smoke_test():
             try:
                 if urllib.request.urlopen("http://127.0.0.1:8199").getcode() == 200:
                     success = True; break
-            except: pass
+            except:
+                pass
         proc.terminate()
         
         if success: CONSOLE.print(Panel("[bold green]PASS: Server responded![/]"), border_style="green")
