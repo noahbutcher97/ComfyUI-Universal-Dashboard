@@ -43,10 +43,10 @@ if [ ! -d "$DASH_ENV/venv" ]; then
 fi
 
 source "$DASH_ENV/venv/bin/activate"
-pip install customtkinter psutil requests >/dev/null 2>&1
+pip install customtkinter psutil requests keyring >/dev/null 2>&1
 
 # Launch
-python3 "$ROOT_DIR/src/dashboard.py"
+python3 "$ROOT_DIR/src/main.py"
 
 EXIT_CODE=$?
 if [ $EXIT_CODE -ne 0 ]; then
