@@ -8,6 +8,7 @@ import sys
 from src.config.manager import config_manager
 from src.services.comfy_service import ComfyService
 from src.services.system_service import SystemService
+from src.ui.components.tooltip import ToolTip
 
 class ComfyUIFrame(ctk.CTkFrame):
     def __init__(self, master, app):
@@ -53,10 +54,31 @@ class ComfyUIFrame(ctk.CTkFrame):
     def open_wizard(self):
         win = ctk.CTkToplevel(self)
         win.title("Setup Wizard")
-        win.geometry("600x700")
+        win.geometry("600x750")
         
         gpu, vram = SystemService.get_gpu_info()
         ctk.CTkLabel(win, text=f"Detected: {gpu} ({vram} GB)", text_color="yellow").pack(pady=10)
+        
+        # --- Persona Presets ---
+        ctk.CTkLabel(win, text="Quick Presets (Personas)", font=("Arial", 14, "bold")).pack(anchor="w", padx=20, pady=(10, 5))
+        persona_frame = ctk.CTkFrame(win, fg_color="transparent")
+        persona_frame.pack(fill="x", padx=20)
+        
+        def apply_persona(style, media, consist, edit):
+            style_var.set(style)
+            media_var.set(media)
+            consist_var.set(consist)
+            edit_var.set(edit)
+            
+        ctk.CTkButton(persona_frame, text="📸 Photographer", width=130, 
+                      command=lambda: apply_persona("Photorealistic", "Image", False, True)).pack(side="left", padx=5)
+        ctk.CTkButton(persona_frame, text="🎥 Animator", width=130, 
+                      command=lambda: apply_persona("Anime", "Video", True, True)).pack(side="left", padx=5)
+        ctk.CTkButton(persona_frame, text="🎨 Generalist", width=130, 
+                      command=lambda: apply_persona("General", "Mixed", True, True)).pack(side="left", padx=5)
+
+        # --- Manual Controls ---
+        ctk.CTkLabel(win, text="Custom Settings", font=("Arial", 14, "bold")).pack(anchor="w", padx=20, pady=(20, 5))
         
         ctk.CTkLabel(win, text="Art Style").pack(anchor="w", padx=20)
         style_var = ctk.StringVar(value="General")
@@ -67,10 +89,14 @@ class ComfyUIFrame(ctk.CTkFrame):
         ctk.CTkSegmentedButton(win, values=["Image", "Video", "Mixed"], variable=media_var).pack(fill="x", padx=20)
         
         consist_var = ctk.BooleanVar()
-        ctk.CTkCheckBox(win, text="Consistency (IPAdapter)", variable=consist_var).pack(anchor="w", padx=20, pady=10)
+        consist_chk = ctk.CTkCheckBox(win, text="Consistency (IPAdapter)", variable=consist_var)
+        consist_chk.pack(anchor="w", padx=20, pady=10)
+        ToolTip(consist_chk, "Maintains character/style consistency across multiple generations.")
         
         edit_var = ctk.BooleanVar()
-        ctk.CTkCheckBox(win, text="Editing (ControlNet)", variable=edit_var).pack(anchor="w", padx=20, pady=5)
+        edit_chk = ctk.CTkCheckBox(win, text="Editing (ControlNet)", variable=edit_var)
+        edit_chk.pack(anchor="w", padx=20, pady=5)
+        ToolTip(edit_chk, "Allows precise control over composition using pose, depth, or canny edges.")
         
         def review():
             ans = {
