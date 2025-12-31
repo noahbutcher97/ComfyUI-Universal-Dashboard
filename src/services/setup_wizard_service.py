@@ -76,12 +76,14 @@ class SetupWizardService:
                 items = ComfyService.generate_manifest(mod, install_path)
                 manifest.items.extend(items)
                 
-                # Add Shortcut
-                shortcut_tmpl = resources.get("modules", {}).get("comfyui", {}).get("shortcut_templates", {})
-                template = shortcut_tmpl.get(sys.platform, shortcut_tmpl.get("windows")) # Default to windows if logic fails? Or linux?
+                # Platform Mapping for Templates
+                if sys.platform == "win32":
+                    plat_key = "windows"
+                elif sys.platform == "darwin":
+                    plat_key = "darwin"
+                else:
+                    plat_key = "linux"
                 
-                # We need better platform key mapping: 'win32'->'windows', 'darwin'->'darwin', 'linux'->'linux'
-                plat_key = "windows" if sys.platform == "win32" else "darwin" if sys.platform == "darwin" else "linux"
                 template = shortcut_tmpl.get(plat_key)
                 
                 if template:
@@ -90,7 +92,7 @@ class SetupWizardService:
                     manifest.shortcuts.append({
                         "name": "ComfyUI Studio",
                         "command": cmd,
-                        "icon": "default" # TODO: Icon path
+                        "icon": "default"
                     })
                     
             elif mod.module_id == "cli_provider":
@@ -101,7 +103,7 @@ class SetupWizardService:
                     item_id=f"cli_{provider}",
                     item_type="npm" if "npm" in install_cmd[0] else "pip",
                     name=f"{mod.display_name} ({provider})",
-                    dest="", # Global or User
+                    dest="",
                     command=install_cmd
                 ))
                 
@@ -109,7 +111,14 @@ class SetupWizardService:
                 prov_conf = DevService.get_provider_config(provider)
                 bin_name = prov_conf.get("bin")
                 shortcut_tmpl = resources.get("modules", {}).get("cli_provider", {}).get("shortcut_templates", {})
-                plat_key = "windows" if sys.platform == "win32" else "darwin" if sys.platform == "darwin" else "linux"
+                
+                if sys.platform == "win32":
+                    plat_key = "windows"
+                elif sys.platform == "darwin":
+                    plat_key = "darwin"
+                else:
+                    plat_key = "linux"
+                
                 template = shortcut_tmpl.get(plat_key)
                 
                 if template and bin_name:
@@ -177,7 +186,8 @@ class SetupWizardService:
                     )
                     
                 elif item.item_type in ["npm", "pip"]:
-                    subprocess.check_call(item.command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    is_win = (sys.platform == "win32")
+                    subprocess.check_call(item.command, shell=is_win, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 
                 progress_callback(item.name, 1.0)
                 
