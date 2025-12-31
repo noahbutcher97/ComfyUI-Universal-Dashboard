@@ -41,24 +41,19 @@
           "display_name": "Claude (Anthropic)",
           "package": "@anthropic-ai/claude-code",
           "bin": "claude",
-          "capabilities": {
-            "coding": 0.95,
-            "creative_writing": 0.9,
-            "analysis": 0.9,
-            "multimodal": 0.5
-          }
+          "capabilities": { "coding": 0.95, "creative_writing": 0.9, "analysis": 0.9, "multimodal": 0.5 }
         },
         "gemini": {
           "display_name": "Gemini (Google)",
           "package": "@google/gemini-cli",
           "bin": "gemini",
-          "capabilities": {
-            "coding": 0.8,
-            "creative_writing": 0.85,
-            "analysis": 0.9,
-            "multimodal": 0.95
-          }
+          "capabilities": { "coding": 0.8, "creative_writing": 0.85, "analysis": 0.9, "multimodal": 0.95 }
         }
+      },
+      "shortcut_templates": {
+        "windows": "@echo off\ncmd /k {bin}",
+        "darwin": "#!/bin/bash\n{bin}",
+        "linux": "#!/bin/bash\n{bin}"
       }
     },
     "comfyui": {
@@ -66,6 +61,11 @@
       "core": {
         "repo": "https://github.com/comfyanonymous/ComfyUI.git",
         "manager_repo": "https://github.com/ltdrdata/ComfyUI-Manager.git"
+      },
+      "shortcut_templates": {
+        "windows": "@echo off\ncd /d \"{path}\"\ncall venv\\Scripts\\activate\npython main.py --auto-launch\npause",
+        "darwin": "#!/bin/bash\ncd \"{path}\"\nsource venv/bin/activate\npython main.py --force-fp16 --auto-launch",
+        "linux": "#!/bin/bash\ncd \"{path}\"\nsource venv/bin/activate\npython main.py --auto-launch"
       }
     }
   },
@@ -153,12 +153,12 @@
     "scoring_weights": {
       "composite": { "hardware_fit": 0.50, "user_fit": 0.35, "approach_fit": 0.15 },
       "user_fit_components": { "style_tag_match_bonus": 0.05, "style_tag_max_bonus": 0.20 },
-      "hardware_penalties": { 
-        "quantization_required": -0.15, 
+      "hardware_penalties": {
+        "quantization_required": -0.15,
         "storage_over_50pct": -0.15,
         "storage_hdd": -0.20,
         "thermal_throttle_risk": -0.20,
-        "on_battery": -0.25 
+        "on_battery": -0.25
       },
       "hardware_bonuses": { "good_thermal_demanding_model": 0.05 },
       "approach_penalties": { "too_many_nodes_for_simplicity": -0.20, "approach_mismatch": -0.40 }
