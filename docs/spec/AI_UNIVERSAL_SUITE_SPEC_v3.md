@@ -1068,14 +1068,18 @@ class ConstraintSatisfactionLayer:
         # 1. VRAM constraint (with quantization fallback consideration)
         rejection = self._check_vram_constraint(candidate, hardware)
         if rejection:
-            return rejection
+            # NEW: Check if CPU offload can save this candidate
+            if self._can_offload_to_cpu(candidate, hardware):
+                candidate.execution_mode = "gpu_offload"
+            else:
+                return rejection
   
         # 2. RAM constraint
         rejection = self._check_ram_constraint(candidate, hardware)
         if rejection:
             return rejection
   
-        # 3. Storage constraint
+        # 3. Storage space constraint
         rejection = self._check_storage_constraint(candidate, hardware)
         if rejection:
             return rejection
@@ -1096,6 +1100,35 @@ class ConstraintSatisfactionLayer:
             return rejection
   
         return None  # Passes all constraints
+  
+    def _can_offload_to_cpu(
+        self,
+        candidate: ModelCandidate,
+        hardware: HardwareProfile
+    ) -> bool:
+        """
+        NEW: Check if model can run via CPU offload when VRAM insufficient.
+        Requires: model supports offload + adequate CPU + sufficient RAM + AVX2.
+        See: docs/spec/HARDWARE_DETECTION.md Section 3, 5
+        """
+        if not candidate.supports_cpu_offload:
+            return False
+        
+        # CPU must be HIGH or MEDIUM tier for viable offload
+        if hardware.cpu.tier not in (CPUTier.HIGH, CPUTier.MEDIUM):
+            return False
+        
+        # GGUF models require AVX2 for reasonable performance
+        is_gguf = any('gguf' in v.precision.lower() for v in candidate.variants)
+        if is_gguf and not hardware.cpu.supports_avx2:
+            return False
+        
+        # Must have enough RAM for offloaded layers
+        ram_needed = candidate.ram_for_offload_gb or candidate.min_vram_gb
+        if hardware.ram.usable_for_offload_gb < ram_needed:
+            return False
+        
+        return True
   
     def _check_vram_constraint(
         self, 
@@ -1169,6 +1202,29 @@ class ConstraintSatisfactionLayer:
                     message=f"{candidate.name} requires CUDA and is not compatible with ROCm"
                 )
   
+        return None
+
+    def _check_storage_constraint(
+        self,
+        candidate: ModelCandidate,
+        hardware: HardwareProfile
+    ) -> Optional[RejectionReason]:
+        """
+        NEW: Check if storage has enough free space for model.
+        See: docs/spec/HARDWARE_DETECTION.md Section 4
+        """
+        model_size_gb = candidate.total_size_gb
+        buffer_gb = 10  # Reserve for workspace, temp files
+        
+        if not hardware.storage.can_fit(model_size_gb, buffer_gb):
+            return RejectionReason(
+                candidate_id=candidate.id,
+                constraint="storage_space",
+                required_gb=model_size_gb,
+                available_gb=hardware.storage.free_gb,
+                message=f"Requires {model_size_gb:.1f}GB storage, only {hardware.storage.free_gb:.1f}GB available"
+            )
+        
         return None
 ```
 
@@ -1296,13 +1352,26 @@ class TOPSISLayer:
     """
     Layer 3: TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)
     Provides final ranking with interpretable "closeness to ideal" scores.
+    
+    Updated to include speed_fit criterion based on storage and form factor.
+    See: docs/spec/HARDWARE_DETECTION.md
     """
   
     DEFAULT_WEIGHTS = {
-        'content_similarity': 0.40,
-        'hardware_fit': 0.30,
+        'content_similarity': 0.35,   # Reduced from 0.40
+        'hardware_fit': 0.25,         # Reduced from 0.30
+        'speed_fit': 0.15,            # NEW: Storage speed + form factor
         'ecosystem_maturity': 0.15,
-        'approach_fit': 0.15,
+        'approach_fit': 0.10,         # Reduced from 0.15
+    }
+    
+    # Alternative weights when user prioritizes speed
+    SPEED_PRIORITY_WEIGHTS = {
+        'content_similarity': 0.25,
+        'hardware_fit': 0.20,
+        'speed_fit': 0.30,            # Elevated for speed-focused users
+        'ecosystem_maturity': 0.15,
+        'approach_fit': 0.10,
     }
   
     def rank_candidates(
@@ -1370,7 +1439,8 @@ class TOPSISLayer:
         self,
         candidates: List[ScoredCandidate],
         criteria: List[str],
-        hardware: HardwareProfile
+        hardware: HardwareProfile,
+        user_preferences: UserPreferences  # NEW parameter
     ) -> np.ndarray:
         """Build decision matrix: rows=candidates, columns=criteria."""
         n_candidates = len(candidates)
@@ -1384,6 +1454,10 @@ class TOPSISLayer:
                 elif criterion == 'hardware_fit':
                     matrix[i, j] = self._compute_hardware_fit(
                         scored.candidate, hardware
+                    )
+                elif criterion == 'speed_fit':  # NEW
+                    matrix[i, j] = self._compute_speed_fit(
+                        scored.candidate, hardware, user_preferences
                     )
                 elif criterion == 'ecosystem_maturity':
                     matrix[i, j] = scored.candidate.ecosystem_maturity_score
@@ -1402,6 +1476,9 @@ class TOPSISLayer:
         1.0 = runs comfortably with headroom
         0.5 = runs at minimum requirements
         0.0 = cannot run (should be filtered by Layer 1)
+        
+        Updated to factor in sustained performance ratio for laptops.
+        See: docs/spec/HARDWARE_DETECTION.md Section 2
         """
         effective_vram = (
             hardware.ram_gb * 0.75 
@@ -1430,8 +1507,66 @@ class TOPSISLayer:
         if hardware.platform == "apple_silicon":
             if candidate.mps_performance_penalty:
                 best_fit *= (1.0 - candidate.mps_performance_penalty)
+        
+        # NEW: Apply sustained performance penalty for laptops
+        if hardware.sustained_performance_ratio < 1.0:
+            # Penalize compute-intensive models more on throttled hardware
+            intensity = candidate.compute_intensity or "medium"
+            if intensity == "high":
+                # Full penalty for high-intensity models (video gen, large LLMs)
+                best_fit *= hardware.sustained_performance_ratio
+            elif intensity == "medium":
+                # Partial penalty for medium-intensity
+                best_fit *= (1.0 + hardware.sustained_performance_ratio) / 2
+            # Low intensity models (small image gen) not penalized
   
         return best_fit
+    
+    def _compute_speed_fit(
+        self,
+        candidate: ModelCandidate,
+        hardware: HardwareProfile,
+        user_preferences: UserPreferences
+    ) -> float:
+        """
+        NEW: Compute speed fit based on storage speed and model size.
+        See: docs/spec/HARDWARE_DETECTION.md Section 4
+        
+        Returns:
+            1.0 = fast loading (<5s)
+            0.5 = moderate loading (5-30s)
+            0.2 = slow loading (>60s)
+        """
+        # If user doesn't prioritize speed, give neutral score
+        if user_preferences.speed_priority < 0.3:
+            return 0.7  # Neutral-ish score
+        
+        # Estimate load time based on storage speed and model size
+        model_size_gb = candidate.total_size_gb
+        load_time_seconds = hardware.storage.estimate_load_time(model_size_gb)
+        
+        # Normalize load time to 0-1 score
+        # <5s = 1.0 (excellent)
+        # 5-15s = 0.8 (good)
+        # 15-30s = 0.6 (acceptable)
+        # 30-60s = 0.4 (slow)
+        # >60s = 0.2 (very slow)
+        if load_time_seconds <= 5:
+            base_score = 1.0
+        elif load_time_seconds <= 15:
+            base_score = 0.8
+        elif load_time_seconds <= 30:
+            base_score = 0.6
+        elif load_time_seconds <= 60:
+            base_score = 0.4
+        else:
+            base_score = 0.2
+        
+        # Bonus for models that support fast inference (TensorRT, etc.)
+        if candidate.supports_tensorrt and hardware.platform in ("windows_nvidia", "linux_nvidia"):
+            base_score = min(1.0, base_score + 0.1)
+        
+        return base_score
 ```
 
 ### 6.5 Resolution Cascade
@@ -1442,10 +1577,14 @@ When hardware cannot run preferred models, apply resolution cascade:
 class ResolutionCascade:
     """
     When preferred model doesn't fit, find the best alternative.
+    
+    Updated to include CPU offload step.
+    See: docs/spec/HARDWARE_DETECTION.md Section 5
     """
   
     RESOLUTION_ORDER = [
         'quantization_downgrade',
+        'cpu_offload',              # NEW: Try CPU offload before substitution
         'variant_substitution',
         'workflow_optimization',
         'cloud_offload'
@@ -1465,13 +1604,18 @@ class ResolutionCascade:
         result = self._try_quantization_downgrade(preferred_model, hardware)
         if result.viable:
             return result
+        
+        # 2. NEW: Try CPU offload (model stays same, uses RAM for overflow)
+        result = self._try_cpu_offload(preferred_model, hardware)
+        if result.viable:
+            return result
   
-        # 2. Try variant substitution
+        # 3. Try variant substitution
         result = self._try_variant_substitution(preferred_model, hardware)
         if result.viable:
             return result
   
-        # 3. Try workflow optimization
+        # 4. Try workflow optimization
         result = self._try_workflow_optimization(preferred_model, hardware)
         if result.viable:
             return result
@@ -1519,6 +1663,45 @@ class ResolutionCascade:
                 )
   
         return ResolutionResult(viable=False)
+    
+    def _try_cpu_offload(
+        self, model: ModelCandidate, hardware: HardwareProfile
+    ) -> ResolutionResult:
+        """
+        NEW: Try running model with CPU offload when VRAM is insufficient.
+        Offloads some layers to system RAM, slower but enables larger models.
+        See: docs/spec/HARDWARE_DETECTION.md Section 5
+        """
+        # Model must support offloading
+        if not model.supports_cpu_offload:
+            return ResolutionResult(viable=False)
+        
+        # CPU must be adequate tier
+        if hardware.cpu.tier not in (CPUTier.HIGH, CPUTier.MEDIUM):
+            return ResolutionResult(
+                viable=False,
+                message=f"CPU ({hardware.cpu.tier.value}) insufficient for offload"
+            )
+        
+        # Must have enough available RAM
+        ram_needed = model.ram_for_offload_gb or model.min_vram_gb
+        if hardware.ram.usable_for_offload_gb < ram_needed:
+            return ResolutionResult(
+                viable=False,
+                message=f"Need {ram_needed:.1f}GB RAM, only {hardware.ram.usable_for_offload_gb:.1f}GB available"
+            )
+        
+        # Calculate expected slowdown
+        # HIGH tier CPU: ~5x slower, MEDIUM: ~10x slower
+        slowdown_factor = 5 if hardware.cpu.tier == CPUTier.HIGH else 10
+        
+        return ResolutionResult(
+            viable=True,
+            resolution_type='cpu_offload',
+            message=f"Can run {model.name} with CPU offload (~{slowdown_factor}x slower)",
+            performance_factor=1.0 / slowdown_factor,
+            quality_impact="Same quality, reduced speed"
+        )
   
     def _try_variant_substitution(
         self, model: ModelCandidate, hardware: HardwareProfile
@@ -1601,26 +1784,271 @@ class RecommendationExplainer:
             return f"Recommended: {model.name} ({resolution.selected_variant.precision}) - best match for your needs within your hardware limits"
         elif resolution and resolution.resolution_type == 'cloud_offload':
             return f"Recommended: {model.name} via cloud API - exceeds local hardware but matches your requirements"
+        elif resolution and resolution.resolution_type == 'cpu_offload':
+            return f"Recommended: {model.name} with CPU offload - runs slower but maintains full quality"
         else:
             return f"Recommended: {model.name} - strong match for your needs ({ranked.topsis_score:.0%} confidence)"
+```
 
----
-kling", "veo", "runway"
-    replicate: boolean          # Available on Replicate
-    fal_ai: boolean             # Available on fal.ai
-    runpod_template: string     # RunPod template ID if available
-    estimated_cost_per_generation: float  # Approximate USD
-  
-  # === EXPLANATION TEMPLATES ===
-  explanation:
-    selected: string            # Why this was recommended
-    rejected_vram: string       # Template when rejected for VRAM
-    rejected_platform: string   # Template when rejected for platform
+### 6.7 Hardware Integration Summary
 
+This section summarizes how hardware detection (see `docs/spec/HARDWARE_DETECTION.md`) integrates with the recommendation engine.
 
+#### 6.7.1 Hardware Elements by Layer
 
+| Hardware Element | Layer 1 (CSP) | Layer 2 (Content) | Layer 3 (TOPSIS) | Resolution | Warnings |
+|------------------|---------------|-------------------|------------------|------------|----------|
+| **GPU VRAM** | ✅ `_check_vram_constraint` | - | ✅ `hardware_fit` | ✅ Quantization | - |
+| **GPU Compute Capability** | ✅ `_check_compute_capability` | - | - | ✅ FP8→GGUF | - |
+| **GPU Power/Form Factor** | - | - | ✅ `hardware_fit` penalty | - | ✅ Laptop warning |
+| **Sustained Perf Ratio** | - | - | ✅ Intensity-based penalty | - | ✅ Throttle notice |
+| **Platform (MPS/CUDA/ROCm)** | ✅ `_check_platform_constraint` | - | ✅ `mps_penalty` | - | - |
+| **CPU Tier** | ✅ Offload viability | - | - | ✅ `_try_cpu_offload` | - |
+| **CPU Cores** | ✅ Offload viability | - | - | ✅ Slowdown factor | - |
+| **CPU AVX2** | ✅ GGUF offload check | - | - | - | ✅ Performance warning |
+| **RAM Available** | ✅ `_check_ram_constraint` | - | - | ✅ Offload capacity | ✅ Low RAM warning |
+| **RAM for Offload** | ✅ `_can_offload_to_cpu` | - | - | ✅ `_try_cpu_offload` | ✅ Offload active |
+| **Storage Free Space** | ✅ `_check_storage_constraint` | - | - | ✅ `adjust_for_space` | - |
+| **Storage Speed/Tier** | - | - | ✅ `speed_fit` | - | ✅ Speed warning |
+| **Memory Bandwidth** | - | - | ✅ LLM tok/s estimate | - | - |
+
+#### 6.7.2 TOPSIS Criteria Weights
+
+**Default weights** (balanced user):
+```python
+{
+    'content_similarity': 0.35,  # Feature match to user needs
+    'hardware_fit': 0.25,        # VRAM headroom + platform penalties + form factor
+    'speed_fit': 0.15,           # Storage speed + model load time
+    'ecosystem_maturity': 0.15,  # Community support, documentation
+    'approach_fit': 0.10,        # Workflow compatibility
+}
+```
+
+**Speed-priority weights** (user prioritizes iteration speed):
+```python
+{
+    'content_similarity': 0.25,
+    'hardware_fit': 0.20,
+    'speed_fit': 0.30,           # Elevated
+    'ecosystem_maturity': 0.15,
+    'approach_fit': 0.10,
+}
+```
+
+#### 6.7.3 Resolution Cascade Order
 
 ```
+1. Quantization Downgrade
+   └─ FP16 → FP8 → GGUF Q8 → Q6 → Q5 → Q4
+   
+2. CPU Offload (NEW)
+   └─ Requires: supports_cpu_offload + CPU tier HIGH/MEDIUM + sufficient RAM
+   └─ Performance: ~5x slower (HIGH) or ~10x slower (MEDIUM)
+   
+3. Variant Substitution
+   └─ e.g., Wan 14B → Wan 5B → Wan 1.3B
+   
+4. Workflow Optimization
+   └─ Reduce batch size, resolution, etc.
+   
+5. Cloud Offload
+   └─ Partner Nodes or third-party APIs
+```
+
+#### 6.7.4 Key Formulas
+
+**Effective VRAM** (Apple Silicon):
+```python
+effective_vram = unified_memory_gb * 0.75
+```
+
+**Sustained Performance Ratio** (Laptop GPUs):
+```python
+performance_ratio = sqrt(actual_power_limit / reference_tdp)
+```
+
+**Storage Load Time Estimate**:
+```python
+load_time_seconds = model_size_gb * 1024 / storage_read_mbps
+```
+
+**Hardware Fit Score** (with form factor):
+```python
+if intensity == "high":
+    fit *= sustained_performance_ratio
+elif intensity == "medium":
+    fit *= (1.0 + sustained_performance_ratio) / 2
+```
+
+#### 6.7.5 Space-Constrained Recommendation Adjustment
+
+When total recommended models exceed available storage, apply priority-based fitting:
+
+```python
+def adjust_for_space(
+    recommendations: List[Model],
+    storage: StorageProfile,
+    use_case_priorities: Dict[str, int]  # Lower = more important
+) -> SpaceConstrainedResult:
+    """
+    Fit recommendations to available space by priority.
+    See: docs/spec/HARDWARE_DETECTION.md Section 4.4
+    """
+    total_needed = sum(m.total_size_gb for m in recommendations)
+    buffer_gb = 10  # Workspace reserve
+    
+    if storage.free_gb >= total_needed + buffer_gb:
+        return SpaceConstrainedResult(fits=True, models=recommendations)
+    
+    # Sort by priority and greedily fit
+    sorted_models = sorted(recommendations, 
+        key=lambda m: use_case_priorities.get(m.use_case, 99))
+    
+    fitted, removed, cloud_fallback = [], [], []
+    current_size = 0
+    
+    for model in sorted_models:
+        if current_size + model.total_size_gb + buffer_gb <= storage.free_gb:
+            fitted.append(model)
+            current_size += model.total_size_gb
+        else:
+            removed.append(model)
+            if model.cloud_available:
+                cloud_fallback.append(model)
+    
+    return SpaceConstrainedResult(
+        fits=False,
+        models=fitted,
+        removed=removed,
+        cloud_alternatives=cloud_fallback,
+        space_short_gb=total_needed - storage.free_gb + buffer_gb
+    )
+```
+
+#### 6.7.6 Hardware Warnings for Explanation System
+
+Generate user-facing warnings based on hardware constraints:
+
+```python
+def generate_hardware_warnings(
+    hardware: HardwareProfile,
+    user_preferences: UserPreferences,
+    recommendations: List[Model]
+) -> List[HardwareWarning]:
+    """
+    Generate warnings for the explanation system.
+    See: docs/spec/HARDWARE_DETECTION.md
+    """
+    warnings = []
+    
+    # Laptop/form factor warning
+    if hardware.is_laptop and hardware.sustained_performance_ratio < 0.8:
+        warnings.append(HardwareWarning(
+            type="form_factor",
+            severity="info",
+            title="Laptop GPU Detected",
+            message=f"Your {hardware.gpu.name} runs at ~{hardware.sustained_performance_ratio*100:.0f}% "
+                    "of desktop performance due to thermal constraints. "
+                    "Long generation tasks may throttle further.",
+            suggestions=["Keep laptop plugged in", "Ensure good ventilation"]
+        ))
+    
+    # Storage speed warning (for speed-focused users)
+    if user_preferences.speed_priority >= 0.7 and hardware.storage.tier == StorageTier.SLOW:
+        largest_model = max(recommendations, key=lambda m: m.total_size_gb)
+        load_time = hardware.storage.estimate_load_time(largest_model.total_size_gb)
+        warnings.append(HardwareWarning(
+            type="storage_speed",
+            severity="warning",
+            title="Storage Speed Notice",
+            message=f"Your models are on HDD. Largest model ({largest_model.name}) "
+                    f"will take ~{load_time:.0f}s to load.",
+            suggestions=[
+                "Install key models on SSD if available",
+                "Use smaller quantized variants",
+                "Minimize model switching"
+            ]
+        ))
+    
+    # CPU offload warning (when being used)
+    offload_models = [m for m in recommendations if m.execution_mode == "gpu_offload"]
+    if offload_models:
+        slowdown = 5 if hardware.cpu.tier == CPUTier.HIGH else 10
+        warnings.append(HardwareWarning(
+            type="cpu_offload",
+            severity="info",
+            title="CPU Offload Active",
+            message=f"{len(offload_models)} model(s) will use CPU offload (~{slowdown}x slower): "
+                    + ", ".join(m.name for m in offload_models[:3]),
+            suggestions=["Consider cloud alternatives for faster inference"]
+        ))
+    
+    # Low RAM warning for offload-dependent configs
+    if hardware.ram.usable_for_offload_gb < 16 and any(
+        m.execution_mode == "gpu_offload" for m in recommendations
+    ):
+        warnings.append(HardwareWarning(
+            type="ram_limited",
+            severity="warning",
+            title="Limited RAM for Offload",
+            message=f"Only {hardware.ram.usable_for_offload_gb:.0f}GB RAM available for offload. "
+                    "Some models may fail to load.",
+            suggestions=["Close other applications", "Use smaller model variants"]
+        ))
+    
+    # AVX warning for GGUF on old CPUs
+    gguf_models = [m for m in recommendations 
+                   if any('gguf' in v.precision for v in m.variants)]
+    if gguf_models and not hardware.cpu.supports_avx2:
+        warnings.append(HardwareWarning(
+            type="cpu_features",
+            severity="warning",
+            title="Limited CPU Features",
+            message="Your CPU lacks AVX2 support. GGUF model inference will be significantly slower.",
+            suggestions=["Consider FP16 variants instead", "Use cloud APIs"]
+        ))
+    
+    return warnings
+```
+
+#### 6.7.7 Memory Bandwidth Impact (Apple Silicon LLMs)
+
+For LLM inference on Apple Silicon, memory bandwidth is the primary bottleneck:
+
+```python
+def estimate_llm_tokens_per_second(
+    model_params_b: float,
+    hardware: HardwareProfile
+) -> float:
+    """
+    Estimate LLM inference speed based on memory bandwidth.
+    Only applicable for Apple Silicon unified memory.
+    
+    Formula: tokens/sec ≈ bandwidth_gbps / (2 * params_b)
+    (Assumes ~2 bytes per parameter access per token)
+    """
+    if not hardware.gpu.unified_memory:
+        return None  # NVIDIA uses different bottleneck
+    
+    bandwidth = hardware.gpu.memory_bandwidth_gbps
+    bytes_per_param = 2  # FP16 or GGUF average
+    
+    tokens_per_sec = bandwidth / (bytes_per_param * model_params_b)
+    return tokens_per_sec
+
+# Example impact:
+# M1 (68 GB/s) + 7B model = 68 / (2 * 7) = ~4.8 tok/s
+# M4 Max (546 GB/s) + 7B model = 546 / (2 * 7) = ~39 tok/s
+# M4 Max (546 GB/s) + 70B model = 546 / (2 * 70) = ~3.9 tok/s
+```
+
+This can inform:
+- Model variant selection (smaller = faster on bandwidth-limited systems)
+- User expectations for LLM-based workflows
+- Trade-off explanations in the recommendation system
+
+---
 
 ## 7. Model Database Schema
 
@@ -1705,6 +2133,16 @@ The model database (`data/models_database.yaml`) contains all supported models w
     replicate: boolean
     fal_ai: boolean
     estimated_cost_per_generation: float
+  
+  # === HARDWARE INTEGRATION (NEW) ===
+  # See: docs/spec/HARDWARE_DETECTION.md
+  hardware:
+    total_size_gb: float        # Total disk space needed (all files)
+    compute_intensity: string   # "high", "medium", "low" - affects laptop penalty
+    supports_cpu_offload: boolean  # Can offload layers to RAM
+    ram_for_offload_gb: float   # RAM needed if using CPU offload
+    supports_tensorrt: boolean  # TensorRT optimization available
+    mps_performance_penalty: float  # 0.0-1.0, penalty on Apple Silicon
   
   # === EXPLANATION TEMPLATES ===
   explanation:
@@ -2450,7 +2888,10 @@ Stage 5: Complete
 ```python
 @dataclass
 class HardwareProfile:
-    """Complete hardware detection result."""
+    """
+    Complete hardware detection result.
+    See: docs/spec/HARDWARE_DETECTION.md for detection methods.
+    """
   
     # Platform identification
     platform: str                    # "windows_nvidia", "apple_silicon", "linux_rocm"
@@ -2476,13 +2917,34 @@ class HardwareProfile:
     ram_gb: float                    # 64.0
     memory_bandwidth_gbps: Optional[float]
   
-    # Storage
+    # Storage (see HARDWARE_DETECTION.md Section 4)
     disk_free_gb: float
-    storage_type: str                # "nvme", "sata_ssd", "hdd"
+    storage_type: str                # "nvme_gen4", "sata_ssd", "hdd"
+    storage_tier: str                # "fast", "moderate", "slow"
+    storage_read_mbps: int           # Estimated read speed
   
     # Multi-GPU
     gpu_count: int
     nvlink_available: bool
+    
+    # Form Factor (see HARDWARE_DETECTION.md Section 2)
+    is_laptop: bool = False
+    power_limit_watts: Optional[float] = None
+    reference_tdp_watts: Optional[float] = None
+    sustained_performance_ratio: float = 1.0
+    
+    # CPU (see HARDWARE_DETECTION.md Section 3)
+    cpu_model: str = ""
+    cpu_physical_cores: int = 0
+    cpu_logical_cores: int = 0
+    cpu_tier: str = "unknown"        # "high", "medium", "low", "minimal"
+    supports_avx: bool = False
+    supports_avx2: bool = False
+    supports_avx512: bool = False
+    
+    # RAM Offload (see HARDWARE_DETECTION.md Section 5)
+    ram_available_gb: float = 0      # Not used by OS/apps
+    ram_for_offload_gb: float = 0    # Conservative estimate for AI use
   
     # Software
     python_version: str
@@ -2491,8 +2953,35 @@ class HardwareProfile:
     comfyui_version: Optional[str]
   
     # Derived
-    hardware_tier: str               # "entry", "consumer", "prosumer", "professional"
+    hardware_tier: str               # "entry", "consumer", "prosumer", "professional", "workstation"
     warnings: List[str]
+    
+    # Helper methods
+    def estimate_load_time(self, model_size_gb: float) -> float:
+        """Estimate model load time in seconds."""
+        return (model_size_gb * 1024) / self.storage_read_mbps
+    
+    def can_fit_model(self, size_gb: float, buffer_gb: float = 10) -> bool:
+        """Check if storage can fit model with buffer."""
+        return self.disk_free_gb >= (size_gb + buffer_gb)
+```
+
+@dataclass
+class UserPreferences:
+    """
+    User preferences from onboarding, influences TOPSIS weights and warnings.
+    """
+    # Speed vs Quality tradeoff (0.0 = quality focused, 1.0 = speed focused)
+    speed_priority: float = 0.5
+    
+    # Willingness to use cloud APIs
+    cloud_willingness: str = "hybrid"  # "local_only", "hybrid", "cloud_preferred"
+    
+    # Budget constraints
+    budget_conscious: bool = False
+    
+    # Technical comfort level
+    technical_level: str = "intermediate"  # "beginner", "intermediate", "advanced"
 ```
 
 ### 10.3 Recommendation Output Schema

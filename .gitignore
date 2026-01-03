@@ -32,3 +32,6 @@ wheels/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Code local config
+.claude/*.local.md
