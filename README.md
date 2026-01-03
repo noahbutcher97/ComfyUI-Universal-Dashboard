@@ -1,36 +1,103 @@
-# AI Universal Suite (formerly ComfyUI Dashboard)
+# AI Universal Suite
 
-A cross-platform (Windows, macOS, Linux) manager for ComfyUI and AI Development Tools.
+A cross-platform desktop application that transforms your computer into a fully configured AI workstation through a guided setup wizard.
 
-## 🚀 Installation
+## Overview
 
-### 🍎 macOS / 🐧 Linux (Recommended)
-Paste this into your Terminal to install everything and set up a Desktop shortcut (no security warnings):
+AI Universal Suite solves the "AI tool sprawl" problem - helping professionals move from scattered subscriptions and copy-paste workflows to an integrated, hardware-optimized AI infrastructure. The application detects your hardware, asks about your needs, and recommends the optimal configuration of models, tools, and workflows.
 
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/noahbutcher97/ComfyUI-Universal-Dashboard/master/install.sh)"
+### Key Features
+
+- **Zero Terminal Interaction** - Every action achievable through GUI
+- **Hardware-Aware Recommendations** - Automatic detection and optimization for your specific GPU, RAM, and storage
+- **100+ AI Models** - Image, video, audio, and 3D generation with intelligent selection
+- **Dual Onboarding Paths** - Quick Setup (~2 min) or Comprehensive Setup (~5-8 min)
+- **Cloud/Local Hybrid** - Seamless fallback to cloud APIs when local hardware is insufficient
+- **Cross-Platform** - Windows/NVIDIA, macOS/Apple Silicon, Linux/AMD ROCm
+
+### Target Users
+
+- Creative professionals (filmmakers, designers, photographers)
+- Knowledge workers adopting AI tools
+- Technical users transitioning to local AI infrastructure
+- Solopreneurs building AI-enhanced workflows
+
+## Project Structure
+
+```
+AI-Universal-Suite/
+├── data/                    # Runtime data
+│   └── models_database.yaml # Model definitions with variants and capabilities
+├── docs/
+│   ├── context/             # Business context
+│   ├── plan/                # Implementation tracking
+│   │   └── PLAN_v3.md
+│   ├── spec/                # Technical specification
+│   │   └── AI_UNIVERSAL_SUITE_SPEC_v3.md
+│   └── archived/            # Historical documents
+├── src/                     # Application source code
+└── (launcher scripts)
 ```
 
-### 🪟 Windows
-1.  Download the repository ZIP and extract it.
-2.  Double-click **`Run_Windows.bat`**.
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [SPEC_v3](docs/spec/AI_UNIVERSAL_SUITE_SPEC_v3.md) | Complete technical specification - architecture, algorithms, schemas |
+| [PLAN_v3](docs/plan/PLAN_v3.md) | Implementation roadmap, decision log, task tracking |
+| [models_database.yaml](data/models_database.yaml) | Model database with 100+ entries, variants, and hardware requirements |
+
+## Current Status
+
+**Phase**: Planning Complete → Implementation Phase 1
+
+The specification consolidates all research into a single source of truth covering:
+- Three-layer recommendation engine (CSP → Content-Based → TOPSIS)
+- Dual-path onboarding system
+- Platform-specific hardware detection
+- Cloud API integration via ComfyUI Partner Nodes
+- Complete model database schema
+
+See [PLAN_v3.md](docs/plan/PLAN_v3.md) for current progress and next steps.
+
+## Quick Start
+
+*Coming soon - currently in development*
+
+```bash
+# Windows
+Run_Windows.bat
+
+# macOS
+./Run_Mac.command
+
+# Linux
+./Run_Unix.sh
+```
+
+## Requirements
+
+- Python 3.10+
+- Git
+- 8GB+ RAM (32GB recommended)
+- GPU with 4GB+ VRAM (for local generation)
+
+## Platform Support
+
+| Platform | GPU | Status |
+|----------|-----|--------|
+| Windows 10/11 | NVIDIA (RTX 20/30/40/50 series) | Primary target (40%) |
+| macOS 12+ | Apple Silicon (M1/M2/M3/M4) | Primary target (40%) |
+| Linux | AMD ROCm (RX 6000/7000) | Supported (20%) |
+
+## License
+
+*TBD*
+
+## Contributing
+
+*TBD - currently in early development*
 
 ---
 
-## Features
-
-- **🧠 Universal Dashboard:** Manage your AI tools from a modern GUI.
-- **✨ Smart Wizard:** Auto-detects your GPU/VRAM and installs the perfect ComfyUI setup (Flux, SDXL, or SD1.5) with a custom recipe.
-- **🛠️ Dev Tools:** One-click install for Node.js and AI CLIs (Claude, Gemini, OpenAI, DeepSeek).
-- **📂 Model Manager:** Drag-and-drop model organizer with visual tree view.
-- **🔑 Key Vault:** Securely store API keys for all your CLI tools.
-
-## Troubleshooting
-
-**Windows:**
-If Python is missing, the launcher will tell you. Install Python 3.10+ and check "Add to PATH".
-
-**Manual Mac Install:**
-If you prefer not to use the terminal command, you can download the zip. If you get a "Malware" warning:
-1. Open **Settings > Privacy & Security**.
-2. Click **Open Anyway** next to the blocked app.
+*Part of the AI Infrastructure Consulting service - helping professionals transition from scattered AI subscriptions to integrated, cost-effective infrastructure solutions.*

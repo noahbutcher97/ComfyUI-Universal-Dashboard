@@ -1,0 +1,1447 @@
+# AI Universal Suite - Model Database Reference
+# Version: 1.0
+# Last Updated: January 2026
+# 
+# This file contains the complete model database for the AI Universal Suite
+# recommendation engine. Each model entry follows the schema defined in
+# AI_UNIVERSAL_SUITE_SPEC_v3.md Section 7.
+#
+# Categories:
+# - image_generation
+# - image_editing  
+# - video_generation
+# - audio_generation
+# - 3d_generation
+# - lip_sync
+# - cloud_apis
+
+---
+
+# =============================================================================
+# IMAGE GENERATION MODELS
+# =============================================================================
+
+image_generation:
+
+  # ---------------------------------------------------------------------------
+  # HiDream Family - Highest Quality
+  # ---------------------------------------------------------------------------
+  
+  hidream_i1_full:
+    name: "HiDream-I1 Full"
+    family: "hidream"
+    release_date: "2025-11-15"
+    license: "mit"
+    commercial_use: true
+    
+    architecture:
+      type: "dit_moe"
+      parameters_b: 17
+      text_encoder: "clip_x4"
+      vae: "hidream_vae"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 48000
+        vram_recommended_mb: 64000
+        download_url: "https://huggingface.co/HiDream-ai/HiDream-I1-Full"
+        download_size_gb: 34
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.0}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: "https://huggingface.co/HiDream-ai/HiDream-I1-Full-FP8"
+        download_size_gb: 17
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+      
+      - id: "gguf_q4"
+        precision: "gguf_q4_k_m"
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_url: "https://huggingface.co/city96/HiDream-I1-GGUF"
+        download_size_gb: 10
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true, notes: "Use Q4_0 variant only - K-quants crash MPS"}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+    
+    capabilities:
+      primary: ["text_to_image"]
+      scores:
+        photorealism: 0.95
+        artistic_quality: 0.92
+        text_rendering: 0.85
+        speed: 0.3
+        consistency: 0.88
+      features:
+        - id: "text_rendering"
+          quality: "excellent"
+        - id: "photorealism"
+          quality: "excellent"
+      style_strengths: ["photorealistic", "cinematic", "portrait", "concept_art"]
+      controlnet_support: ["depth", "canny", "pose"]
+    
+    dependencies:
+      required_nodes: []
+      paired_models: []
+      incompatibilities: []
+    
+    cloud:
+      partner_node: false
+      replicate: true
+      estimated_cost_per_generation: 0.05
+    
+    explanation:
+      selected: "Highest quality image generation with excellent text rendering"
+      rejected_vram: "Requires {required}GB VRAM. Consider GGUF Q4 variant (~10GB)."
+      rejected_platform: "Not supported on Apple Silicon. Consider FLUX GGUF instead."
+
+        photorealism: 0.95
+        artistic_quality: 0.92
+        text_rendering: 0.85
+        speed: 0.3
+        consistency: 0.88
+      features:
+        - id: "text_rendering"
+          quality: "excellent"
+        - id: "photorealism"
+          quality: "excellent"
+      style_strengths: ["photorealistic", "cinematic", "portrait", "concept_art"]
+      controlnet_support: ["depth", "canny", "pose"]
+    
+    dependencies:
+      required_nodes: []
+      paired_models: []
+      incompatibilities: []
+    
+    cloud:
+      partner_node: false
+      replicate: true
+      estimated_cost_per_generation: 0.05
+    
+    explanation:
+      selected: "Highest quality image generation with excellent text rendering"
+      rejected_vram: "Requires {required}GB VRAM. Consider GGUF Q4 variant (~10GB)."
+      rejected_platform: "Not supported on Apple Silicon. Consider FLUX GGUF instead."
+
+  hidream_i1_fast:
+    name: "HiDream-I1 Fast"
+    family: "hidream"
+    release_date: "2025-11-15"
+    license: "mit"
+    commercial_use: true
+    
+    architecture:
+      type: "dit_moe"
+      parameters_b: 17
+      text_encoder: "clip_x4"
+      vae: "hidream_vae"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 27000
+        vram_recommended_mb: 32000
+        download_size_gb: 34
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_size_gb: 17
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+    
+    capabilities:
+      primary: ["text_to_image"]
+      scores:
+        photorealism: 0.92
+        artistic_quality: 0.90
+        text_rendering: 0.82
+        speed: 0.6
+        consistency: 0.85
+
+  # ---------------------------------------------------------------------------
+  # FLUX Family - Quality Benchmark
+  # ---------------------------------------------------------------------------
+  
+  flux_dev:
+    name: "FLUX.1 Dev"
+    family: "flux"
+    release_date: "2024-08-01"
+    license: "non-commercial"
+    commercial_use: false
+    
+    architecture:
+      type: "rectified_flow_transformer"
+      parameters_b: 12
+      text_encoder: "t5_xxl"
+      vae: "flux_vae"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 33000
+        vram_recommended_mb: 40000
+        download_url: "https://huggingface.co/black-forest-labs/FLUX.1-dev"
+        download_size_gb: 23.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: "https://huggingface.co/Kijai/flux-fp8"
+        download_size_gb: 12
+        quality_retention_percent: 99
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+      
+      - id: "gguf_q8"
+        precision: "gguf_q8_0"
+        vram_min_mb: 12000
+        vram_recommended_mb: 14000
+        download_url: "https://huggingface.co/city96/FLUX.1-dev-gguf"
+        download_size_gb: 12
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+      
+      - id: "gguf_q5"
+        precision: "gguf_q5_k_m"
+        vram_min_mb: 8000
+        vram_recommended_mb: 10000
+        download_size_gb: 8
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true, notes: "Use Q5_0 variant"}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+      
+      - id: "gguf_q4"
+        precision: "gguf_q4_k_m"
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_size_gb: 6
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true, notes: "Use Q4_0 variant"}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+    
+    capabilities:
+      primary: ["text_to_image"]
+      scores:
+        photorealism: 0.95
+        artistic_quality: 0.93
+        text_rendering: 0.92
+        speed: 0.4
+        consistency: 0.90
+      features:
+        - id: "text_rendering"
+          quality: "excellent"
+        - id: "prompt_adherence"
+          quality: "excellent"
+      style_strengths: ["photorealistic", "cinematic", "digital_art", "concept_art"]
+      controlnet_support: ["depth", "canny", "pose"]
+    
+    cloud:
+      partner_node: true
+      partner_service: "bfl"
+      estimated_cost_per_generation: 0.04
+
+  flux_schnell:
+    name: "FLUX.1 Schnell"
+    family: "flux"
+    release_date: "2024-08-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "rectified_flow_transformer"
+      parameters_b: 12
+      text_encoder: "t5_xxl"
+      vae: "flux_vae"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: "https://huggingface.co/black-forest-labs/FLUX.1-schnell"
+        download_size_gb: 23.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 12000
+        vram_recommended_mb: 14000
+        download_size_gb: 12
+        quality_retention_percent: 99
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+      
+      - id: "gguf_q4"
+        precision: "gguf_q4_k_m"
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_size_gb: 6
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true, notes: "Use Q4_0 variant"}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+    
+    capabilities:
+      primary: ["text_to_image"]
+      scores:
+        photorealism: 0.90
+        artistic_quality: 0.88
+        text_rendering: 0.88
+        speed: 0.85
+        consistency: 0.85
+      features:
+        - id: "fast_generation"
+          quality: "excellent"
+          notes: "1-4 steps"
+      style_strengths: ["photorealistic", "illustration", "concept_art"]
+
+  # ---------------------------------------------------------------------------
+  # Stable Diffusion Family
+  # ---------------------------------------------------------------------------
+  
+  sd35_large:
+    name: "SD3.5 Large"
+    family: "sd3"
+    release_date: "2025-03-01"
+    license: "community"
+    commercial_use: true
+    
+    architecture:
+      type: "mmdit"
+      parameters_b: 8
+      text_encoder: "clip_t5"
+      vae: "sd3_vae"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 20000
+        vram_recommended_mb: 24000
+        download_size_gb: 16
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_size_gb: 8
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+    
+    capabilities:
+      primary: ["text_to_image"]
+      scores:
+        photorealism: 0.88
+        artistic_quality: 0.85
+        text_rendering: 0.94
+        speed: 0.5
+        consistency: 0.82
+      features:
+        - id: "text_rendering"
+          quality: "excellent"
+          notes: "94% accuracy"
+
+  sd35_medium:
+    name: "SD3.5 Medium"
+    family: "sd3"
+    release_date: "2025-03-01"
+    license: "community"
+    commercial_use: true
+    
+    architecture:
+      type: "mmdit"
+      parameters_b: 2.6
+      text_encoder: "clip_t5"
+      vae: "sd3_vae"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 8000
+        vram_recommended_mb: 10000
+        download_size_gb: 5.1
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["text_to_image"]
+      scores:
+        photorealism: 0.82
+        artistic_quality: 0.80
+        text_rendering: 0.90
+        speed: 0.7
+        consistency: 0.78
+      features:
+        - id: "text_rendering"
+          quality: "good"
+        - id: "low_vram"
+          quality: "excellent"
+          notes: "8GB entry point with text rendering"
+
+  sdxl_base:
+    name: "SDXL 1.0"
+    family: "sdxl"
+    release_date: "2023-07-26"
+    license: "openrail"
+    commercial_use: true
+    
+    architecture:
+      type: "unet"
+      parameters_b: 3.5
+      text_encoder: "clip_dual"
+      vae: "sdxl_vae"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_size_gb: 6.5
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+      
+      - id: "gguf_q4"
+        precision: "gguf_q4_k_m"
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_size_gb: 4
+        quality_retention_percent: 85
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+    
+    capabilities:
+      primary: ["text_to_image", "image_to_image"]
+      scores:
+        photorealism: 0.85
+        artistic_quality: 0.88
+        text_rendering: 0.3
+        speed: 0.6
+        consistency: 0.80
+      style_strengths: ["photorealistic", "illustration", "anime", "concept_art"]
+      controlnet_support: ["pose", "depth", "canny", "lineart", "scribble", "seg"]
+    
+    dependencies:
+      required_nodes: []
+      incompatibilities: []
+
+
+# =============================================================================
+# VIDEO GENERATION MODELS
+# =============================================================================
+
+video_generation:
+
+  # ---------------------------------------------------------------------------
+  # Wan 2.2 Family - Complete Video Production
+  # ---------------------------------------------------------------------------
+  
+  wan_22_t2v_14b:
+    name: "Wan 2.2 T2V 14B"
+    family: "wan"
+    release_date: "2025-12-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "moe_dit"
+      parameters_b: 14
+      text_encoder: "t5_umt5"
+      vae: "wan_vae"
+      notes: "Requires both high-noise and low-noise experts"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 60000
+        vram_recommended_mb: 80000
+        download_size_gb: 28
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 28000
+        vram_recommended_mb: 32000
+        download_size_gb: 14
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+      
+      - id: "gguf_q8"
+        precision: "gguf_q8_0"
+        vram_min_mb: 15400
+        vram_recommended_mb: 18000
+        download_size_gb: 15.4
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true, notes: "Use Euler sampler"}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+      
+      - id: "gguf_q4"
+        precision: "gguf_q4_k_m"
+        vram_min_mb: 9600
+        vram_recommended_mb: 12000
+        download_size_gb: 9.6
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true, notes: "Use Q4_0, Euler sampler"}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+    
+    capabilities:
+      primary: ["text_to_video"]
+      video_modes: ["t2v"]
+      max_duration_seconds: 5
+      max_resolution: "720p"
+      audio_support: false
+      scores:
+        photorealism: 0.92
+        motion_quality: 0.90
+        temporal_coherence: 0.88
+        speed: 0.3
+      features:
+        - id: "camera_control"
+          quality: "excellent"
+          notes: "Via Fun Camera variant"
+    
+    dependencies:
+      required_nodes:
+        - package: "ComfyUI-GGUF"
+          repo: "https://github.com/city96/ComfyUI-GGUF"
+          required_for: ["gguf_q8", "gguf_q4"]
+        - package: "ComfyUI-VideoHelperSuite"
+          repo: "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite"
+          required_for: ["all"]
+      paired_models:
+        - model_id: "wan_22_t2v_14b_low"
+          reason: "MoE architecture requires both high-noise and low-noise experts"
+
+  wan_22_i2v_14b:
+    name: "Wan 2.2 I2V 14B"
+    family: "wan"
+    release_date: "2025-12-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "moe_dit"
+      parameters_b: 14
+      text_encoder: "t5_umt5"
+      notes: "Requires both high-noise and low-noise experts"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 57000
+        vram_recommended_mb: 72000
+        download_size_gb: 27
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 28000
+        vram_recommended_mb: 32000
+        download_size_gb: 14
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+      
+      - id: "gguf_q5"
+        precision: "gguf_q5_k_m"
+        vram_min_mb: 12000
+        vram_recommended_mb: 14000
+        download_size_gb: 11
+        quality_retention_percent: 92
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true, notes: "Use Q5_0, Euler sampler"}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+      
+      - id: "gguf_q4"
+        precision: "gguf_q4_k_m"
+        vram_min_mb: 9600
+        vram_recommended_mb: 12000
+        download_size_gb: 9.6
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true, notes: "Use Q4_0, Euler sampler"}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+    
+    capabilities:
+      primary: ["image_to_video"]
+      video_modes: ["i2v", "flf2v"]
+      max_duration_seconds: 5
+      max_resolution: "720p"
+      audio_support: false
+      scores:
+        photorealism: 0.92
+        motion_quality: 0.92
+        temporal_coherence: 0.90
+        speed: 0.3
+
+  wan_22_ti2v_5b:
+    name: "Wan 2.2 TI2V 5B"
+    family: "wan"
+    release_date: "2025-12-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "dit"
+      parameters_b: 5
+      text_encoder: "t5_umt5"
+      notes: "Hybrid model - single checkpoint for both T2V and I2V"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_size_gb: 10
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 5000
+        vram_recommended_mb: 6000
+        download_size_gb: 5
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+      
+      - id: "gguf_q8"
+        precision: "gguf_q8_0"
+        vram_min_mb: 5400
+        vram_recommended_mb: 6000
+        download_size_gb: 5.4
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+      
+      - id: "gguf_q4"
+        precision: "gguf_q4_k_m"
+        vram_min_mb: 3400
+        vram_recommended_mb: 4000
+        download_size_gb: 3.4
+        quality_retention_percent: 85
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true, notes: "Use Q4_0"}
+          linux_rocm: {supported: true}
+        requires_nodes: ["ComfyUI-GGUF"]
+    
+    capabilities:
+      primary: ["text_to_video", "image_to_video"]
+      video_modes: ["t2v", "i2v"]
+      max_duration_seconds: 5
+      max_resolution: "720p"
+      audio_support: false
+      scores:
+        photorealism: 0.82
+        motion_quality: 0.80
+        temporal_coherence: 0.78
+        speed: 0.7
+      features:
+        - id: "low_vram"
+          quality: "excellent"
+          notes: "Full T2V+I2V on 3.4GB - runs on any modern GPU"
+    
+    explanation:
+      selected: "Best video model for consumer hardware - full T2V+I2V in 3.4GB"
+      rejected_vram: "Even Q4 requires 3.4GB. Consider cloud APIs."
+      rejected_platform: "Fully supported on all platforms"
+
+  # ---------------------------------------------------------------------------
+  # LTX-Video - Speed Leader
+  # ---------------------------------------------------------------------------
+  
+  ltx_video_2b:
+    name: "LTX-Video 2B"
+    family: "ltx"
+    release_date: "2025-06-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "dit"
+      parameters_b: 2
+      text_encoder: "t5"
+      notes: "Native audio generation in same latent space"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_size_gb: 4
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_size_gb: 2
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+    
+    capabilities:
+      primary: ["text_to_video", "image_to_video"]
+      video_modes: ["t2v", "i2v", "flf2v"]
+      max_duration_seconds: 10
+      max_resolution: "4k"
+      audio_support: true
+      scores:
+        photorealism: 0.75
+        motion_quality: 0.78
+        temporal_coherence: 0.80
+        speed: 0.95
+      features:
+        - id: "native_audio"
+          quality: "excellent"
+          notes: "Synchronized dialogue and sound effects"
+        - id: "real_time"
+          quality: "excellent"
+          notes: "5-10 seconds on RTX 4090"
+
+  ltx_video_13b:
+    name: "LTX-Video 13B"
+    family: "ltx"
+    release_date: "2025-09-01"
+    license: "openrail"
+    commercial_use: true
+    
+    architecture:
+      type: "dit"
+      parameters_b: 13
+      text_encoder: "t5"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_size_gb: 26
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+      
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 10000
+        vram_recommended_mb: 14000
+        download_size_gb: 13
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia: {supported: true, min_compute_capability: 8.9}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: false}
+    
+    capabilities:
+      primary: ["text_to_video", "image_to_video"]
+      video_modes: ["t2v", "i2v", "flf2v"]
+      max_duration_seconds: 10
+      max_resolution: "4k"
+      audio_support: true
+      scores:
+        photorealism: 0.88
+        motion_quality: 0.90
+        temporal_coherence: 0.88
+        speed: 0.75
+      features:
+        - id: "distilled"
+          quality: "excellent"
+          notes: "4-8 steps for high quality"
+
+  # ---------------------------------------------------------------------------
+  # AnimateDiff - Apple Silicon Primary
+  # ---------------------------------------------------------------------------
+  
+  animatediff_sd15:
+    name: "AnimateDiff (SD1.5)"
+    family: "animatediff"
+    release_date: "2023-07-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "motion_module"
+      parameters_b: 0.1
+      base_model: "sd15"
+      notes: "Works with any SD1.5 checkpoint"
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 6000
+        vram_recommended_mb: 10000
+        download_size_gb: 1.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["text_to_video", "image_to_video"]
+      video_modes: ["t2v"]
+      max_duration_seconds: 4
+      max_resolution: "512p"
+      audio_support: false
+      scores:
+        photorealism: 0.70
+        motion_quality: 0.75
+        temporal_coherence: 0.72
+        speed: 0.65
+      features:
+        - id: "apple_silicon"
+          quality: "excellent"
+          notes: "Primary video option for Mac users"
+        - id: "infinite_animation"
+          quality: "good"
+          notes: "Context windowing for longer videos"
+    
+    dependencies:
+      required_nodes:
+        - package: "ComfyUI-AnimateDiff-Evolved"
+          repo: "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved"
+          required_for: ["all"]
+    
+    explanation:
+      selected: "Best video option for Apple Silicon - full MPS support"
+      rejected_platform: "Fully supported on all platforms"
+
+
+# =============================================================================
+# AUDIO GENERATION MODELS
+# =============================================================================
+
+audio_generation:
+
+  f5_tts:
+    name: "F5-TTS"
+    family: "f5"
+    release_date: "2025-03-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "flow_matching"
+      parameters_b: 1.2
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_size_gb: 1.2
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["text_to_speech", "voice_cloning"]
+      voice_cloning: true
+      voice_clone_sample_seconds: 15
+      languages: ["en", "zh", "ja", "ko", "es", "fr", "de", "it", "pt"]
+      scores:
+        voice_quality: 0.92
+        naturalness: 0.90
+        clone_accuracy: 0.88
+        speed: 0.7
+      features:
+        - id: "zero_shot_cloning"
+          quality: "excellent"
+          notes: "Clone from 5-15 second sample"
+    
+    dependencies:
+      required_nodes:
+        - package: "ComfyUI-F5-TTS"
+          repo: "https://github.com/AIFSH/ComfyUI-F5-TTS"
+          required_for: ["all"]
+
+  kokoro_tts:
+    name: "Kokoro TTS"
+    family: "kokoro"
+    release_date: "2025-01-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "transformer"
+      parameters_b: 0.082
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 0
+        vram_recommended_mb: 2000
+        download_size_gb: 0.3
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+        notes: "CPU-capable"
+    
+    capabilities:
+      primary: ["text_to_speech"]
+      voice_cloning: false
+      preset_voices: 54
+      languages: ["en", "zh", "ja", "ko", "es", "fr", "de", "it", "pt"]
+      scores:
+        voice_quality: 0.85
+        naturalness: 0.82
+        speed: 0.95
+      features:
+        - id: "cpu_capable"
+          quality: "excellent"
+        - id: "low_latency"
+          quality: "excellent"
+
+  xtts_v2:
+    name: "XTTS v2"
+    family: "coqui"
+    release_date: "2024-01-01"
+    license: "cpml"
+    commercial_use: true
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 4000
+        vram_recommended_mb: 8000
+        download_size_gb: 1.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["text_to_speech", "voice_cloning"]
+      voice_cloning: true
+      voice_clone_sample_seconds: 6
+      languages: ["en", "es", "fr", "de", "it", "pt", "pl", "tr", "ru", "nl", "cs", "ar", "zh", "ja", "hu", "ko", "hi"]
+      scores:
+        voice_quality: 0.88
+        naturalness: 0.85
+        clone_accuracy: 0.90
+        speed: 0.6
+      features:
+        - id: "multilingual"
+          quality: "excellent"
+          notes: "17 languages supported"
+
+  musicgen_medium:
+    name: "MusicGen Medium"
+    family: "musicgen"
+    release_date: "2023-06-01"
+    license: "cc-by-nc"
+    commercial_use: false
+    
+    architecture:
+      type: "transformer"
+      parameters_b: 1.5
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_size_gb: 3
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["music_generation"]
+      scores:
+        music_quality: 0.85
+        prompt_adherence: 0.80
+        speed: 0.5
+      features:
+        - id: "melody_conditioning"
+          quality: "good"
+          notes: "Guide generation with hummed melody"
+
+  ace_step:
+    name: "ACE-Step"
+    family: "ace"
+    release_date: "2025-06-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "diffusion"
+      parameters_b: 3.5
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 8000
+        vram_recommended_mb: 16000
+        download_size_gb: 7
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["music_generation", "vocal_synthesis"]
+      voice_cloning: true
+      scores:
+        music_quality: 0.92
+        vocal_quality: 0.88
+        speed: 0.6
+      features:
+        - id: "full_songs"
+          quality: "excellent"
+          notes: "4 minutes in 20 seconds on A100"
+        - id: "vocals"
+          quality: "excellent"
+          notes: "Generates lyrics and voice"
+
+# =============================================================================
+# 3D GENERATION MODELS
+# =============================================================================
+
+3d_generation:
+
+  hunyuan3d_2_mini:
+    name: "Hunyuan3D 2-mini"
+    family: "hunyuan3d"
+    release_date: "2025-10-01"
+    license: "open"
+    commercial_use: true
+    
+    architecture:
+      type: "two_stage"
+      parameters_b: 0.6
+      stages: ["shape_generation", "texture_painting"]
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 5000
+        vram_recommended_mb: 8000
+        download_size_gb: 2
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["image_to_3d", "text_to_3d"]
+      output_formats: ["glb", "obj"]
+      pbr_materials: true
+      scores:
+        mesh_quality: 0.80
+        texture_quality: 0.78
+        speed: 0.85
+      features:
+        - id: "low_vram"
+          quality: "excellent"
+          notes: "Full pipeline in 5GB"
+
+  hunyuan3d_21:
+    name: "Hunyuan3D 2.1"
+    family: "hunyuan3d"
+    release_date: "2025-12-01"
+    license: "open"
+    commercial_use: true
+    
+    architecture:
+      type: "two_stage"
+      parameters_b: 4.6
+      stages: ["shape_generation_3.3b", "texture_painting_1.3b"]
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 6000
+        vram_recommended_mb: 24000
+        download_size_gb: 9
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+        notes: "6GB for shape only, 24GB for full pipeline"
+    
+    capabilities:
+      primary: ["image_to_3d", "text_to_3d"]
+      output_formats: ["glb", "obj", "fbx"]
+      pbr_materials: true
+      scores:
+        mesh_quality: 0.92
+        texture_quality: 0.90
+        speed: 0.5
+      features:
+        - id: "production_ready"
+          quality: "excellent"
+          notes: "PBR textures for game/render pipelines"
+
+  triposr:
+    name: "TripoSR"
+    family: "tripo"
+    release_date: "2024-03-01"
+    license: "mit"
+    commercial_use: true
+    
+    architecture:
+      type: "lrm"
+      parameters_b: 0.3
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 7000
+        vram_recommended_mb: 8000
+        download_size_gb: 0.6
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["image_to_3d"]
+      output_formats: ["glb", "obj", "stl", "fbx"]
+      pbr_materials: false
+      scores:
+        mesh_quality: 0.75
+        texture_quality: 0.70
+        speed: 0.98
+      features:
+        - id: "sub_second"
+          quality: "excellent"
+          notes: "Inference in <1 second"
+        - id: "production_status"
+          quality: "excellent"
+          notes: "Most mature open-source 3D option"
+
+  trellis_2:
+    name: "TRELLIS.2"
+    family: "trellis"
+    release_date: "2025-12-01"
+    license: "mit"
+    commercial_use: true
+    
+    architecture:
+      type: "transformer"
+      parameters_b: 4
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 8000
+        vram_recommended_mb: 24000
+        download_size_gb: 8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["image_to_3d", "text_to_3d"]
+      output_formats: ["mesh", "gaussians", "radiance_field"]
+      pbr_materials: true
+      scores:
+        mesh_quality: 0.95
+        texture_quality: 0.92
+        speed: 0.4
+      features:
+        - id: "complex_topology"
+          quality: "excellent"
+          notes: "Handles transparency and complex shapes"
+        - id: "high_resolution"
+          quality: "excellent"
+          notes: "Up to 1536Â³ resolution"
+
+# =============================================================================
+# LIP SYNC MODELS
+# =============================================================================
+
+lip_sync:
+
+  wav2lip:
+    name: "Wav2Lip"
+    family: "wav2lip"
+    release_date: "2020-08-01"
+    license: "mit"
+    commercial_use: true
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_size_gb: 0.4
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["lip_sync"]
+      input_types: ["video", "audio"]
+      scores:
+        sync_accuracy: 0.85
+        visual_quality: 0.70
+        speed: 0.9
+
+  latentsync_16:
+    name: "LatentSync 1.6"
+    family: "latentsync"
+    release_date: "2025-08-01"
+    license: "apache-2.0"
+    commercial_use: true
+    
+    architecture:
+      type: "latent_diffusion"
+      parameters_b: 5
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 6500
+        vram_recommended_mb: 20000
+        download_size_gb: 7
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["lip_sync"]
+      input_types: ["video", "audio"]
+      max_resolution: "512x512"
+      scores:
+        sync_accuracy: 0.95
+        visual_quality: 0.92
+        speed: 0.4
+      features:
+        - id: "high_quality"
+          quality: "excellent"
+          notes: "Best lip clarity, resolved teeth/lips issues"
+
+  sadtalker:
+    name: "SadTalker"
+    family: "sadtalker"
+    release_date: "2023-03-01"
+    license: "mit"
+    commercial_use: true
+    
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_size_gb: 1.5
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+    
+    capabilities:
+      primary: ["lip_sync", "talking_head"]
+      input_types: ["image", "audio"]
+      scores:
+        sync_accuracy: 0.82
+        visual_quality: 0.85
+        head_motion: 0.88
+        speed: 0.7
+      features:
+        - id: "full_head_motion"
+          quality: "excellent"
+          notes: "Realistic head movement, not just lips"
+        - id: "photo_input"
+          quality: "excellent"
+          notes: "Animate from single photo"
+
+# =============================================================================
+# CLOUD API MODELS (Partner Nodes)
+# =============================================================================
+
+cloud_apis:
+
+  veo_3:
+    name: "Google Veo 3"
+    family: "veo"
+    provider: "google"
+    partner_node: true
+    
+    capabilities:
+      primary: ["text_to_video", "image_to_video"]
+      video_modes: ["t2v", "i2v", "flf2v"]
+      max_duration_seconds: 8
+      max_resolution: "1080p"
+      audio_support: true
+      camera_control: true
+      features:
+        - id: "native_audio"
+          quality: "excellent"
+          notes: "Synchronized audio generation"
+    
+    pricing:
+      estimated_cost_per_generation: 0.20
+
+  kling_20:
+    name: "Kling 2.0"
+    family: "kling"
+    provider: "kuaishou"
+    partner_node: true
+    
+    capabilities:
+      primary: ["text_to_video", "image_to_video"]
+      video_modes: ["t2v", "i2v", "flf2v"]
+      max_duration_seconds: 10
+      max_resolution: "1080p"
+      audio_support: false
+      camera_control: true
+      features:
+        - id: "dual_character"
+          quality: "excellent"
+          notes: "Maintain two characters consistently"
+        - id: "lip_sync"
+          quality: "excellent"
+        - id: "virtual_tryon"
+          quality: "excellent"
+    
+    pricing:
+      estimated_cost_per_generation: 0.15
+
+  luma_ray_3:
+    name: "Luma Ray 3"
+    family: "luma"
+    provider: "luma"
+    partner_node: true
+    
+    capabilities:
+      primary: ["text_to_video", "image_to_video"]
+      video_modes: ["t2v", "i2v", "keyframes"]
+      max_duration_seconds: 10
+      max_resolution: "4k_hdr"
+      audio_support: true
+      camera_control: true
+      features:
+        - id: "4k_hdr"
+          quality: "excellent"
+          notes: "Hi-Fi Diffusion mastering"
+    
+    pricing:
+      estimated_cost_per_generation: 0.18
+
+---
+# End of Model Database
