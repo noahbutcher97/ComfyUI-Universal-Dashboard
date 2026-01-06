@@ -47,7 +47,6 @@ class TestHardwareProfile:
             gpu_vendor="nvidia",
             gpu_name="RTX 4090",
             vram_gb=48.0,
-            ram_gb=128.0,
         )
         assert profile.tier == HardwareTier.WORKSTATION
 
@@ -58,7 +57,6 @@ class TestHardwareProfile:
             gpu_vendor="nvidia",
             gpu_name="RTX 4090",
             vram_gb=24.0,
-            ram_gb=64.0,
         )
         assert profile.tier == HardwareTier.PROFESSIONAL
 
@@ -68,7 +66,6 @@ class TestHardwareProfile:
             gpu_vendor="nvidia",
             gpu_name="RTX 4080",
             vram_gb=16.0,
-            ram_gb=32.0,
         )
         assert profile16.tier == HardwareTier.PROFESSIONAL
 
@@ -79,7 +76,6 @@ class TestHardwareProfile:
             gpu_vendor="nvidia",
             gpu_name="RTX 4070 Ti",
             vram_gb=12.0,
-            ram_gb=32.0,
         )
         assert profile.tier == HardwareTier.PROSUMER
 
@@ -90,7 +86,6 @@ class TestHardwareProfile:
             gpu_vendor="nvidia",
             gpu_name="RTX 4070",
             vram_gb=8.0,
-            ram_gb=16.0,
         )
         assert profile.tier == HardwareTier.CONSUMER
 
@@ -101,7 +96,6 @@ class TestHardwareProfile:
             gpu_vendor="nvidia",
             gpu_name="RTX 3050",
             vram_gb=4.0,
-            ram_gb=16.0,
         )
         assert profile.tier == HardwareTier.ENTRY
 
@@ -112,7 +106,6 @@ class TestHardwareProfile:
             gpu_vendor="none",
             gpu_name="CPU Only",
             vram_gb=0.0,
-            ram_gb=8.0,
         )
         assert profile.tier == HardwareTier.MINIMAL
 
@@ -123,7 +116,6 @@ class TestHardwareProfile:
             gpu_vendor="apple",
             gpu_name="Apple M3 Max",
             vram_gb=36.0,  # 48GB * 0.75
-            ram_gb=48.0,
             unified_memory=True,
         )
 
@@ -138,7 +130,6 @@ class TestHardwareProfile:
             gpu_vendor="apple",
             gpu_name="Apple M3",
             vram_gb=18.0,
-            ram_gb=24.0,
             unified_memory=True,
         )
 
@@ -155,7 +146,6 @@ class TestHardwareProfile:
             gpu_vendor="nvidia",
             gpu_name="RTX 4090",
             vram_gb=24.0,
-            ram_gb=64.0,
         )
 
         quants = profile.allowed_gguf_quants
@@ -170,7 +160,6 @@ class TestHardwareProfile:
             gpu_vendor="apple",
             gpu_name="Apple M3",
             vram_gb=6.0,  # 8GB * 0.75
-            ram_gb=8.0,
             unified_memory=True,
         )
         assert profile_small.can_run_hunyuan is False
@@ -181,7 +170,6 @@ class TestHardwareProfile:
             gpu_vendor="apple",
             gpu_name="Apple M3 Max",
             vram_gb=72.0,  # 96GB * 0.75
-            ram_gb=96.0,
             unified_memory=True,
         )
         assert profile_large.can_run_hunyuan is True
@@ -194,7 +182,6 @@ class TestHardwareProfile:
             gpu_vendor="nvidia",
             gpu_name="RTX 4090",
             vram_gb=24.0,
-            ram_gb=64.0,
             compute_capability=8.9,
             supports_fp8=True,
         )
@@ -206,7 +193,6 @@ class TestHardwareProfile:
             gpu_vendor="nvidia",
             gpu_name="RTX 3090",
             vram_gb=24.0,
-            ram_gb=64.0,
             compute_capability=8.6,
             supports_fp8=False,
         )
@@ -420,16 +406,315 @@ class TestTierBoundaries:
         (128.0, HardwareTier.WORKSTATION),
     ])
     def test_tier_boundary(self, vram, expected_tier):
-        """Test tier classification at exact boundaries."""
+        """Test tier classification at exact boundaries.
+
+        Note: Tier is based on VRAM only per SPEC_v3 Section 4.5.
+        RAM affects offload viability but not tier classification.
+        """
         profile = HardwareProfile(
             platform=PlatformType.WINDOWS_NVIDIA,
             gpu_vendor="nvidia",
             gpu_name="Test GPU",
             vram_gb=vram,
-            ram_gb=32.0,
         )
         assert profile.tier == expected_tier, \
             f"VRAM {vram}GB should be {expected_tier.value}, got {profile.tier.value}"
+
+
+class TestCPUDetection:
+    """Tests for CPU detection module (Phase 1 Week 2a)."""
+
+    def test_cpu_tier_high(self):
+        """16+ cores should be HIGH tier."""
+        from src.services.hardware.cpu import calculate_cpu_tier
+        from src.schemas.hardware import CPUTier
+
+        assert calculate_cpu_tier(16) == CPUTier.HIGH
+        assert calculate_cpu_tier(24) == CPUTier.HIGH
+        assert calculate_cpu_tier(64) == CPUTier.HIGH
+
+    def test_cpu_tier_medium(self):
+        """8-15 cores should be MEDIUM tier."""
+        from src.services.hardware.cpu import calculate_cpu_tier
+        from src.schemas.hardware import CPUTier
+
+        assert calculate_cpu_tier(8) == CPUTier.MEDIUM
+        assert calculate_cpu_tier(12) == CPUTier.MEDIUM
+        assert calculate_cpu_tier(15) == CPUTier.MEDIUM
+
+    def test_cpu_tier_low(self):
+        """4-7 cores should be LOW tier."""
+        from src.services.hardware.cpu import calculate_cpu_tier
+        from src.schemas.hardware import CPUTier
+
+        assert calculate_cpu_tier(4) == CPUTier.LOW
+        assert calculate_cpu_tier(6) == CPUTier.LOW
+        assert calculate_cpu_tier(7) == CPUTier.LOW
+
+    def test_cpu_tier_minimal(self):
+        """<4 cores should be MINIMAL tier."""
+        from src.services.hardware.cpu import calculate_cpu_tier
+        from src.schemas.hardware import CPUTier
+
+        assert calculate_cpu_tier(1) == CPUTier.MINIMAL
+        assert calculate_cpu_tier(2) == CPUTier.MINIMAL
+        assert calculate_cpu_tier(3) == CPUTier.MINIMAL
+
+    def test_cpu_profile_can_offload_x86_with_avx2(self):
+        """x86 with AVX2 should support GGUF offload."""
+        from src.schemas.hardware import CPUProfile
+
+        profile = CPUProfile(
+            model="Intel Core i9",
+            architecture="x86_64",
+            physical_cores=16,
+            logical_cores=32,
+            supports_avx=True,
+            supports_avx2=True,
+            supports_avx512=False,
+        )
+        assert profile.can_offload is True
+
+    def test_cpu_profile_cannot_offload_x86_without_avx2(self):
+        """x86 without AVX2 should not support GGUF offload."""
+        from src.schemas.hardware import CPUProfile
+
+        profile = CPUProfile(
+            model="Old Intel CPU",
+            architecture="x86_64",
+            physical_cores=4,
+            logical_cores=8,
+            supports_avx=True,
+            supports_avx2=False,
+            supports_avx512=False,
+        )
+        assert profile.can_offload is False
+
+    def test_cpu_profile_arm64_can_offload(self):
+        """ARM64 should support GGUF offload (NEON always available)."""
+        from src.schemas.hardware import CPUProfile
+
+        profile = CPUProfile(
+            model="Apple M3",
+            architecture="arm64",
+            physical_cores=8,
+            logical_cores=8,
+            supports_avx=False,
+            supports_avx2=False,
+            supports_avx512=False,
+        )
+        assert profile.can_offload is True
+
+
+class TestRAMDetection:
+    """Tests for RAM detection module (Phase 1 Week 2a)."""
+
+    def test_ram_bandwidth_lookup_ddr5(self):
+        """Should return correct bandwidth for DDR5."""
+        from src.services.hardware.ram import get_bandwidth_for_type
+
+        assert get_bandwidth_for_type("ddr5-6400") == 102.4
+        assert get_bandwidth_for_type("ddr5-4800") == 76.8
+        assert get_bandwidth_for_type("ddr5") == 76.8
+
+    def test_ram_bandwidth_lookup_ddr4(self):
+        """Should return correct bandwidth for DDR4."""
+        from src.services.hardware.ram import get_bandwidth_for_type
+
+        assert get_bandwidth_for_type("ddr4-3200") == 51.2
+        assert get_bandwidth_for_type("ddr4") == 42.7
+
+    def test_ram_bandwidth_lookup_unknown(self):
+        """Should return None for unknown memory type."""
+        from src.services.hardware.ram import get_bandwidth_for_type
+
+        assert get_bandwidth_for_type("unknown") is None
+        assert get_bandwidth_for_type(None) is None
+
+    def test_offload_capacity_calculation(self):
+        """Offload capacity should leave 4GB for OS and use 80% safety."""
+        from src.services.hardware.ram import _calculate_offload_capacity
+
+        # 32GB available: (32 - 4) * 0.8 = 22.4GB
+        assert abs(_calculate_offload_capacity(32.0) - 22.4) < 0.01
+
+        # 8GB available: (8 - 4) * 0.8 = 3.2GB
+        assert abs(_calculate_offload_capacity(8.0) - 3.2) < 0.01
+
+        # 4GB or less: 0GB (can't spare any)
+        assert _calculate_offload_capacity(4.0) == 0.0
+        assert _calculate_offload_capacity(2.0) == 0.0
+
+    def test_offload_viability_calculation(self):
+        """Should calculate offload viability correctly."""
+        from src.services.hardware.ram import calculate_offload_viability
+        from src.schemas.hardware import RAMProfile
+
+        ram_profile = RAMProfile(
+            total_gb=64.0,
+            available_gb=50.0,
+            usable_for_offload_gb=36.8,  # (50 - 4) * 0.8
+            bandwidth_gbps=102.4,
+            memory_type="ddr5-6400",
+        )
+
+        # Encapsulated pattern: RAM bandwidth read from ram_profile.bandwidth_gbps
+        result = calculate_offload_viability(
+            vram_gb=24.0,
+            ram_profile=ram_profile,  # Has bandwidth_gbps=102.4
+            cpu_can_offload=True,
+            gpu_bandwidth_gbps=1008.0,  # RTX 4090
+        )
+
+        assert result["offload_viable"] is True
+        assert result["gpu_only_gb"] == 24.0
+        assert result["with_offload_gb"] == 60.8  # 24 + 36.8
+        # Speed ratio = 102.4 / 1008 ≈ 0.1
+        assert 0.09 < result["speed_ratio"] < 0.11
+
+    def test_offload_viability_no_gpu_bandwidth(self):
+        """Speed ratio should be None when GPU bandwidth is not provided."""
+        from src.services.hardware.ram import calculate_offload_viability
+        from src.schemas.hardware import RAMProfile
+
+        ram_profile = RAMProfile(
+            total_gb=64.0,
+            available_gb=50.0,
+            usable_for_offload_gb=36.8,
+            bandwidth_gbps=102.4,  # Has RAM bandwidth
+            memory_type="ddr5-6400",
+        )
+
+        # No GPU bandwidth provided - speed ratio should be None
+        result = calculate_offload_viability(
+            vram_gb=24.0,
+            ram_profile=ram_profile,
+            cpu_can_offload=True,
+            # gpu_bandwidth_gbps not provided
+        )
+
+        assert result["offload_viable"] is True
+        assert result["speed_ratio"] is None  # Can't calculate without GPU bandwidth
+
+    def test_offload_viability_no_ram_bandwidth(self):
+        """Speed ratio should be None when RAM bandwidth is unknown."""
+        from src.services.hardware.ram import calculate_offload_viability
+        from src.schemas.hardware import RAMProfile
+
+        ram_profile = RAMProfile(
+            total_gb=64.0,
+            available_gb=50.0,
+            usable_for_offload_gb=36.8,
+            bandwidth_gbps=None,  # Unknown RAM bandwidth
+            memory_type=None,
+        )
+
+        result = calculate_offload_viability(
+            vram_gb=24.0,
+            ram_profile=ram_profile,
+            cpu_can_offload=True,
+            gpu_bandwidth_gbps=1008.0,
+        )
+
+        assert result["offload_viable"] is True
+        assert result["speed_ratio"] is None  # Can't calculate without RAM bandwidth
+
+    def test_offload_not_viable_low_ram(self):
+        """Offload should not be viable with insufficient RAM."""
+        from src.services.hardware.ram import calculate_offload_viability
+        from src.schemas.hardware import RAMProfile
+
+        ram_profile = RAMProfile(
+            total_gb=8.0,
+            available_gb=4.0,
+            usable_for_offload_gb=0.0,  # Too low
+            bandwidth_gbps=51.2,
+            memory_type="ddr4-3200",
+        )
+
+        result = calculate_offload_viability(
+            vram_gb=8.0,
+            ram_profile=ram_profile,
+            cpu_can_offload=True,  # CPU can, but RAM can't
+            gpu_bandwidth_gbps=448.0,
+        )
+
+        assert result["offload_viable"] is False
+        assert result["with_offload_gb"] == 8.0  # No increase
+        assert result["speed_ratio"] == 1.0  # Full GPU speed (no offload)
+
+
+class TestFormFactorDetection:
+    """Tests for form factor detection module (Phase 1 Week 2a)."""
+
+    def test_sustained_performance_ratio_desktop(self):
+        """Desktop GPU should have ~100% sustained performance."""
+        from src.services.hardware.form_factor import calculate_sustained_performance_ratio
+
+        # RTX 4090 Desktop: 450W, reference 450W = sqrt(450/450) = 1.0
+        is_laptop, ratio, ref_tdp = calculate_sustained_performance_ratio(
+            gpu_name="NVIDIA GeForce RTX 4090",
+            actual_power_limit=450.0
+        )
+        assert abs(ratio - 1.0) < 0.01
+        assert is_laptop is False
+        assert ref_tdp == 450
+
+    def test_sustained_performance_ratio_laptop(self):
+        """Laptop GPU should have reduced sustained performance."""
+        from src.services.hardware.form_factor import calculate_sustained_performance_ratio
+
+        # RTX 4090 Laptop: 175W, reference 450W = sqrt(175/450) ≈ 0.62
+        is_laptop, ratio, ref_tdp = calculate_sustained_performance_ratio(
+            gpu_name="NVIDIA GeForce RTX 4090 Laptop GPU",
+            actual_power_limit=175.0
+        )
+        assert 0.61 < ratio < 0.65
+        assert is_laptop is True
+
+    def test_tdp_lookup_table(self):
+        """Should have TDP values for common GPUs."""
+        from src.services.hardware.form_factor import GPU_REFERENCE_TDP
+
+        assert "4090" in GPU_REFERENCE_TDP
+        assert GPU_REFERENCE_TDP["4090"] == 450
+        assert "4080" in GPU_REFERENCE_TDP
+        assert "3090" in GPU_REFERENCE_TDP
+
+
+class TestGPUBandwidthLookup:
+    """Tests for GPU bandwidth lookup (Phase 1 Week 2a)."""
+
+    def test_nvidia_bandwidth_lookup(self):
+        """Should return correct bandwidth for NVIDIA GPUs."""
+        detector = NVIDIADetector()
+
+        # RTX 4090
+        bandwidth = detector._lookup_gpu_bandwidth("NVIDIA GeForce RTX 4090")
+        assert bandwidth == 1008
+
+        # RTX 3090
+        bandwidth = detector._lookup_gpu_bandwidth("GeForce RTX 3090")
+        assert bandwidth == 936
+
+    def test_nvidia_bandwidth_unknown(self):
+        """Should return None for unknown GPUs."""
+        detector = NVIDIADetector()
+
+        bandwidth = detector._lookup_gpu_bandwidth("Unknown GPU XYZ")
+        assert bandwidth is None
+
+    def test_amd_bandwidth_lookup(self):
+        """Should return correct bandwidth for AMD GPUs."""
+        detector = AMDROCmDetector()
+
+        # RX 7900 XTX
+        bandwidth = detector._lookup_gpu_bandwidth("AMD Radeon RX 7900 XTX")
+        assert bandwidth == 960
+
+        # RX 6900 XT
+        bandwidth = detector._lookup_gpu_bandwidth("Radeon RX 6900 XT")
+        assert bandwidth == 512
 
 
 if __name__ == "__main__":

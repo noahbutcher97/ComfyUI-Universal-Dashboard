@@ -24,6 +24,7 @@ from typing import Optional
 from pathlib import Path
 
 from src.utils.logger import log
+from src.utils.subprocess_utils import run_powershell, extract_json
 
 
 class StorageType(Enum):
@@ -68,6 +69,7 @@ def _detect_windows(path: str) -> StorageType:
     Detect storage type on Windows using PowerShell/WMI.
 
     Uses Get-PhysicalDisk to determine media type.
+    Uses shared utilities per ARCHITECTURE_PRINCIPLES.md.
     """
     try:
         # Get the drive letter from path
@@ -83,16 +85,17 @@ $partition = Get-Partition -DriveLetter '{drive[0]}'
 $disk = Get-PhysicalDisk | Where-Object {{ $_.DeviceId -eq $partition.DiskNumber }}
 $disk | Select-Object MediaType, BusType | ConvertTo-Json
 '''
-        result = subprocess.check_output(
-            ["powershell", "-Command", ps_script],
-            creationflags=subprocess.CREATE_NO_WINDOW,
-            stderr=subprocess.DEVNULL,
-            timeout=10
-        ).decode()
+        # Use shared utility with -NoProfile for profile isolation
+        result = run_powershell(ps_script, timeout=10)
+        if not result:
+            log.debug("PowerShell storage detection returned no output")
+            return StorageType.UNKNOWN
 
-        # Parse JSON output
-        import json
-        disk_info = json.loads(result)
+        # Parse JSON output using shared utility
+        disk_info = extract_json(result)
+        if not disk_info:
+            log.debug("Could not parse disk info JSON")
+            return StorageType.UNKNOWN
 
         media_type = disk_info.get("MediaType", "").upper()
         bus_type = disk_info.get("BusType", "").upper()
@@ -109,10 +112,8 @@ $disk | Select-Object MediaType, BusType | ConvertTo-Json
 
         return StorageType.UNKNOWN
 
-    except subprocess.TimeoutExpired:
-        log.warning("Storage detection timed out on Windows")
-        return StorageType.UNKNOWN
     except Exception as e:
+        # Shared utilities handle timeouts internally
         log.debug(f"Windows storage detection failed: {e}")
         return StorageType.UNKNOWN
 
@@ -292,3 +293,72 @@ def get_estimated_load_time(storage_type: StorageType, model_size_gb: float) -> 
     size_mb = model_size_gb * 1024
 
     return size_mb / speed
+
+
+def detect_storage(path: str = ".") -> "StorageProfile":
+    """
+    Detect full storage profile for a given path.
+
+    Combines storage type detection with capacity information
+    to create a complete StorageProfile.
+
+    Args:
+        path: Path to analyze (default: current directory)
+
+    Returns:
+        StorageProfile with type, capacity, speed, and tier
+
+    Example:
+        storage = detect_storage("/models")
+        if storage.can_fit(50.0):
+            print("Can fit 50GB model")
+        print(f"Estimated load time: {storage.estimate_load_time(10.0):.1f}s")
+    """
+    import shutil
+    from src.schemas.hardware import StorageProfile, StorageTier
+
+    # Get absolute path
+    abs_path = os.path.abspath(path)
+
+    # Detect storage type
+    storage_type = detect_storage_type(abs_path)
+
+    # Get disk usage
+    try:
+        total, used, free = shutil.disk_usage(abs_path)
+        total_gb = total / (1024 ** 3)
+        free_gb = free / (1024 ** 3)
+    except Exception as e:
+        log.warning(f"Could not get disk usage for {abs_path}: {e}")
+        total_gb = 0.0
+        free_gb = 0.0
+
+    # Estimate read speed based on storage type
+    speeds = {
+        StorageType.NVME_GEN4: 7000,
+        StorageType.NVME_GEN3: 3500,
+        StorageType.NVME: 3500,
+        StorageType.SATA_SSD: 550,
+        StorageType.HDD: 140,
+        StorageType.UNKNOWN: 550,
+    }
+    estimated_read_mbps = speeds.get(storage_type, 550)
+
+    # Determine tier
+    if storage_type in (StorageType.NVME_GEN4, StorageType.NVME_GEN3, StorageType.NVME):
+        tier = StorageTier.FAST
+    elif storage_type == StorageType.SATA_SSD:
+        tier = StorageTier.MODERATE
+    elif storage_type == StorageType.HDD:
+        tier = StorageTier.SLOW
+    else:
+        tier = StorageTier.MODERATE  # Conservative default
+
+    return StorageProfile(
+        path=abs_path,
+        total_gb=total_gb,
+        free_gb=free_gb,
+        storage_type=storage_type.value,
+        estimated_read_mbps=estimated_read_mbps,
+        tier=tier,
+    )

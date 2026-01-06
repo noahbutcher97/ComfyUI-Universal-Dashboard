@@ -147,6 +147,104 @@ Capturing key decisions made during planning and implementation. Reference this 
 | 2026-01-03 | Hardware warnings in explainer | A) Silent constraints B) Explicit warnings | Warnings improve UX by explaining why choices were made and setting expectations |
 | 2026-01-03 | Space-constrained adjustment | A) Reject configs B) Auto-adjust by priority | Auto-adjustment with cloud fallback better UX than outright rejection |
 | 2026-01-03 | Memory bandwidth for LLM estimates | A) Ignore B) Factor into recommendations | Helps Apple Silicon users understand LLM inference speed expectations |
+| 2026-01-03 | Bandwidth-based speed ratio | A) Magic numbers (0.2) B) Bandwidth formula | User requirement: no arbitrary estimates; `speed_ratio = ram_bw / gpu_bw` |
+| 2026-01-03 | GPU bandwidth via lookup tables | A) API query B) Static lookup tables | No reliable cross-platform API; lookup tables based on published specs |
+| 2026-01-03 | RAM bandwidth via DDR type detection | A) Assume DDR4 B) Detect DDR type + speed | Accurate bandwidth needed for speed ratio; WMI SMBIOSMemoryType + clock speed |
+| 2026-01-03 | Nested profiles in HardwareProfile | A) Flat structure B) Nested CPUProfile/RAMProfile/etc | Cleaner separation of concerns; each profile has own tier/methods |
+| 2026-01-03 | Shell output normalization utilities | A) Inline handling B) Per-command fixes C) Centralized utilities | PowerShell profiles can interfere with output; centralized `_run_powershell()`, `_extract_number_from_output()`, `_extract_json_from_output()` utilities prevent repeated issues |
+| 2026-01-03 | **HardwareTier = effective capacity** | A) VRAM only B) VRAM + offload viability | **CHANGES SPEC** - Tier should reflect actual runnable capacity, not just native GPU; see Extension below |
+
+### Extension: HardwareTier Calculation (2026-01-03)
+
+**Problem**: Current SPEC_v3 Section 4.5 defines HardwareTier based on VRAM alone:
+
+| Tier | VRAM | Current Definition |
+|------|------|-------------------|
+| WORKSTATION | 48GB+ | Pure VRAM |
+| PROFESSIONAL | 16-47GB | Pure VRAM |
+| PROSUMER | 12-15GB | Pure VRAM |
+| CONSUMER | 8-11GB | Pure VRAM |
+| ENTRY | 4-7GB | Pure VRAM |
+| MINIMAL | <4GB | Pure VRAM |
+
+**Issue**: This creates misleading tier classifications:
+
+```
+Machine A: 24GB GPU + 64GB RAM + 16-core CPU
+  → VRAM-only tier: PROFESSIONAL
+  → Effective capacity: ~60GB (with offload)
+  → Can actually run: 60GB models (slower)
+
+Machine B: 24GB GPU + 8GB RAM + 4-core CPU
+  → VRAM-only tier: PROFESSIONAL
+  → Effective capacity: 24GB (no viable offload)
+  → Can actually run: 24GB models only
+
+Both classified as "PROFESSIONAL" but have very different capabilities.
+```
+
+**Decision**: HardwareTier should reflect **effective capacity** including offload viability.
+
+**Proposed Algorithm**:
+```python
+def _calculate_tier(self) -> HardwareTier:
+    """
+    Calculate tier based on effective capacity, not just VRAM.
+
+    Effective capacity = VRAM + usable_offload_capacity (if CPU/RAM support offload)
+    """
+    # Start with VRAM
+    effective_gb = self.vram_gb
+
+    # Add offload capacity if viable
+    if self.cpu is not None and self.cpu.can_offload:
+        if self.ram is not None and self.ram.usable_for_offload_gb > 4.0:
+            effective_gb += self.ram.usable_for_offload_gb
+
+    # Classify based on effective capacity
+    if effective_gb >= 48:
+        return HardwareTier.WORKSTATION
+    elif effective_gb >= 16:
+        return HardwareTier.PROFESSIONAL
+    # ... etc
+```
+
+**Impact on SPEC**:
+- Section 4.5 tier table needs updating to reference "effective capacity"
+- Tier boundaries remain the same (48/16/12/8/4 GB)
+- `vram_gb` field remains for native capacity
+- `effective_capacity_with_offload_gb` property already exists
+
+**User Communication**:
+- Tier badge should show effective tier
+- Tooltip/hover can explain: "PROFESSIONAL tier (24GB native + 36GB offload)"
+- Offload models should show slowdown warning regardless of tier
+
+**Open Questions**:
+1. Should offload capacity count fully or be discounted (e.g., 50%) due to slowdown?
+2. If discounted, what factor? Speed-based (5-10x slower = 10-20% weight)?
+3. Should there be separate `native_tier` and `effective_tier` properties?
+
+**Recommendation**: Start with full offload capacity counting, add discount factor in v3.1 if needed based on user feedback.
+
+### Extension: Shell Output Normalization (2026-01-03)
+
+**Problem**: Windows PowerShell profiles can inject text into command output, breaking parsers that expect clean numeric or JSON results.
+
+**Solution**: Centralized utility functions in `src/services/hardware/ram.py` (to be moved to shared location):
+- `_run_powershell(command, timeout)`: Runs PowerShell with `-NoProfile` flag, returns cleaned output
+- `_extract_number_from_output(output)`: Finds numeric lines in potentially noisy output
+- `_extract_json_from_output(output)`: Extracts JSON object from mixed text output
+
+**Integration Scope**:
+| File | Current State | Needed |
+|------|--------------|--------|
+| `ram.py` | Uses utilities ✅ | Done |
+| `storage.py` | Manual PowerShell ❌ | Update to use utilities |
+| `nvidia.py` | Uses subprocess directly | Already uses `CREATE_NO_WINDOW` |
+| `cpu.py` | Windows registry (not PowerShell) | N/A |
+
+**Future Work**: Move utilities to `src/utils/subprocess_utils.py` for cross-module reuse.
 
 ---
 
@@ -210,44 +308,73 @@ Capturing key decisions made during planning and implementation. Reference this 
   - Test tier classification boundaries
   - **Done**: `tests/services/test_hardware_detection.py` (41 tests, all passing)
 
-#### Week 2a: Extended Hardware Detection
+#### Week 2a: Extended Hardware Detection ✅ COMPLETE
 
 **Prerequisites**: Read HARDWARE_DETECTION.md Sections 2-5 before starting.
 
 **Goal**: Complete the hardware profile with form factor, CPU, storage, and RAM data needed by the recommendation engine.
 
-- [ ] Implement form factor / sustained performance detection (HARDWARE_DETECTION.md Section 2)
+- [x] Implement form factor / sustained performance detection (HARDWARE_DETECTION.md Section 2) ✅ 2026-01-03
   - Detect actual power limit via `nvidia-smi --query-gpu=power.limit`
-  - Look up reference TDP from GPU database
-  - Calculate sustained performance ratio using sqrt(power_ratio)
-  - **Update `HardwareProfile`**: Add `sustained_performance_ratio`, `power_limit_watts`, `reference_tdp_watts`, `is_laptop`
-  - Flag mobile GPUs in UI with throttling warning
+  - Look up reference TDP from GPU database (`GPU_REFERENCE_TDP` lookup table)
+  - Calculate sustained performance ratio using `sqrt(power_ratio)`
+  - **Done**: `src/services/hardware/form_factor.py` with `FormFactorProfile` dataclass
+  - Flag mobile GPUs in UI with throttling warning via `get_form_factor_warning()`
 
-- [ ] Implement CPU detection (HARDWARE_DETECTION.md Section 3)
+- [x] Implement CPU detection (HARDWARE_DETECTION.md Section 3) ✅ 2026-01-03
   - Detect physical/logical cores, model name, architecture
-  - Detect AVX/AVX2/AVX-512 support (x86 only)
+  - Detect AVX/AVX2/AVX-512 support (x86 only) via `cpuinfo` library
   - Classify into tiers: HIGH (16+), MEDIUM (8-15), LOW (4-7), MINIMAL (<4)
-  - **Create `CPUProfile` dataclass** in `src/schemas/hardware.py`
-  - **Update `HardwareProfile`**: Add CPU fields or nested CPUProfile
+  - **Done**: `CPUProfile` dataclass in `src/schemas/hardware.py`
+  - **Done**: `src/services/hardware/cpu.py` with platform-specific detection
 
-- [ ] Extend storage detection to full StorageProfile (HARDWARE_DETECTION.md Section 4)
-  - Extend existing `storage.py` with StorageProfile dataclass
-  - Detect total and free space
+- [x] Extend storage detection to full StorageProfile (HARDWARE_DETECTION.md Section 4) ✅ 2026-01-03
+  - Extend existing `storage.py` with `StorageProfile` dataclass
+  - Detect total and free space via `shutil.disk_usage()`
   - Estimate read speeds for load time calculations
   - Classify into tiers: FAST, MODERATE, SLOW
-  - **Update `HardwareProfile`**: Add storage fields or nested StorageProfile
+  - **Done**: `src/services/hardware/storage.py` with `detect_storage()` function
 
-- [ ] Implement RAM offload detection (HARDWARE_DETECTION.md Section 5)
+- [x] Implement RAM offload detection (HARDWARE_DETECTION.md Section 5) ✅ 2026-01-03
   - Detect total and available RAM
-  - Calculate usable RAM for model offload
+  - Calculate usable RAM for model offload: `(available - 4GB) * 0.8`
   - Integrate with CPU tier for offload viability
-  - **Update `HardwareProfile`**: Add `ram_available_gb`, `ram_for_offload_gb`
+  - **Done**: `RAMProfile` dataclass with `bandwidth_gbps`, `memory_type` fields
+  - **Done**: `src/services/hardware/ram.py` with DDR bandwidth lookup tables
+  - **Done**: `calculate_offload_viability()` using bandwidth-based speed ratio (not magic numbers)
 
-- [ ] Update unit tests for extended hardware detection
+- [x] Update GPU detectors with nested profiles ✅ 2026-01-03
+  - `NVIDIADetector`: Added CPU, RAM, Storage, FormFactor profiles + GPU bandwidth lookup
+  - `AppleSiliconDetector`: Added CPU, RAM, Storage profiles + unified memory bandwidth
+  - `AMDROCmDetector`: Added CPU, RAM, Storage profiles + GPU bandwidth lookup
+  - `CPUOnlyDetector`: Added CPU, RAM, Storage profiles for CPU-only fallback
+
+- [x] Add memory bandwidth detection ✅ 2026-01-03
+  - GPU bandwidth: Lookup tables in `NVIDIADetector.GPU_BANDWIDTH_GBPS`, `AMDROCmDetector.GPU_BANDWIDTH_GBPS`
+  - RAM bandwidth: `RAM_BANDWIDTH_GBPS` lookup + `detect_memory_type()` in `ram.py`
+  - Speed ratio formula: `speed_ratio = ram_bandwidth / gpu_bandwidth` (no magic numbers)
+
+- [x] Update unit tests for extended hardware detection ✅ 2026-01-03
   - Test form factor detection and performance ratio calculation
   - Test CPU tier classification
-  - Test storage tier classification
-  - Test RAM offload calculations
+  - Test storage tier classification (via storage type)
+  - Test RAM offload calculations with encapsulated lookup pattern
+  - Test GPU bandwidth lookups (NVIDIA, AMD)
+  - **Done**: Added `TestCPUDetection`, `TestRAMDetection`, `TestFormFactorDetection`, `TestGPUBandwidthLookup`
+
+- [x] Create shared subprocess utilities ✅ 2026-01-03
+  - `src/utils/subprocess_utils.py` with I/O normalization functions
+  - `run_powershell()` with `-NoProfile` for profile isolation
+  - `run_command()` for general subprocess execution
+  - `extract_number()`, `extract_json()`, `extract_json_array()` for noisy output parsing
+  - Updated `ram.py`, `storage.py`, `nvidia.py` to use shared utilities
+  - **Done**: Added `tests/utils/test_subprocess_utils.py` with 29 tests
+
+- [x] Document architecture principles ✅ 2026-01-03
+  - `docs/ARCHITECTURE_PRINCIPLES.md` - comprehensive coding patterns guide
+  - I/O normalization, no magic numbers, lookup tables, encapsulated lookups
+  - Nested profile pattern, explicit failure handling
+  - Updated `CLAUDE.md` to reference architecture principles in Source of Truth
 
 #### Week 2b: Configuration & Services
 

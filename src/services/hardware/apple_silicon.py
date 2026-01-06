@@ -24,8 +24,11 @@ from src.schemas.hardware import (
     HardwareProfile,
     PlatformType,
     ThermalState,
+    RAMProfile,
 )
 from src.services.hardware.base import HardwareDetector, DetectionFailedError
+from src.services.hardware.cpu import detect_cpu
+from src.services.hardware.storage import detect_storage
 from src.utils.logger import log
 
 
@@ -91,13 +94,43 @@ class AppleSiliconDetector(HardwareDetector):
         # Look up memory bandwidth
         bandwidth = self.BANDWIDTH_LOOKUP.get(chip_variant, 68)
 
+        # Phase 1 Week 2a: Nested profile detection
+        # CPU detection
+        try:
+            cpu_profile = detect_cpu()
+        except DetectionFailedError as e:
+            log.warning(f"CPU detection failed: {e.message}")
+            cpu_profile = None
+
+        # RAM profile for Apple Silicon (unified memory)
+        # Note: Apple Silicon doesn't use system RAM for offload since memory is unified
+        # Bandwidth is the unified memory bandwidth (already have in BANDWIDTH_LOOKUP)
+        ram_profile = RAMProfile(
+            total_gb=unified_memory_gb,
+            available_gb=unified_memory_gb * 0.75,  # macOS reserves ~25%
+            usable_for_offload_gb=0.0,  # No separate RAM offload on unified memory
+            bandwidth_gbps=float(bandwidth),  # Unified memory bandwidth
+            memory_type="lpddr5" if chip_variant.startswith(("M3", "M4")) else "lpddr4",
+        )
+
+        # Storage detection
+        try:
+            storage_profile = detect_storage()
+        except Exception as e:
+            log.warning(f"Storage detection failed: {e}")
+            storage_profile = None
+
         return HardwareProfile(
             platform=PlatformType.APPLE_SILICON,
             gpu_vendor="apple",
             gpu_name=chip_string,
             vram_gb=effective_vram_gb,
-            ram_gb=unified_memory_gb,
             unified_memory=True,
+            # Nested profiles (Phase 1 Week 2a)
+            cpu=cpu_profile,
+            ram=ram_profile,
+            storage=storage_profile,
+            form_factor=None,  # Apple Silicon doesn't use power-based form factor detection
             # Apple Silicon does not support these
             compute_capability=None,
             supports_fp8=False,
@@ -106,7 +139,7 @@ class AppleSiliconDetector(HardwareDetector):
             flash_attention_available=False,
             # Apple-specific
             mps_available=mps_available,
-            memory_bandwidth_gbps=bandwidth,
+            unified_memory_bandwidth_gbps=float(bandwidth),
             chip_variant=chip_variant,
         )
 

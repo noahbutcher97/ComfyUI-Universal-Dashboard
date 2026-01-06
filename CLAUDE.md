@@ -23,10 +23,13 @@ python launch.py
 - **Specification**: `docs/spec/AI_UNIVERSAL_SUITE_SPEC_v3.md` - Architecture, algorithms, schemas
 - **Hardware Detection**: `docs/spec/HARDWARE_DETECTION.md` - GPU, CPU, Storage, RAM detection
 - **CUDA/PyTorch**: `docs/spec/CUDA_PYTORCH_INSTALLATION.md` - PyTorch installation logic
+- **Architecture Principles**: `docs/ARCHITECTURE_PRINCIPLES.md` - Coding patterns, anti-patterns
+- **Migration Protocol**: `docs/MIGRATION_PROTOCOL.md` - TDD workflow, safe refactoring
 - **Task Tracker**: `docs/plan/PLAN_v3.md` - Current phase, decisions, gaps
 - **Model Database**: `data/models_database.yaml` - 100+ model definitions
 
 **If code contradicts the spec, the spec is correct.**
+**If code violates architecture principles, the code is wrong.**
 
 ## Project Overview
 
@@ -89,10 +92,20 @@ src/
 │   └── resources.json          # Legacy - migrate to models_database.yaml
 ├── schemas/
 │   ├── environment.py          # EnvironmentReport dataclass
+│   ├── hardware.py             # HardwareProfile, CPUProfile, RAMProfile, etc.
 │   ├── recommendation.py       # UserProfile, candidates, results
 │   └── installation.py         # InstallationManifest, items
 ├── services/
-│   ├── system_service.py       # Hardware detection (HAS BUGS)
+│   ├── hardware/               # NEW: Platform-specific hardware detection
+│   │   ├── base.py             # HardwareDetector ABC, exceptions
+│   │   ├── nvidia.py           # NVIDIA GPU detection
+│   │   ├── apple_silicon.py    # Apple Silicon detection
+│   │   ├── amd_rocm.py         # AMD ROCm detection
+│   │   ├── cpu.py              # CPU detection (cross-platform)
+│   │   ├── ram.py              # RAM detection and offload calculation
+│   │   ├── storage.py          # Storage type detection
+│   │   └── form_factor.py      # Desktop/laptop detection
+│   ├── system_service.py       # Legacy hardware detection (HAS BUGS)
 │   ├── scoring_service.py      # Old architecture (REPLACE)
 │   ├── recommendation_service.py # Orchestrator (REFACTOR)
 │   ├── comfy_service.py        # ComfyUI integration
@@ -106,7 +119,8 @@ src/
 │   ├── views/                  # Module dashboards
 │   └── components/             # Reusable UI components
 └── utils/
-    └── logger.py
+    ├── logger.py
+    └── subprocess_utils.py     # NEW: I/O normalization utilities
 ```
 
 ## Platform Constraints (HARDWARE_DETECTION.md)
@@ -159,12 +173,23 @@ src/
 5. **Model Data**: Use `data/models_database.yaml`, NOT `resources.json`
 6. **Migration Protocol**: See `docs/MIGRATION_PROTOCOL.md` - don't break working app during refactor
 
+### Architecture Principles (see `docs/ARCHITECTURE_PRINCIPLES.md`)
+
+- **I/O Normalization**: All shell output parsed with `src/utils/subprocess_utils.py` utilities
+- **No Magic Numbers**: All calculations use formulas or documented constants
+- **Lookup Tables**: Hardware specs from published sources with encapsulated lookups
+- **Nested Profiles**: Hardware data uses dataclasses with tier classification
+- **Explicit Failure**: Detection failures raise errors, not silent defaults
+
 ## Locked Decisions (Do Not Relitigate)
+
+Key decisions are final. For full rationale, see `docs/plan/PLAN_v3.md` Section 1 Decision Log.
 
 | Area | Decision |
 |------|----------|
 | Recommendation | 3-layer (CSP→Content→TOPSIS) |
 | Onboarding | Dual-path (Quick 5 / Comprehensive 15-20) |
+| HardwareTier | Effective capacity (VRAM + offload), not VRAM-only |
 | Model database | `data/models_database.yaml` |
 | Cloud APIs | Partner Nodes primary (ComfyUI 0.3.60+) |
 | Platform split | 40% Mac, 40% Windows, 20% Linux |
@@ -173,12 +198,18 @@ src/
 
 **Phase 1: Core Infrastructure** - IN PROGRESS
 
-Priority tasks:
-1. ~~Audit codebase against spec~~ ✅
-2. Fix Apple Silicon RAM detection (CRITICAL)
-3. Create `HardwareProfile` dataclass per SPEC 4.5
-4. Implement platform-specific `HardwareDetector` classes
-5. Migrate model loading to `models_database.yaml`
-6. Stub out 3-layer recommendation classes
+Completed:
+- ~~Audit codebase against spec~~ ✅
+- ~~Week 1: Hardware detection infrastructure~~ ✅
+  - `HardwareProfile` dataclass with nested profiles (CPU, RAM, Storage, FormFactor)
+  - Platform-specific detectors (NVIDIA, Apple Silicon, AMD ROCm)
+  - Shared utilities (`src/utils/subprocess_utils.py`)
+  - Architecture principles documented
+- ~~Week 2a: Extended detection (CPU, RAM, Storage, FormFactor)~~ ✅
+
+In progress:
+- Week 2b: Integration testing with real hardware
+- Migrate model loading to `models_database.yaml`
+- Stub out 3-layer recommendation classes
 
 See `docs/plan/PLAN_v3.md` Section 2 for full task list.

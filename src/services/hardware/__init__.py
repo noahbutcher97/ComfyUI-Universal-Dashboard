@@ -20,7 +20,17 @@ See: docs/MIGRATION_PROTOCOL.md Section 3
 import platform
 from typing import Optional
 
-from src.schemas.hardware import HardwareProfile, PlatformType, HardwareTier
+from src.schemas.hardware import (
+    HardwareProfile,
+    PlatformType,
+    HardwareTier,
+    CPUProfile,
+    CPUTier,
+    RAMProfile,
+    StorageProfile,
+    StorageTier,
+    FormFactorProfile,
+)
 from src.services.hardware.base import (
     HardwareDetector,
     DetectionFailedError,
@@ -30,11 +40,24 @@ from src.services.hardware.base import (
 from src.services.hardware.apple_silicon import AppleSiliconDetector
 from src.services.hardware.nvidia import NVIDIADetector
 from src.services.hardware.amd_rocm import AMDROCmDetector
+from src.services.hardware.cpu import detect_cpu, get_cpu_model_name, detect_avx_support
+from src.services.hardware.ram import (
+    detect_ram,
+    calculate_offload_viability,
+    detect_memory_type,
+    get_bandwidth_for_type,
+)
 from src.services.hardware.storage import (
     StorageType,
     detect_storage_type,
+    detect_storage,
     get_storage_warning,
     get_estimated_load_time,
+)
+from src.services.hardware.form_factor import (
+    detect_form_factor,
+    detect_power_limit,
+    calculate_sustained_performance_ratio,
 )
 from src.utils.logger import log
 
@@ -44,12 +67,26 @@ __all__ = [
     # Main functions
     "get_detector",
     "detect_hardware",
+    # Detection functions
+    "detect_cpu",
+    "detect_ram",
+    "detect_storage",
     "detect_storage_type",
-    # Types
+    "detect_form_factor",
+    "detect_memory_type",
+    "detect_power_limit",
+    # Profile types
     "HardwareProfile",
+    "CPUProfile",
+    "RAMProfile",
+    "StorageProfile",
+    "FormFactorProfile",
+    # Enums
     "HardwareTier",
     "PlatformType",
     "StorageType",
+    "CPUTier",
+    "StorageTier",
     # Detectors (for advanced use)
     "HardwareDetector",
     "AppleSiliconDetector",
@@ -59,9 +96,14 @@ __all__ = [
     "DetectionFailedError",
     "NoCUDAError",
     "NoROCmError",
-    # Storage utilities
+    # Utility functions
     "get_storage_warning",
     "get_estimated_load_time",
+    "get_cpu_model_name",
+    "detect_avx_support",
+    "calculate_offload_viability",
+    "calculate_sustained_performance_ratio",
+    "get_bandwidth_for_type",
 ]
 
 
@@ -137,46 +179,45 @@ class CPUOnlyDetector(HardwareDetector):
         return True
 
     def detect(self) -> HardwareProfile:
-        """Return CPU-only profile."""
-        ram_gb = self._get_system_ram()
+        """Return CPU-only profile with nested profiles."""
+        # Phase 1 Week 2a: Nested profile detection
+        # CPU detection
+        try:
+            cpu_profile = detect_cpu()
+        except DetectionFailedError as e:
+            log.warning(f"CPU detection failed: {e.message}")
+            cpu_profile = None
+
+        # RAM detection
+        try:
+            ram_profile = detect_ram()
+        except DetectionFailedError as e:
+            log.warning(f"RAM detection failed: {e.message}")
+            ram_profile = None
+
+        # Storage detection
+        try:
+            storage_profile = detect_storage()
+        except Exception as e:
+            log.warning(f"Storage detection failed: {e}")
+            storage_profile = None
 
         return HardwareProfile(
             platform=PlatformType.CPU_ONLY,
             gpu_vendor="none",
             gpu_name="CPU Only",
             vram_gb=0.0,  # No GPU VRAM
-            ram_gb=ram_gb,
             unified_memory=False,
+            # Nested profiles (Phase 1 Week 2a)
+            cpu=cpu_profile,
+            ram=ram_profile,
+            storage=storage_profile,
+            form_factor=None,  # No GPU form factor
             warnings=[
                 "No GPU detected - AI workloads will be very slow",
                 "Consider using cloud APIs for generation tasks",
             ],
         )
-
-    def _get_system_ram(self) -> float:
-        """Get system RAM in GB."""
-        try:
-            import psutil
-            return psutil.virtual_memory().total / (1024 ** 3)
-        except ImportError:
-            # Platform-specific fallbacks
-            if platform.system() == "Darwin":
-                try:
-                    import subprocess
-                    result = subprocess.check_output(["sysctl", "-n", "hw.memsize"])
-                    return int(result.strip()) / (1024 ** 3)
-                except Exception:
-                    pass
-            elif platform.system() == "Linux":
-                try:
-                    with open("/proc/meminfo", "r") as f:
-                        for line in f:
-                            if line.startswith("MemTotal:"):
-                                kb = int(line.split()[1])
-                                return kb / (1024 ** 2)
-                except Exception:
-                    pass
-            return 8.0  # Safe minimal fallback for CPU-only
 
 
 # Utility functions for migration compatibility

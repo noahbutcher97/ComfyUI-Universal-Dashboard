@@ -9,6 +9,7 @@ Key features:
 - Multi-GPU detection with NVLink topology
 - WSL2 detection
 - Thermal state monitoring
+- Phase 1 Week 2a: CPU, RAM, Storage, Form Factor detection
 
 NEW in Phase 1 - does not replace existing code.
 See: docs/MIGRATION_PROTOCOL.md Section 3
@@ -25,7 +26,12 @@ from src.schemas.hardware import (
     ThermalState,
 )
 from src.services.hardware.base import HardwareDetector, DetectionFailedError, NoCUDAError
+from src.services.hardware.cpu import detect_cpu
+from src.services.hardware.ram import detect_ram
+from src.services.hardware.storage import detect_storage
+from src.services.hardware.form_factor import detect_form_factor
 from src.utils.logger import log
+from src.utils.subprocess_utils import run_command
 
 
 class NVIDIADetector(HardwareDetector):
@@ -35,6 +41,48 @@ class NVIDIADetector(HardwareDetector):
     Uses PyTorch CUDA APIs for primary detection with nvidia-smi fallback.
     Detects compute capability for precision support (FP8, BF16, etc.).
     """
+
+    # GPU memory bandwidth lookup table (GB/s)
+    # Based on memory type and bus width per GPU series
+    # Source: NVIDIA specifications
+    GPU_BANDWIDTH_GBPS = {
+        # Blackwell (RTX 50 series) - GDDR7
+        "5090": 1792,  # 512-bit GDDR7
+        "5080": 960,   # 256-bit GDDR7
+        "5070 ti": 896,
+        "5070": 672,
+        # Ada Lovelace (RTX 40 series) - GDDR6X
+        "4090": 1008,  # 384-bit GDDR6X
+        "4080 super": 736,
+        "4080": 736,   # 256-bit GDDR6X
+        "4070 ti super": 672,
+        "4070 ti": 504,
+        "4070 super": 504,
+        "4070": 504,   # 192-bit GDDR6X
+        "4060 ti": 288,
+        "4060": 272,   # 128-bit GDDR6
+        # Ampere (RTX 30 series) - GDDR6X/GDDR6
+        "3090 ti": 1008,
+        "3090": 936,   # 384-bit GDDR6X
+        "3080 ti": 912,
+        "3080": 760,   # 320-bit GDDR6X
+        "3070 ti": 608,
+        "3070": 448,   # 256-bit GDDR6
+        "3060 ti": 448,
+        "3060": 360,   # 192-bit GDDR6
+        # Turing (RTX 20 series) - GDDR6
+        "2080 ti": 616,
+        "2080 super": 496,
+        "2080": 448,
+        "2070 super": 448,
+        "2070": 448,
+        "2060 super": 448,
+        "2060": 336,
+        # Data center
+        "h100": 3350,  # HBM3
+        "a100": 2039,  # HBM2e
+        "v100": 900,   # HBM2
+    }
 
     def is_available(self) -> bool:
         """Check if NVIDIA GPU detection is possible."""
@@ -48,6 +96,49 @@ class NVIDIADetector(HardwareDetector):
             return torch.cuda.is_available()
         except ImportError:
             return False
+
+    def _lookup_gpu_bandwidth(self, gpu_name: str) -> Optional[float]:
+        """
+        Look up GPU memory bandwidth from specifications.
+
+        Args:
+            gpu_name: GPU name string (e.g., "NVIDIA GeForce RTX 4090")
+
+        Returns:
+            Memory bandwidth in GB/s, or None if not found
+        """
+        import re
+
+        # Normalize GPU name
+        name_lower = gpu_name.lower()
+        name_lower = name_lower.replace("nvidia", "")
+        name_lower = name_lower.replace("geforce", "")
+        name_lower = name_lower.replace("rtx", "")
+        name_lower = name_lower.replace("gtx", "")
+        name_lower = name_lower.strip()
+
+        # Try exact match with suffixes first
+        for key, bandwidth in self.GPU_BANDWIDTH_GBPS.items():
+            if key in name_lower:
+                return float(bandwidth)
+
+        # Try to extract model number
+        model_pattern = r'(\d{4})\s*(ti|super)?'
+        match = re.search(model_pattern, name_lower)
+
+        if match:
+            model_key = match.group(1)
+            suffix = match.group(2) or ""
+            if suffix:
+                full_key = f"{model_key} {suffix}"
+                if full_key in self.GPU_BANDWIDTH_GBPS:
+                    return float(self.GPU_BANDWIDTH_GBPS[full_key])
+
+            if model_key in self.GPU_BANDWIDTH_GBPS:
+                return float(self.GPU_BANDWIDTH_GBPS[model_key])
+
+        log.debug(f"No bandwidth data found for GPU: {gpu_name}")
+        return None
 
     def detect(self) -> HardwareProfile:
         """
@@ -93,9 +184,6 @@ class NVIDIADetector(HardwareDetector):
         # WSL2 detection
         is_wsl = self._detect_wsl()
 
-        # System RAM
-        ram_gb = self._get_system_ram()
-
         # Determine platform type
         if is_wsl:
             plat = PlatformType.WSL2_NVIDIA
@@ -104,19 +192,57 @@ class NVIDIADetector(HardwareDetector):
         else:
             plat = PlatformType.LINUX_NVIDIA
 
+        # Phase 1 Week 2a: Extended detection
+        # CPU detection
+        try:
+            cpu_profile = detect_cpu()
+        except DetectionFailedError as e:
+            log.warning(f"CPU detection failed: {e.message}")
+            cpu_profile = None
+
+        # RAM detection
+        try:
+            ram_profile = detect_ram()
+        except DetectionFailedError as e:
+            log.warning(f"RAM detection failed: {e.message}")
+            ram_profile = None
+
+        # Storage detection (uses current working directory)
+        try:
+            storage_profile = detect_storage()
+        except Exception as e:
+            log.warning(f"Storage detection failed: {e}")
+            storage_profile = None
+
+        # Form factor detection (NVIDIA-specific)
+        try:
+            form_factor_profile = detect_form_factor(gpu_name)
+        except Exception as e:
+            log.warning(f"Form factor detection failed: {e}")
+            form_factor_profile = None
+
+        # GPU memory bandwidth lookup
+        gpu_bandwidth = self._lookup_gpu_bandwidth(gpu_name)
+
         return HardwareProfile(
             platform=plat,
             gpu_vendor="nvidia",
             gpu_name=gpu_name,
             vram_gb=vram_gb,
-            ram_gb=ram_gb,
             unified_memory=False,
+            # Nested profiles (Phase 1 Week 2a)
+            cpu=cpu_profile,
+            ram=ram_profile,
+            storage=storage_profile,
+            form_factor=form_factor_profile,
             # Compute capability-based features
             compute_capability=compute_capability,
             supports_fp8=compute_capability >= 8.9,      # Ada Lovelace+
             supports_bf16=compute_capability >= 8.0,     # Ampere+
             supports_tf32=compute_capability >= 8.0,     # Ampere+
             flash_attention_available=compute_capability >= 8.0,
+            # Memory bandwidth for offload calculations
+            gpu_bandwidth_gbps=gpu_bandwidth,
             # Multi-GPU
             gpu_count=gpu_count,
             nvlink_available=nvlink_available,
@@ -127,36 +253,44 @@ class NVIDIADetector(HardwareDetector):
         Fallback detection via nvidia-smi when PyTorch CUDA unavailable.
 
         Provides basic GPU info without compute capability details.
+        Uses shared utilities per ARCHITECTURE_PRINCIPLES.md.
         """
         try:
-            creation_flags = 0
-            if platform.system() == "Windows":
-                creation_flags = subprocess.CREATE_NO_WINDOW
-
-            output = subprocess.check_output(
+            # Use shared utility for consistent error handling
+            output = run_command(
                 ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
-                creationflags=creation_flags,
-                stderr=subprocess.DEVNULL
-            ).decode()
+                timeout=10
+            )
+
+            if not output:
+                raise DetectionFailedError(
+                    component="NVIDIA GPU",
+                    message="nvidia-smi returned no output",
+                    details="Ensure NVIDIA drivers are installed."
+                )
 
             name, mem = output.strip().split(',')
             vram_gb = float(mem.strip()) / 1024
 
             # Infer compute capability from GPU name (approximate)
             cc = self._infer_compute_capability(name)
+            gpu_name_clean = name.strip()
+
+            # GPU memory bandwidth lookup
+            gpu_bandwidth = self._lookup_gpu_bandwidth(gpu_name_clean)
 
             return HardwareProfile(
                 platform=PlatformType.WINDOWS_NVIDIA if platform.system() == "Windows" else PlatformType.LINUX_NVIDIA,
                 gpu_vendor="nvidia",
-                gpu_name=name.strip(),
+                gpu_name=gpu_name_clean,
                 vram_gb=vram_gb,
-                ram_gb=self._get_system_ram(),
                 unified_memory=False,
                 compute_capability=cc,
                 supports_fp8=cc is not None and cc >= 8.9,
                 supports_bf16=cc is not None and cc >= 8.0,
                 supports_tf32=cc is not None and cc >= 8.0,
                 flash_attention_available=cc is not None and cc >= 8.0,
+                gpu_bandwidth_gbps=gpu_bandwidth,
                 warnings=["Compute capability inferred from GPU name (PyTorch CUDA unavailable)"],
             )
         except Exception as e:
@@ -211,20 +345,11 @@ class NVIDIADetector(HardwareDetector):
 
     def _check_nvlink(self) -> bool:
         """Check if NVLink is available between GPUs."""
-        try:
-            creation_flags = 0
-            if platform.system() == "Windows":
-                creation_flags = subprocess.CREATE_NO_WINDOW
-
-            output = subprocess.check_output(
-                ["nvidia-smi", "nvlink", "--status"],
-                creationflags=creation_flags,
-                stderr=subprocess.DEVNULL
-            ).decode()
-
-            return "NVLink" in output and "inactive" not in output.lower()
-        except Exception:
+        # Use shared utility for consistent error handling
+        output = run_command(["nvidia-smi", "nvlink", "--status"], timeout=5)
+        if not output:
             return False
+        return "NVLink" in output and "inactive" not in output.lower()
 
     def _get_system_ram(self) -> float:
         """Get system RAM in GB."""
@@ -244,17 +369,17 @@ class NVIDIADetector(HardwareDetector):
         - WARNING: 82-84C (approaching throttle)
         - CRITICAL: 85C+ (active throttling)
         """
+        # Use shared utility for consistent error handling
+        output = run_command(
+            ["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
+            timeout=5
+        )
+
+        if not output:
+            log.debug("Thermal state detection returned no output")
+            return None
+
         try:
-            creation_flags = 0
-            if platform.system() == "Windows":
-                creation_flags = subprocess.CREATE_NO_WINDOW
-
-            output = subprocess.check_output(
-                ["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"],
-                creationflags=creation_flags,
-                stderr=subprocess.DEVNULL
-            ).decode()
-
             temp = int(output.strip().split('\n')[0])
 
             if temp >= 85:
@@ -263,6 +388,6 @@ class NVIDIADetector(HardwareDetector):
                 return ThermalState.WARNING.value
             else:
                 return ThermalState.NORMAL.value
-        except Exception as e:
-            log.debug(f"Thermal state detection failed: {e}")
+        except (ValueError, IndexError) as e:
+            log.debug(f"Thermal state parsing failed: {e}")
             return None

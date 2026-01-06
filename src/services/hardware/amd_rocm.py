@@ -25,6 +25,9 @@ from src.schemas.hardware import (
     PlatformType,
 )
 from src.services.hardware.base import HardwareDetector, DetectionFailedError, NoROCmError
+from src.services.hardware.cpu import detect_cpu
+from src.services.hardware.ram import detect_ram
+from src.services.hardware.storage import detect_storage
 from src.utils.logger import log
 
 
@@ -49,6 +52,27 @@ class AMDROCmDetector(HardwareDetector):
         "gfx1030": ("RX 6900 XT/6800", "HSA_OVERRIDE_GFX_VERSION=10.3.0"),
         "gfx1031": ("RX 6700 XT", "HSA_OVERRIDE_GFX_VERSION=10.3.0"),
         "gfx1032": ("RX 6600 XT", "HSA_OVERRIDE_GFX_VERSION=10.3.0"),
+    }
+
+    # GPU memory bandwidth lookup table (GB/s)
+    # Based on memory type and bus width per GPU series
+    GPU_BANDWIDTH_GBPS = {
+        # RDNA3 (RX 7000 series) - GDDR6
+        "7900 xtx": 960,    # 384-bit GDDR6
+        "7900 xt": 800,     # 320-bit GDDR6
+        "7900 gre": 576,    # 256-bit GDDR6
+        "7800 xt": 576,     # 256-bit GDDR6
+        "7700 xt": 432,     # 192-bit GDDR6
+        "7600 xt": 288,     # 128-bit GDDR6
+        "7600": 288,        # 128-bit GDDR6
+        # RDNA2 (RX 6000 series) - GDDR6
+        "6950 xt": 576,     # 256-bit GDDR6
+        "6900 xt": 512,     # 256-bit GDDR6
+        "6800 xt": 512,     # 256-bit GDDR6
+        "6800": 512,        # 256-bit GDDR6
+        "6700 xt": 384,     # 192-bit GDDR6
+        "6600 xt": 256,     # 128-bit GDDR6
+        "6600": 224,        # 128-bit GDDR6
     }
 
     def is_available(self) -> bool:
@@ -90,8 +114,30 @@ class AMDROCmDetector(HardwareDetector):
         if not officially_supported and gfx_version in self.RDNA2_WORKAROUND:
             _, hsa_override = self.RDNA2_WORKAROUND[gfx_version]
 
-        # Get system RAM
-        ram_gb = self._get_system_ram()
+        # Phase 1 Week 2a: Nested profile detection
+        # CPU detection
+        try:
+            cpu_profile = detect_cpu()
+        except DetectionFailedError as e:
+            log.warning(f"CPU detection failed: {e.message}")
+            cpu_profile = None
+
+        # RAM detection
+        try:
+            ram_profile = detect_ram()
+        except DetectionFailedError as e:
+            log.warning(f"RAM detection failed: {e.message}")
+            ram_profile = None
+
+        # Storage detection
+        try:
+            storage_profile = detect_storage()
+        except Exception as e:
+            log.warning(f"Storage detection failed: {e}")
+            storage_profile = None
+
+        # GPU memory bandwidth lookup
+        gpu_bandwidth = self._lookup_gpu_bandwidth(gpu_name)
 
         # Build warnings list
         warnings = ["ROCm support is experimental"]
@@ -106,14 +152,20 @@ class AMDROCmDetector(HardwareDetector):
             gpu_vendor="amd",
             gpu_name=gpu_name,
             vram_gb=vram_gb,
-            ram_gb=ram_gb,
             unified_memory=False,
+            # Nested profiles (Phase 1 Week 2a)
+            cpu=cpu_profile,
+            ram=ram_profile,
+            storage=storage_profile,
+            form_factor=None,  # AMD GPUs don't use power-based form factor detection (yet)
             # AMD doesn't support these in the same way
             compute_capability=None,
             supports_fp8=False,  # Not available on current AMD GPUs
             supports_bf16=True,  # RDNA3 supports BF16
             supports_tf32=False,
             flash_attention_available=False,  # Limited FA support on ROCm
+            # GPU memory bandwidth for offload calculations
+            gpu_bandwidth_gbps=gpu_bandwidth,
             # ROCm-specific
             rocm_version=rocm_version,
             gfx_version=gfx_version,
@@ -210,22 +262,45 @@ class AMDROCmDetector(HardwareDetector):
 
         return None
 
-    def _get_system_ram(self) -> float:
-        """Get system RAM in GB."""
-        try:
-            import psutil
-            return psutil.virtual_memory().total / (1024 ** 3)
-        except ImportError:
-            # Fallback to /proc/meminfo
-            try:
-                with open("/proc/meminfo", "r") as f:
-                    for line in f:
-                        if line.startswith("MemTotal:"):
-                            kb = int(line.split()[1])
-                            return kb / (1024 ** 2)
-            except Exception:
-                pass
-            return 0.0
+    def _lookup_gpu_bandwidth(self, gpu_name: str) -> Optional[float]:
+        """
+        Look up GPU memory bandwidth from specifications.
+
+        Args:
+            gpu_name: GPU name string (e.g., "AMD Radeon RX 7900 XTX")
+
+        Returns:
+            Memory bandwidth in GB/s, or None if not found
+        """
+        # Normalize GPU name
+        name_lower = gpu_name.lower()
+        name_lower = name_lower.replace("amd", "")
+        name_lower = name_lower.replace("radeon", "")
+        name_lower = name_lower.replace("rx", "")
+        name_lower = name_lower.strip()
+
+        # Try direct match
+        for key, bandwidth in self.GPU_BANDWIDTH_GBPS.items():
+            if key in name_lower:
+                return float(bandwidth)
+
+        # Try extracting model number
+        model_pattern = r'(\d{4})\s*(xt|xtx|gre)?'
+        match = re.search(model_pattern, name_lower)
+
+        if match:
+            model_key = match.group(1)
+            suffix = match.group(2) or ""
+            if suffix:
+                full_key = f"{model_key} {suffix}"
+                if full_key in self.GPU_BANDWIDTH_GBPS:
+                    return float(self.GPU_BANDWIDTH_GBPS[full_key])
+
+            if model_key in self.GPU_BANDWIDTH_GBPS:
+                return float(self.GPU_BANDWIDTH_GBPS[model_key])
+
+        log.debug(f"No bandwidth data found for AMD GPU: {gpu_name}")
+        return None
 
     def get_thermal_state(self) -> Optional[str]:
         """
