@@ -10,16 +10,35 @@ from src.schemas.recommendation import (
     CLICapabilityScores
 )
 from src.services.scoring_service import ScoringService
+from src.services.model_database import (
+    ModelDatabase,
+    ModelEntry,
+    ModelVariant,
+    get_model_database,
+    normalize_platform,
+)
 from src.utils.logger import log
+
 
 class RecommendationService:
     """
     Generates configuration recommendations for modules based on
     User Profile and Hardware Environment.
+
+    Model data is loaded from models_database.yaml via ModelDatabase.
+    Non-model config (use_cases, modules) comes from resources.json.
     """
-    
-    def __init__(self, resources: Dict[str, Any]):
+
+    def __init__(self, resources: Dict[str, Any], model_db: Optional[ModelDatabase] = None):
+        """
+        Initialize the recommendation service.
+
+        Args:
+            resources: Config from resources.json (use_cases, modules, etc.)
+            model_db: Optional ModelDatabase instance. If None, uses singleton.
+        """
         self.resources = resources
+        self.model_db = model_db or get_model_database()
         self.scoring_service = ScoringService(resources)
 
     def generate_recommendations(
@@ -54,15 +73,19 @@ class RecommendationService:
         return recommendations
 
     def _recommend_comfyui(
-        self, 
-        use_case_config: Dict, 
+        self,
+        use_case_config: Dict,
         env: EnvironmentReport,
         hardware: HardwareConstraints,
         user_profile: UserProfile
     ) -> ModuleRecommendation:
-        
-        # 1. Generate Candidates from Resources
-        candidates = self._generate_model_candidates()
+
+        # Determine categories based on use case capabilities
+        capabilities = use_case_config.get("capabilities", [])
+        categories = self._capabilities_to_categories(capabilities)
+
+        # 1. Generate Candidates from ModelDatabase (replaces resources.json)
+        candidates = self._generate_model_candidates(env, categories)
         
         # 2. Score Candidates
         scored_candidates = self.scoring_service.score_model_candidates(candidates, user_profile, hardware)
@@ -160,25 +183,179 @@ class RecommendationService:
             estimated_time_minutes=1
         )
 
-    def _generate_model_candidates(self) -> List[ModelCandidate]:
+    def _generate_model_candidates(
+        self,
+        env: EnvironmentReport,
+        categories: Optional[List[str]] = None,
+    ) -> List[ModelCandidate]:
+        """
+        Generate model candidates from ModelDatabase.
+
+        This replaces the legacy resources.json model loading.
+
+        Args:
+            env: Environment report with hardware info
+            categories: Optional list of categories to filter (None = all local models)
+
+        Returns:
+            List of ModelCandidate objects for scoring
+        """
+        candidates = []
+
+        # Determine platform key from environment
+        platform = normalize_platform(env.gpu_vendor, env.platform)
+
+        # Get VRAM in MB (convert from GB)
+        vram_mb = int(env.vram_gb * 1024)
+
+        # Get compute capability if available
+        compute_cap = None
+        if hasattr(env, "cuda_compute_capability") and env.cuda_compute_capability:
+            compute_cap = env.cuda_compute_capability
+
+        # Default categories if not specified
+        if categories is None:
+            categories = ["image_generation", "video_generation"]
+
+        # Get compatible models from database
+        compatible = self.model_db.get_compatible_models(
+            platform=platform,
+            vram_mb=vram_mb,
+            categories=categories,
+            compute_capability=compute_cap,
+        )
+
+        for model, variant in compatible:
+            candidate = self._model_to_candidate(model, variant, platform)
+            candidates.append(candidate)
+
+        log.info(f"Generated {len(candidates)} model candidates for {platform} with {vram_mb}MB VRAM")
+        return candidates
+
+    def _model_to_candidate(
+        self,
+        model: ModelEntry,
+        variant: ModelVariant,
+        platform: str,
+    ) -> ModelCandidate:
+        """
+        Convert a ModelEntry + ModelVariant to a ModelCandidate.
+
+        Args:
+            model: The model entry from database
+            variant: The selected variant
+            platform: Platform key for node filtering
+
+        Returns:
+            ModelCandidate ready for scoring
+        """
+        # Map capability scores from YAML schema to ModelCapabilityScores
+        cap_scores = ModelCapabilityScores()
+        yaml_scores = model.capabilities.scores
+
+        # Map common score names
+        score_mapping = {
+            "photorealism": "photorealism",
+            "artistic_quality": "artistic_stylization",
+            "speed": "generation_speed",
+            "temporal_coherence": "temporal_coherence",
+            "motion_quality": "motion_dynamic",
+            "consistency": "output_fidelity",
+            "text_rendering": "prompt_adherence",
+        }
+
+        for yaml_key, attr_name in score_mapping.items():
+            if yaml_key in yaml_scores and hasattr(cap_scores, attr_name):
+                setattr(cap_scores, attr_name, yaml_scores[yaml_key])
+
+        # Determine tier from model family/architecture
+        tier = self._determine_tier(model, variant)
+
+        # Get required nodes
+        required_nodes = self.model_db.get_required_nodes(model, variant)
+
+        # Build requirements dict
+        requirements = {
+            "url": variant.download_url,
+            "size_gb": variant.download_size_gb,
+            "vram_min_mb": variant.vram_min_mb,
+            "vram_recommended_mb": variant.vram_recommended_mb,
+            "precision": variant.precision,
+            "quality_retention": variant.quality_retention_percent,
+        }
+
+        # Determine approach based on model complexity
+        approach = self._determine_approach(model)
+
+        return ModelCandidate(
+            id=f"{model.id}_{variant.id}",
+            display_name=f"{model.name} ({variant.precision.upper()})",
+            tier=tier,
+            capabilities=cap_scores,
+            requirements=requirements,
+            approach=approach,
+            required_nodes=required_nodes,
+        )
+
+    def _determine_tier(self, model: ModelEntry, variant: ModelVariant) -> str:
+        """
+        Determine tier classification from model data.
+
+        Maps to legacy tier names for compatibility with scoring_service.
+        """
+        family = model.family.lower()
+        vram_min = variant.vram_min_mb
+
+        # Map by VRAM requirements (legacy tier system)
+        if vram_min >= 24000:
+            return "flux"
+        elif vram_min >= 12000:
+            return "flux"
+        elif vram_min >= 8000:
+            return "sdxl"
+        elif "gguf" in variant.precision.lower():
+            return "gguf"
+        else:
+            return "sd15"
+
+    def _determine_approach(self, model: ModelEntry) -> str:
+        """
+        Determine recommended approach from model characteristics.
+
+        Returns:
+            "minimal", "monolithic", or "modular"
+        """
+        # Check for complex dependencies
+        if model.dependencies.paired_models:
+            return "modular"
+
+        # Check for multiple required nodes
+        if len(model.dependencies.required_nodes) > 2:
+            return "modular"
+
+        # Default to minimal for simpler setups
+        return "minimal"
+
+    def _generate_model_candidates_legacy(self) -> List[ModelCandidate]:
+        """
+        Legacy method - loads from resources.json.
+
+        DEPRECATED: Use _generate_model_candidates() instead.
+        Kept for backward compatibility during migration.
+        """
         candidates = []
         models_res = self.resources.get("comfyui_components", {}).get("models", {})
-        
+
         # Process Checkpoints
         checkpoints = models_res.get("checkpoints", {})
         for key, data in checkpoints.items():
             caps = data.get("capabilities", {})
-            # Map dict caps to ModelCapabilityScores if detail available, 
-            # currently resources.json has list ["t2i"] or dict. 
-            # The schema in resources.json (read earlier) showed "capabilities": { "t2i": 1.0 ... }
-            
             cap_scores = ModelCapabilityScores()
             if isinstance(caps, dict):
-                # Update with values from json
                 for k, v in caps.items():
                     if hasattr(cap_scores, k):
                         setattr(cap_scores, k, float(v))
-            
+
             cand = ModelCandidate(
                 id=key,
                 display_name=data.get("display_name", key),
@@ -189,15 +366,14 @@ class RecommendationService:
                     "size_gb": data.get("size_gb", 0),
                     "hash": data.get("hash")
                 },
-                approach="minimal" # Default
+                approach="minimal"
             )
             candidates.append(cand)
-            
+
         # Process GGUF/UNETs
         unets = models_res.get("unet_gguf", {})
         for key, data in unets.items():
-             # Similar logic
-             cand = ModelCandidate(
+            cand = ModelCandidate(
                 id=key,
                 display_name=data.get("display_name", key),
                 tier=data.get("tier", "gguf"),
@@ -206,9 +382,9 @@ class RecommendationService:
                     "size_gb": data.get("size_gb", 0)
                 },
                 required_nodes=["ComfyUI-GGUF"]
-             )
-             candidates.append(cand)
-             
+            )
+            candidates.append(cand)
+
         return candidates
 
     def _normalize_hardware(self, env: EnvironmentReport) -> HardwareConstraints:
@@ -243,5 +419,65 @@ class RecommendationService:
         
         # Form Factor / Thermal hints
         constraints.expected_thermal_throttle = (env.form_factor == "laptop")
-        
+
         return constraints
+
+    def _capabilities_to_categories(self, capabilities: List[str]) -> List[str]:
+        """
+        Map use case capabilities to model database categories.
+
+        Args:
+            capabilities: List of capability strings from use_case config
+                         e.g., ["t2i", "i2i", "i2v"]
+
+        Returns:
+            List of category strings for ModelDatabase query
+                         e.g., ["image_generation", "video_generation"]
+        """
+        # Mapping from capability codes to database categories
+        capability_map = {
+            # Image capabilities
+            "t2i": "image_generation",
+            "i2i": "image_generation",
+            "text_to_image": "image_generation",
+            "image_to_image": "image_generation",
+            "inpainting": "image_generation",
+            "outpainting": "image_generation",
+
+            # Video capabilities
+            "i2v": "video_generation",
+            "t2v": "video_generation",
+            "image_to_video": "video_generation",
+            "text_to_video": "video_generation",
+            "video_editing": "video_generation",
+
+            # Audio capabilities
+            "tts": "audio_generation",
+            "text_to_speech": "audio_generation",
+            "voice_cloning": "audio_generation",
+            "music": "audio_generation",
+            "music_generation": "audio_generation",
+
+            # 3D capabilities
+            "i2_3d": "3d_generation",
+            "t2_3d": "3d_generation",
+            "image_to_3d": "3d_generation",
+            "text_to_3d": "3d_generation",
+
+            # Lip sync
+            "lip_sync": "lip_sync",
+            "talking_head": "lip_sync",
+        }
+
+        categories = set()
+
+        for cap in capabilities:
+            cap_lower = cap.lower()
+            if cap_lower in capability_map:
+                categories.add(capability_map[cap_lower])
+
+        # Default to image_generation if no capabilities specified
+        if not categories:
+            categories.add("image_generation")
+
+        return list(categories)

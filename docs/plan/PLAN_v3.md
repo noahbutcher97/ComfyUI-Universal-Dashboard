@@ -382,15 +382,19 @@ def _calculate_tier(self) -> HardwareTier:
 
 **Goal**: Infrastructure for config persistence, model loading, downloads, and recommendation engine stubs.
 
-- [ ] Migrate model loading to `models_database.yaml`
-  - Update `recommendation_service.py` to load from YAML
-  - Remove model definitions from `resources.json`
-  - Implement `ModelDatabase` class with querying
-  
-- [ ] Implement `ConfigManager` with v3.0 schema
-  - User preferences persistence
-  - Installation state tracking
-  - Migration from older config versions
+- [x] Migrate model loading to `models_database.yaml` ✅ 2026-01-06
+  - Created `src/services/model_database.py` with full YAML parsing
+  - Updated `recommendation_service.py` to use `ModelDatabase`
+  - Added `_generate_model_candidates()` with platform/VRAM filtering
+  - 37 unit tests in `tests/services/test_model_database.py`
+  - **Note**: `resources.json` retained for non-model config (use_cases, modules)
+
+- [x] Implement `ConfigManager` with v3.0 schema ✅ 2026-01-06
+  - Schema versioning with migration from v1/v2 to v3
+  - Nested key access via dot notation (`preferences.theme`)
+  - Installation state tracking (modules, models, custom nodes)
+  - Timestamp tracking (created_at, updated_at)
+  - 20 TDD tests in `tests/config/test_config_manager.py`
 
 - [ ] Implement `DownloadService` with retry and progress
   - Exponential backoff on failure
@@ -403,11 +407,12 @@ def _calculate_tier(self) -> HardwareTier:
   - macOS: .command files or .app bundles
   - Linux: .desktop files
 
-- [ ] Stub out 3-layer recommendation classes
+- [x] Stub out 3-layer recommendation classes ✅ 2026-01-06
   - `src/services/recommendation/constraint_layer.py` (Layer 1: CSP)
   - `src/services/recommendation/content_layer.py` (Layer 2: Content-Based)
   - `src/services/recommendation/topsis_layer.py` (Layer 3: TOPSIS)
-  - These will be implemented in Phase 3
+  - Includes dataclasses: `PassingCandidate`, `RejectedCandidate`, `ScoredCandidate`, `RankedCandidate`
+  - Full implementation in Phase 3
 
 - [ ] Add logging infrastructure
   - Structured logging with levels
