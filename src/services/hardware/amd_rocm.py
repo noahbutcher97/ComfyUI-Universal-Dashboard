@@ -304,9 +304,83 @@ class AMDROCmDetector(HardwareDetector):
 
     def get_thermal_state(self) -> Optional[str]:
         """
-        Get GPU thermal state via amd-smi or rocm-smi.
+        Get GPU thermal state via rocm-smi temperature reading.
 
-        Note: Thermal monitoring is lower priority - returns None for now.
+        Uses `rocm-smi --showtemp` to get GPU temperature.
+        Returns: "nominal", "fair", "serious", "critical", or None if detection fails.
+
+        Thermal thresholds (typical for AMD GPUs):
+        - nominal: < 70°C
+        - fair: 70-85°C
+        - serious: 85-95°C
+        - critical: > 95°C
+
+        Per SPEC §4.6.1: Maps to ThermalState enum values.
         """
-        # TODO: Implement if needed
+        try:
+            # Try rocm-smi first
+            result = subprocess.run(
+                ["rocm-smi", "--showtemp"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if result.returncode == 0:
+                return self._parse_rocm_smi_temp(result.stdout)
+
+            # Fall back to amd-smi (newer ROCm versions)
+            result = subprocess.run(
+                ["amd-smi", "metric", "-t"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if result.returncode == 0:
+                return self._parse_amd_smi_temp(result.stdout)
+
+            log.debug("Both rocm-smi and amd-smi failed for thermal detection")
+            return None
+
+        except subprocess.TimeoutExpired:
+            log.warning("ROCm thermal check timed out")
+            return None
+        except FileNotFoundError:
+            log.debug("rocm-smi/amd-smi not found")
+            return None
+        except Exception as e:
+            log.warning(f"AMD thermal state detection failed: {e}")
+            return None
+
+    def _parse_rocm_smi_temp(self, output: str) -> Optional[str]:
+        """Parse temperature from rocm-smi --showtemp output."""
+        # Look for temperature values like "Temperature (Sensor edge) (C): 45.0"
+        # or "GPU[0] : Temperature (Sensor junction) (C): 52.0"
+        temp_match = re.search(r'Temperature.*?:\s*(\d+(?:\.\d+)?)', output)
+        if temp_match:
+            temp = float(temp_match.group(1))
+            return self._temp_to_state(temp)
+
         return None
+
+    def _parse_amd_smi_temp(self, output: str) -> Optional[str]:
+        """Parse temperature from amd-smi metric -t output."""
+        # amd-smi outputs temperature in various formats
+        temp_match = re.search(r'(\d+(?:\.\d+)?)\s*[°]?C', output)
+        if temp_match:
+            temp = float(temp_match.group(1))
+            return self._temp_to_state(temp)
+
+        return None
+
+    def _temp_to_state(self, temp_celsius: float) -> str:
+        """Convert temperature to thermal state string."""
+        if temp_celsius < 70:
+            return "nominal"
+        elif temp_celsius < 85:
+            return "fair"
+        elif temp_celsius < 95:
+            return "serious"
+        else:
+            return "critical"

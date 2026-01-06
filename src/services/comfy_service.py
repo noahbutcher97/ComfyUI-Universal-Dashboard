@@ -92,14 +92,38 @@ class ComfyService:
 
     @staticmethod
     def install_custom_node(node_url: str, dest_path: str) -> bool:
-        """Clone a custom node repository."""
-        # Implementation depends on execution environment.
-        # This might just check if it exists or return a manifest item?
-        # The spec implies an action.
+        """
+        Clone a custom node repository.
+
+        Per ARCHITECTURE_PRINCIPLES: Uses run_command() instead of direct subprocess.
+        """
         try:
+            from src.utils.subprocess_utils import run_command
+
+            result = run_command(["git", "clone", node_url, dest_path], timeout=300)
+            if result is not None:
+                log.info(f"Successfully cloned custom node to {dest_path}")
+                return True
+            else:
+                log.error(f"Failed to clone custom node from {node_url}")
+                return False
+        except ImportError:
+            # Fallback if subprocess_utils not available
             import subprocess
-            subprocess.check_call(["git", "clone", node_url, dest_path])
-            return True
+            try:
+                subprocess.run(
+                    ["git", "clone", node_url, dest_path],
+                    check=True,
+                    timeout=300
+                )
+                log.info(f"Successfully cloned custom node to {dest_path}")
+                return True
+            except subprocess.CalledProcessError as e:
+                log.error(f"Git clone failed: {e}")
+                return False
+            except subprocess.TimeoutExpired:
+                log.error(f"Git clone timed out for {node_url}")
+                return False
         except Exception as e:
             log.error(f"Failed to install custom node: {e}")
             return False

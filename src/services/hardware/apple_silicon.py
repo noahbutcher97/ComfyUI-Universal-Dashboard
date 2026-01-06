@@ -235,10 +235,64 @@ class AppleSiliconDetector(HardwareDetector):
 
     def get_thermal_state(self) -> Optional[str]:
         """
-        Get thermal state via IOKit (macOS).
+        Get thermal state via pmset (macOS).
 
-        Note: Requires additional implementation for full thermal monitoring.
-        Returns None for now as thermal detection is lower priority.
+        Uses `pmset -g therm` to detect thermal throttling state.
+        Returns: "nominal", "fair", "serious", "critical", or None if detection fails.
+
+        Per SPEC §4.6.1: Maps to ThermalState enum values.
         """
-        # TODO: Implement via IOKit if needed
-        return None
+        try:
+            result = subprocess.run(
+                ["pmset", "-g", "therm"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode != 0:
+                log.debug(f"pmset thermal check failed: {result.stderr}")
+                return None
+
+            output = result.stdout
+
+            # Parse CPU_Speed_Limit (100 = no throttling, <100 = throttling)
+            speed_match = re.search(r'CPU_Speed_Limit\s*=\s*(\d+)', output)
+            if speed_match:
+                speed_limit = int(speed_match.group(1))
+
+                if speed_limit >= 100:
+                    return "nominal"
+                elif speed_limit >= 80:
+                    return "fair"  # Light throttling
+                elif speed_limit >= 50:
+                    return "serious"  # Significant throttling
+                else:
+                    return "critical"  # Heavy throttling
+
+            # Check for scheduler limit as alternative indicator
+            sched_match = re.search(r'CPU_Scheduler_Limit\s*=\s*(\d+)', output)
+            if sched_match:
+                sched_limit = int(sched_match.group(1))
+
+                if sched_limit >= 100:
+                    return "nominal"
+                elif sched_limit >= 80:
+                    return "fair"
+                elif sched_limit >= 50:
+                    return "serious"
+                else:
+                    return "critical"
+
+            # No throttling indicators found - assume nominal
+            return "nominal"
+
+        except subprocess.TimeoutExpired:
+            log.warning("pmset thermal check timed out")
+            return None
+        except FileNotFoundError:
+            log.debug("pmset command not found")
+            return None
+        except Exception as e:
+            log.warning(f"Thermal state detection failed: {e}")
+            return None

@@ -52,40 +52,76 @@ class SystemService:
         return _legacy_get_gpu_info()
 
     @staticmethod
-    def get_system_ram_gb() -> float:
-        """Returns total system RAM in GB."""
+    def get_system_ram_gb() -> Optional[float]:
+        """
+        Returns total system RAM in GB.
+
+        Returns: RAM in GB, or None if detection fails.
+
+        Per ARCHITECTURE_PRINCIPLES: Explicit failure, no silent fallbacks.
+        """
         try:
             import psutil
             return psutil.virtual_memory().total / (1024**3)
-        except:
-            return 8.0
+        except ImportError:
+            log.error("psutil not installed - cannot detect RAM")
+            return None
+        except Exception as e:
+            log.error(f"RAM detection failed: {e}")
+            return None
 
     @staticmethod
-    def get_disk_free_gb(path: str = ".") -> int:
-        """Returns free disk space at path in GB."""
+    def get_disk_free_gb(path: str = ".") -> Optional[int]:
+        """
+        Returns free disk space at path in GB.
+
+        Returns: Free space in GB, or None if detection fails.
+
+        Per ARCHITECTURE_PRINCIPLES: Explicit failure, no silent fallbacks.
+        """
         try:
             total, used, free = shutil.disk_usage(os.path.abspath(path))
             return int(free / (1024**3))
-        except:
-            return 0
+        except FileNotFoundError:
+            log.error(f"Path not found for disk check: {path}")
+            return None
+        except Exception as e:
+            log.error(f"Disk space detection failed: {e}")
+            return None
 
     @staticmethod
     def detect_form_factor() -> str:
         """
         Detect system form factor (desktop, laptop, mini, workstation).
+
+        Per ARCHITECTURE_PRINCIPLES: Uses run_powershell() with -NoProfile.
         """
         if platform.system() == "Windows":
             try:
-                # WMI query via PowerShell to avoid `wmi` dependency if possible,
-                # or use ctypes. For now, basic heuristic or assumption.
-                # Since we don't have `wmi` in requirements.txt yet, we'll try a PowerShell call.
+                from src.utils.subprocess_utils import run_powershell
+
                 cmd = "Get-CimInstance -ClassName Win32_SystemEnclosure | Select-Object -ExpandProperty ChassisTypes"
-                output = subprocess.check_output(["powershell", "-Command", cmd], creationflags=subprocess.CREATE_NO_WINDOW).decode().strip()
-                # 9, 10, 14 = Laptop
-                if any(x in output for x in ["9", "10", "14"]):
-                    return "laptop"
-            except:
-                pass
+                output = run_powershell(cmd, timeout=10)
+
+                if output:
+                    # ChassisTypes: 9, 10, 14 = Laptop/Notebook/Sub-Notebook
+                    if any(x in output for x in ["9", "10", "14"]):
+                        return "laptop"
+            except ImportError:
+                log.warning("subprocess_utils not available, using fallback")
+                # Fallback to direct call if utilities not available
+                try:
+                    cmd = "Get-CimInstance -ClassName Win32_SystemEnclosure | Select-Object -ExpandProperty ChassisTypes"
+                    output = subprocess.check_output(
+                        ["powershell", "-NoProfile", "-Command", cmd],
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                    ).decode().strip()
+                    if any(x in output for x in ["9", "10", "14"]):
+                        return "laptop"
+                except Exception:
+                    pass
+            except Exception as e:
+                log.warning(f"Form factor detection failed: {e}")
 
         # Default to desktop if detection fails
         return "desktop"
@@ -103,10 +139,176 @@ class SystemService:
     @staticmethod
     def detect_power_state() -> Tuple[str, bool]:
         """
-        Returns (power_profile, on_battery).
+        Detect current power state and profile.
+
+        Returns: (power_profile, on_battery)
+            - power_profile: "high_performance", "balanced", "power_saver", "unknown"
+            - on_battery: True if running on battery, False if plugged in
+
+        Per SPEC §4.6: Platform-specific power detection.
         """
-        # Placeholder for complex ctypes logic
-        return "balanced", False
+        system = platform.system()
+
+        if system == "Windows":
+            return SystemService._detect_power_state_windows()
+        elif system == "Darwin":
+            return SystemService._detect_power_state_macos()
+        elif system == "Linux":
+            return SystemService._detect_power_state_linux()
+        else:
+            return "unknown", False
+
+    @staticmethod
+    def _detect_power_state_windows() -> Tuple[str, bool]:
+        """Windows power state detection via GetSystemPowerStatus."""
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class SYSTEM_POWER_STATUS(ctypes.Structure):
+                _fields_ = [
+                    ("ACLineStatus", ctypes.c_byte),
+                    ("BatteryFlag", ctypes.c_byte),
+                    ("BatteryLifePercent", ctypes.c_byte),
+                    ("SystemStatusFlag", ctypes.c_byte),
+                    ("BatteryLifeTime", wintypes.DWORD),
+                    ("BatteryFullLifeTime", wintypes.DWORD),
+                ]
+
+            status = SYSTEM_POWER_STATUS()
+            if not ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(status)):
+                log.warning("GetSystemPowerStatus failed")
+                return "unknown", False
+
+            # ACLineStatus: 0 = offline (battery), 1 = online (plugged in), 255 = unknown
+            on_battery = status.ACLineStatus == 0
+
+            # Try to detect power profile via powercfg
+            try:
+                from src.utils.subprocess_utils import run_powershell
+                output = run_powershell("powercfg /getactivescheme", timeout=5)
+                if output:
+                    output_lower = output.lower()
+                    if "high performance" in output_lower:
+                        return "high_performance", on_battery
+                    elif "power saver" in output_lower:
+                        return "power_saver", on_battery
+                    elif "balanced" in output_lower:
+                        return "balanced", on_battery
+            except Exception:
+                pass
+
+            return "balanced", on_battery
+
+        except Exception as e:
+            log.warning(f"Windows power state detection failed: {e}")
+            return "unknown", False
+
+    @staticmethod
+    def _detect_power_state_macos() -> Tuple[str, bool]:
+        """macOS power state detection via pmset."""
+        try:
+            result = subprocess.run(
+                ["pmset", "-g", "batt"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode != 0:
+                return "unknown", False
+
+            output = result.stdout.lower()
+
+            # Check power source
+            on_battery = "battery power" in output or "'battery power'" in output
+            on_ac = "ac power" in output or "'ac power'" in output
+
+            if on_ac:
+                on_battery = False
+            elif not on_battery and not on_ac:
+                # Default to plugged in if unclear
+                on_battery = False
+
+            # macOS doesn't have explicit power profiles like Windows
+            # Detect if Low Power Mode is enabled
+            try:
+                lpm_result = subprocess.run(
+                    ["pmset", "-g"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if "lowpowermode" in lpm_result.stdout.lower() and "1" in lpm_result.stdout:
+                    return "power_saver", on_battery
+            except Exception:
+                pass
+
+            return "balanced", on_battery
+
+        except subprocess.TimeoutExpired:
+            log.warning("pmset power check timed out")
+            return "unknown", False
+        except FileNotFoundError:
+            return "unknown", False
+        except Exception as e:
+            log.warning(f"macOS power state detection failed: {e}")
+            return "unknown", False
+
+    @staticmethod
+    def _detect_power_state_linux() -> Tuple[str, bool]:
+        """Linux power state detection via /sys/class/power_supply."""
+        try:
+            import os
+
+            power_supply_path = "/sys/class/power_supply"
+            on_battery = True  # Default to battery if no AC found
+
+            if os.path.exists(power_supply_path):
+                for supply in os.listdir(power_supply_path):
+                    supply_path = os.path.join(power_supply_path, supply)
+                    type_path = os.path.join(supply_path, "type")
+                    online_path = os.path.join(supply_path, "online")
+
+                    if os.path.exists(type_path):
+                        with open(type_path, 'r') as f:
+                            supply_type = f.read().strip().lower()
+
+                        # Check if AC adapter is online
+                        if supply_type in ("mains", "usb"):
+                            if os.path.exists(online_path):
+                                with open(online_path, 'r') as f:
+                                    online = f.read().strip()
+                                    if online == "1":
+                                        on_battery = False
+                                        break
+
+            # Linux power profiles (if available)
+            profile = "balanced"
+            try:
+                # Check power-profiles-daemon (GNOME)
+                result = subprocess.run(
+                    ["powerprofilesctl", "get"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    profile_output = result.stdout.strip().lower()
+                    if "performance" in profile_output:
+                        profile = "high_performance"
+                    elif "power-saver" in profile_output:
+                        profile = "power_saver"
+                    elif "balanced" in profile_output:
+                        profile = "balanced"
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+            return profile, on_battery
+
+        except Exception as e:
+            log.warning(f"Linux power state detection failed: {e}")
+            return "unknown", False
 
     @staticmethod
     def scan_full_environment() -> EnvironmentReport:

@@ -376,6 +376,32 @@ def _calculate_tier(self) -> HardwareTier:
   - Nested profile pattern, explicit failure handling
   - Updated `CLAUDE.md` to reference architecture principles in Source of Truth
 
+#### Week 2a+ (Deferred Tasks from Audits) ✅ COMPLETE
+
+**Note**: These tasks were identified during code audits. Completed 2026-01-06.
+
+- [x] Implement thermal detection for Apple Silicon (SPEC §4.6.1) ✅ 2026-01-06
+  - Uses `pmset -g therm` to detect CPU speed limit throttling
+  - Returns: "nominal", "fair", "serious", "critical"
+  - **Done**: `src/services/hardware/apple_silicon.py:236-298`
+
+- [x] Implement thermal detection for AMD ROCm (SPEC §4.6.1) ✅ 2026-01-06
+  - Uses `rocm-smi --showtemp` with amd-smi fallback
+  - Temperature thresholds: <70°C=nominal, 70-85=fair, 85-95=serious, >95=critical
+  - **Done**: `src/services/hardware/amd_rocm.py:305-386`
+
+- [x] Implement real power state detection (SPEC §4.6) ✅ 2026-01-06
+  - Windows: ctypes `GetSystemPowerStatus` + `powercfg`
+  - macOS: `pmset -g batt` + low power mode detection
+  - Linux: `/sys/class/power_supply` + `powerprofilesctl`
+  - **Done**: `src/services/system_service.py:103-275`
+
+- [x] Fix legacy code violations (ARCHITECTURE_PRINCIPLES) ✅ 2026-01-06
+  - `system_service.py:55-71` - Returns `None` on failure (not 8GB/0)
+  - `system_service.py:92-127` - Uses `run_powershell()` with `-NoProfile`
+  - `comfy_service.py:93-129` - Uses `run_command()` with proper error handling
+  - **Done**: 17 new tests in `tests/services/test_hardware_detection.py`
+
 #### Week 2b: Configuration & Services
 
 **Prerequisites**: Read SPEC_v3 Sections 7, 11 before starting.
@@ -663,12 +689,115 @@ See `docs/MIGRATION_PROTOCOL.md` for full migration patterns and procedures.
 | Technical Specification | `docs/spec/AI_UNIVERSAL_SUITE_SPEC_v3.md` | Source of truth |
 | Hardware Detection | `docs/spec/HARDWARE_DETECTION.md` | GPU, CPU, Storage, RAM detection |
 | CUDA/PyTorch Installation | `docs/spec/CUDA_PYTORCH_INSTALLATION.md` | PyTorch installation logic |
+| Architecture Principles | `docs/ARCHITECTURE_PRINCIPLES.md` | Coding patterns and standards |
 | Model Database | `data/models_database.yaml` | Model entries with variants |
 | Migration Protocol | `docs/MIGRATION_PROTOCOL.md` | How to migrate/deprecate code |
 | Claude Code Context | `CLAUDE.md` | Auto-loaded by Claude Code |
 | Gemini CLI Context | `GEMINI.md` | Auto-loaded by Gemini CLI |
 | General Agent Context | `AGENTS.md` | For other AI tools (Cursor, Aider, etc.) |
 | Research | `docs/archived/research/` | Background research documents |
+| ~~Outstanding Issues~~ | `docs/archived/audits/OUTSTANDING_ISSUES_2026-01-06.md` | **ARCHIVED** - See Section 9 |
+
+---
+
+## 9. Issue Tracker (Integrated)
+
+> **Supersedes**: `docs/archived/audits/OUTSTANDING_ISSUES_2026-01-06.md` (archived)
+> All issues now tracked here with full context, spec references, and plan mappings.
+
+### 9.1 Issue → Plan → Spec Mapping
+
+| Priority | Issue | Plan Location | SPEC Section | Status |
+|----------|-------|---------------|--------------|--------|
+| **CRITICAL** | scoring_service.py uses old algorithm | Phase 3 Week 6 | §6 | Stubs ready, blocked by Phase 3 |
+| **CRITICAL** | Resolution cascade not implemented | Phase 3 Week 7 | §6.5 | Stub exists |
+| **CRITICAL** | models_database.yaml missing hardware section | Phase 4 Week 8 | §7.2 | Schema defined, data missing |
+| **HIGH** | Dual-path onboarding not implemented | Phase 2 Week 4-5 | §5.1-5.2 | Not started |
+| **HIGH** | show_if expression evaluator missing | Phase 2 Week 5 | §5.3 | Not started |
+| ~~**HIGH**~~ | ~~Apple Silicon thermal returns None~~ | Phase 1 Week 2a+ | §4.6.1 | ✅ Resolved 2026-01-06 |
+| ~~**HIGH**~~ | ~~AMD ROCm thermal returns None~~ | Phase 1 Week 2a+ | §4.6.1 | ✅ Resolved 2026-01-06 |
+| ~~**HIGH**~~ | ~~Power state detection placeholder~~ | Phase 1 Week 2a+ | §4.6 | ✅ Resolved 2026-01-06 |
+| ~~**HIGH**~~ | ~~Silent fallbacks in system_service.py~~ | Week 2a+ cleanup | ARCH_PRINCIPLES | ✅ Resolved 2026-01-06 |
+| **MEDIUM** | DownloadService incomplete | Phase 1 Week 2b | §11.3 | Not started |
+| **MEDIUM** | ShortcutService incomplete | Phase 1 Week 2b | §11.5 | Not started |
+| **MEDIUM** | PyTorch/CUDA dynamic installation | Phase 1 Week 3 | CUDA_PYTORCH_INSTALLATION.md | **CRITICAL for zero-terminal** |
+| **MEDIUM** | Magic numbers undocumented | Ongoing | ARCH_PRINCIPLES | See list below |
+| **MEDIUM** | Config integration tests | Phase 1 Week 2b | §11.4 | Unit tests done |
+| **MEDIUM** | Cloud API pricing gaps | Phase 5 Week 9 | §8.2.3 | Spec incomplete |
+| **DOC** | ARCHITECTURE_PRINCIPLES.md not in spec | - | §1 | Needs reference |
+| **DOC** | show_if syntax not formally defined | - | §5.3 | Needs spec section |
+| **DOC** | ConfigManager schema not in spec | - | §11.4 | Implemented, undocumented |
+
+### 9.2 Spec Sections Not Yet in Plan
+
+| SPEC Section | Description | Recommended Phase | Priority |
+|--------------|-------------|-------------------|----------|
+| §4.6 | Power State Detection | Phase 1 Week 2a+ | MEDIUM |
+| §4.6.1 | Thermal State Detection | Phase 1 Week 2a+ | LOW |
+| §6.7.7 | Memory Bandwidth LLM Estimation | Phase 3 | LOW |
+| §8.2.3 | Image API Pricing Matrix | Phase 5 | LOW |
+| §9.4 | Model Manager View UI mockup | Phase 4 | MEDIUM |
+| §12.3 | Model Manager Components | Phase 4 | MEDIUM |
+
+### 9.3 Magic Numbers Requiring Documentation
+
+| Location | Value | Purpose | Action |
+|----------|-------|---------|--------|
+| `ram.py:249` | `4.0` GB | OS reserved memory | Add constant `OS_RESERVED_RAM_GB` |
+| `ram.py:252` | `0.8` | Safety factor for offload | Add constant `OFFLOAD_SAFETY_FACTOR` |
+| `scoring_service.py:125` | `-0.20` | Thermal throttle penalty | DELETE with scoring_service.py |
+| `scoring_service.py:129` | `-0.15` | Storage overuse penalty | DELETE with scoring_service.py |
+| `scoring_service.py:164` | `(val-1)/4` | Preference normalization | DELETE with scoring_service.py |
+| `recommendation_service.py:124` | `1.5` GB | Venv size estimate | Add constant `VENV_SIZE_ESTIMATE_GB` |
+| SPEC §6.5 | `5x/10x` | CPU offload slowdown | Add benchmark or formula |
+
+### 9.4 Tasks Missing from Plan (Add to Phase 1)
+
+These tasks are in OUTSTANDING_ISSUES.md but not explicitly in the plan:
+
+```
+Phase 1 Week 2a+ (Add):
+- [ ] Implement thermal detection for Apple Silicon (IOKit)
+- [ ] Implement thermal detection for AMD ROCm (rocm-smi)
+- [ ] Implement real power state detection (battery vs AC)
+- [ ] Fix silent fallbacks in system_service.py
+- [ ] Fix direct subprocess in comfy_service.py:100
+
+Phase 1 Week 3 (MANDATORY - not optional):
+- [ ] Implement PyTorch/CUDA dynamic installation
+  - get_pytorch_config(compute_capability) → cu130/cu121/cu118
+  - install_pytorch(config) → pip install into venv
+  - Version matrix: Blackwell→cu130, Ada→cu130, Volta→cu121, Pascal→cu118
+  - Fallback chain: stable → nightly → older CUDA → CPU
+  - Verification: torch.cuda.is_available()
+```
+
+### 9.5 Resolved Issues
+
+| Issue | Resolution | Date | Commit |
+|-------|------------|------|--------|
+| 3-layer files missing | Created stubs in `src/services/recommendation/` | 2026-01-06 | bec633d |
+| Model database wrong source | Created `ModelDatabase` class | 2026-01-06 | bec633d |
+| ConfigManager v1 flat structure | Upgraded to v3.0 with migration | 2026-01-06 | bec633d |
+| SPEC §6.1 lists 4 criteria | Updated to show all 5 | 2026-01-06 | - |
+| HardwareTier effective capacity | Updated HARDWARE_DETECTION.md | 2026-01-06 | - |
+| Deprecation tracker missing | Added Section 7 to PLAN | 2026-01-06 | - |
+| Apple Silicon thermal returns None | Implemented via `pmset -g therm` | 2026-01-06 | - |
+| AMD ROCm thermal returns None | Implemented via `rocm-smi --showtemp` | 2026-01-06 | - |
+| Power state detection placeholder | Platform-specific detection (Win/Mac/Linux) | 2026-01-06 | - |
+| Silent fallbacks in system_service.py | Returns None on failure, uses run_powershell() | 2026-01-06 | - |
+
+### 9.6 Metrics
+
+| Category | Total | Resolved | Remaining |
+|----------|-------|----------|-----------|
+| Critical | 3 | 0 | 3 |
+| High | 6 | 4 | 2 |
+| Medium | 7 | 0 | 7 |
+| Documentation | 3 | 0 | 3 |
+| **Total** | **19** | **4** | **15** |
+
+*Note: Metrics exclude items that will be deleted (scoring_service.py magic numbers).*
 
 ---
 

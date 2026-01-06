@@ -893,16 +893,31 @@ class HardwareProfile:
         self.tier = self._calculate_tier()
     
     def _calculate_tier(self) -> HardwareTier:
-        vram = self.effective_vram_gb
-        if vram >= 48:
+        """
+        Calculate tier based on EFFECTIVE capacity (VRAM + viable offload).
+
+        This reflects actual runnable model sizes, not just native GPU VRAM.
+        A machine with 24GB VRAM + 64GB fast RAM can run larger models via
+        offloading than one with 24GB VRAM + 8GB slow RAM.
+
+        Decision: PLAN_v3.md 2026-01-03
+        """
+        # Use effective capacity (includes offload if viable)
+        capacity = self.effective_capacity_with_offload_gb
+
+        # Fall back to VRAM if offload calculation not available
+        if capacity <= 0:
+            capacity = self.effective_vram_gb
+
+        if capacity >= 48:
             return HardwareTier.WORKSTATION
-        elif vram >= 16:
+        elif capacity >= 16:
             return HardwareTier.PROFESSIONAL
-        elif vram >= 12:
+        elif capacity >= 12:
             return HardwareTier.PROSUMER
-        elif vram >= 8:
+        elif capacity >= 8:
             return HardwareTier.CONSUMER
-        elif vram >= 4:
+        elif capacity >= 4:
             return HardwareTier.ENTRY
         else:
             return HardwareTier.MINIMAL

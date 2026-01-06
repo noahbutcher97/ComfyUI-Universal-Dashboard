@@ -1,6 +1,12 @@
-# Outstanding Issues
+# Outstanding Issues (Archived)
 
-Consolidated from architectural audits (2026-01-06). Updated after Phase 1 Week 2b completion.
+> **⚠️ ARCHIVED**: This document was superseded by `docs/plan/PLAN_v3.md` Section 9 "Issue Tracker (Integrated)" on 2026-01-06.
+> All issues are now tracked in the plan with full context, spec references, and plan task mappings.
+> This file is retained in `docs/archived/audits/` for historical reference only.
+
+---
+
+*Original content below (consolidated from architectural audits 2026-01-06):*
 
 ---
 
@@ -108,8 +114,8 @@ Consolidated from architectural audits (2026-01-06). Updated after Phase 1 Week 
 ## Priority 4: Documentation
 
 ### SPEC: Internal Contradictions
-- [ ] **§6.1 vs §6.7.2**: Says 4 TOPSIS criteria, shows 5 weights → Update §6.1 to say 5
-- [ ] **PLAN §1 vs SPEC §4.5**: "effective capacity" vs "VRAM-only" → Decision logged but spec not updated
+- [x] **§6.1 vs §6.7.2**: Says 4 TOPSIS criteria, shows 5 weights → ✅ Fixed 2026-01-06
+- [x] **PLAN §1 vs SPEC §4.5**: "effective capacity" vs "VRAM-only" → ✅ HARDWARE_DETECTION.md updated 2026-01-06
 
 ### SPEC: Orphaned Content (Not in Plan)
 - [ ] §4.6.1 Thermal State Detection - No implementation tasks
@@ -145,6 +151,9 @@ Consolidated from architectural audits (2026-01-06). Updated after Phase 1 Week 
 | Model database wrong source | Created `ModelDatabase` class, integrated with `recommendation_service.py` | 2026-01-06 |
 | ConfigManager v1 flat structure | Upgraded to v3.0 with migration support | 2026-01-06 |
 | 5 TOPSIS criteria missing | Added to `topsis_layer.py` stub | 2026-01-06 |
+| SPEC §6.1 lists 4 criteria | Updated to show all 5 criteria including `speed_fit` | 2026-01-06 |
+| HardwareTier effective capacity | Updated HARDWARE_DETECTION.md `_calculate_tier()` to use effective capacity | 2026-01-06 |
+| Deprecation tracker missing | Section 7 added to PLAN_v3.md with table | 2026-01-06 |
 
 ---
 
@@ -155,8 +164,8 @@ Consolidated from architectural audits (2026-01-06). Updated after Phase 1 Week 
 | Critical | 3 | 0 | 3 |
 | High | 6 | 0 | 6 |
 | Medium | 10 | 0 | 10 |
-| Documentation | 15 | 0 | 15 |
-| **Total** | **34** | **0** | **34** |
+| Documentation | 15 | 2 | 13 |
+| **Total** | **34** | **2** | **32** |
 
 *Note: "Resolved" counts issues fully closed, not stubbed/partial.*
 
@@ -165,7 +174,7 @@ Consolidated from architectural audits (2026-01-06). Updated after Phase 1 Week 
 ## Next Actions (Recommended Order)
 
 1. Complete Week 2b: DownloadService, ShortcutService
-2. Add missing YAML fields to `models_database.yaml`
-3. Document magic numbers or convert to named constants
-4. Update SPEC §6.1 to say 5 TOPSIS criteria
+2. Week 3: Implement PyTorch/CUDA dynamic installation (CRITICAL)
+3. Add missing YAML fields to `models_database.yaml` (hardware section)
+4. Document magic numbers or convert to named constants
 5. Begin Phase 2: Onboarding dual-path

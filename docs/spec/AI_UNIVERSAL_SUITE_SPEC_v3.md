@@ -54,6 +54,16 @@ AI Universal Suite is a cross-platform desktop application that transforms a use
 | macOS + Apple Silicon | 40%   | MPS, GGUF quantization, MLX     |
 | Linux + AMD ROCm      | 20%   | ROCm 6.4+, GGUF fallback        |
 
+### 1.4 Related Documents
+
+| Document | Location | Purpose |
+|----------|----------|---------|
+| Implementation Plan | `docs/plan/PLAN_v3.md` | Task tracker, decisions, issue tracking |
+| Hardware Detection Spec | `docs/spec/HARDWARE_DETECTION.md` | Detailed hardware detection requirements |
+| CUDA/PyTorch Installation | `docs/spec/CUDA_PYTORCH_INSTALLATION.md` | PyTorch auto-installation logic |
+| Architecture Principles | `docs/ARCHITECTURE_PRINCIPLES.md` | Coding patterns and standards |
+| Model Database | `data/models_database.yaml` | Model entries with variants |
+
 ---
 
 ## 2. Strategic Vision
@@ -179,8 +189,8 @@ The recommendation system uses a **three-layer architecture** validated by resea
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  LAYER 3: TOPSIS MULTI-CRITERIA RANKING                                 │
 │  ─────────────────────────────────────────────                          │
-│  • Weighted criteria: content_similarity, hardware_fit,                 │
-│    approach_fit, ecosystem_maturity                                     │
+│  • Weighted criteria (5): content_similarity, hardware_fit,             │
+│    speed_fit, ecosystem_maturity, approach_fit                          │
 │  • Output: Final ranked list with closeness coefficients                │
 └─────────────────────────────────────────────────────────────────────────┘
                                 │
