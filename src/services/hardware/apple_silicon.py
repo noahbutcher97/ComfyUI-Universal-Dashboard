@@ -284,8 +284,10 @@ class AppleSiliconDetector(HardwareDetector):
                 else:
                     return "critical"
 
-            # No throttling indicators found - assume nominal
-            return "nominal"
+            # No throttling indicators found - cannot determine state
+            # Per ARCHITECTURE_PRINCIPLES: explicit failure, no assumptions
+            log.debug("pmset output did not contain CPU_Speed_Limit or CPU_Scheduler_Limit")
+            return None
 
         except subprocess.TimeoutExpired:
             log.warning("pmset thermal check timed out")

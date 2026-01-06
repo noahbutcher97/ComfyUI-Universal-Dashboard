@@ -777,6 +777,20 @@ class TestThermalDetection:
             result = detector.get_thermal_state()
             assert result is None
 
+    def test_apple_silicon_thermal_parsing_failure(self):
+        """Should return None when pmset output doesn't contain expected fields."""
+        detector = AppleSiliconDetector()
+
+        with patch('subprocess.run') as mock_run:
+            # Output without CPU_Speed_Limit or CPU_Scheduler_Limit
+            mock_run.return_value = MagicMock(
+                returncode=0,
+                stdout="Some unrelated pmset output\nNo thermal data here"
+            )
+            result = detector.get_thermal_state()
+            # Per ARCHITECTURE_PRINCIPLES: explicit failure, no assumptions
+            assert result is None
+
     def test_amd_rocm_thermal_nominal(self):
         """rocm-smi output with <70C should return nominal."""
         detector = AMDROCmDetector()
@@ -835,6 +849,30 @@ class TestThermalDetection:
         assert detector._temp_to_state(85.0) == "serious"
         assert detector._temp_to_state(94.9) == "serious"
         assert detector._temp_to_state(95.0) == "critical"
+
+    def test_amd_smi_temp_parsing_patterns(self):
+        """Test amd-smi temperature parsing with specific patterns."""
+        detector = AMDROCmDetector()
+
+        # Pattern 1: "Temperature: 45.0 C"
+        result = detector._parse_amd_smi_temp("TEMPERATURE: 75.0 C")
+        assert result == "fair"
+
+        # Pattern 2: "GPU Temperature: 45°C"
+        result = detector._parse_amd_smi_temp("GPU Temperature: 45°C")
+        assert result == "nominal"
+
+        # Should NOT match unrelated numbers like "PCIe Gen3"
+        result = detector._parse_amd_smi_temp("PCIe Gen3 Controller\nMemory: 8GB")
+        assert result is None
+
+    def test_amd_rocm_thermal_failure(self):
+        """Should return None when rocm-smi fails and no fallback works."""
+        detector = AMDROCmDetector()
+
+        with patch('shutil.which', return_value=None):  # No rocm-smi or amd-smi
+            result = detector.get_thermal_state()
+            assert result is None
 
 
 class TestPowerStateDetection:

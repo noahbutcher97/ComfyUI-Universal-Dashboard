@@ -366,11 +366,19 @@ class AMDROCmDetector(HardwareDetector):
 
     def _parse_amd_smi_temp(self, output: str) -> Optional[str]:
         """Parse temperature from amd-smi metric -t output."""
-        # amd-smi outputs temperature in various formats
-        temp_match = re.search(r'(\d+(?:\.\d+)?)\s*[°]?C', output)
-        if temp_match:
-            temp = float(temp_match.group(1))
-            return self._temp_to_state(temp)
+        # amd-smi outputs temperature with field labels like:
+        # "TEMPERATURE: 45.0 C" or "Temperature (C): 52" or "GPU Temperature: 67°C"
+        # Use specific patterns to avoid matching unrelated numbers (e.g. "PCIe Gen3")
+        patterns = [
+            r'[Tt]emperature[^:]*:\s*(\d+(?:\.\d+)?)\s*[°]?C?',  # "Temperature: 45.0 C"
+            r'TEMP(?:ERATURE)?[^:]*:\s*(\d+(?:\.\d+)?)',         # "TEMP: 45" or "TEMPERATURE: 45"
+            r'(\d+(?:\.\d+)?)\s*°C',                              # "45.0°C" (degree symbol required)
+        ]
+        for pattern in patterns:
+            temp_match = re.search(pattern, output, re.IGNORECASE)
+            if temp_match:
+                temp = float(temp_match.group(1))
+                return self._temp_to_state(temp)
 
         return None
 
