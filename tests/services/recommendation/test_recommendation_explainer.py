@@ -29,6 +29,8 @@ from src.schemas.hardware import (
     StorageProfile,
     StorageTier,
     RAMProfile,
+    CPUProfile,
+    CPUTier,
 )
 
 
@@ -874,3 +876,338 @@ class TestGpuTiers:
         assert len(gpu_suggestions) >= 1
         # Should suggest professional tier (A100/H100)
         assert "A100" in gpu_suggestions[0].details or "H100" in gpu_suggestions[0].details
+
+
+class TestHardwareWarnings:
+    """Tests for hardware-specific warnings per SPEC Section 6.7.6."""
+
+    # --- Form Factor / Laptop Warnings ---
+
+    def test_warns_about_laptop_with_significant_penalty(self):
+        """Should warn about laptop GPU with < 80% sustained performance."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware()
+        hardware.form_factor = FormFactorProfile(
+            is_laptop=True,
+            power_limit_watts=175.0,
+            reference_tdp_watts=450.0,
+            sustained_performance_ratio=0.62,  # sqrt(175/450) ≈ 0.62
+        )
+        ranked = [create_mock_ranked_candidate()]
+
+        warnings = explainer._generate_hardware_warnings(ranked, hardware)
+
+        laptop_warnings = [w for w in warnings if "Laptop" in w.title]
+        assert len(laptop_warnings) >= 1
+        assert "62%" in laptop_warnings[0].description or "thermal" in laptop_warnings[0].details.lower()
+
+    def test_warns_about_laptop_with_minor_penalty(self):
+        """Should still warn about laptop even with > 80% performance."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware()
+        hardware.form_factor = FormFactorProfile(
+            is_laptop=True,
+            power_limit_watts=300.0,
+            reference_tdp_watts=350.0,
+            sustained_performance_ratio=0.93,  # Good ratio but still laptop
+        )
+        ranked = [create_mock_ranked_candidate()]
+
+        warnings = explainer._generate_hardware_warnings(ranked, hardware)
+
+        laptop_warnings = [w for w in warnings if "Laptop" in w.title]
+        assert len(laptop_warnings) >= 1
+        assert "93%" in laptop_warnings[0].description
+
+    def test_no_warning_for_desktop(self):
+        """Should not warn about desktop GPU."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware()
+        hardware.form_factor = FormFactorProfile(
+            is_laptop=False,
+            sustained_performance_ratio=1.0,
+        )
+        ranked = [create_mock_ranked_candidate()]
+
+        warnings = explainer._generate_hardware_warnings(ranked, hardware)
+
+        laptop_warnings = [w for w in warnings if "Laptop" in w.title]
+        assert len(laptop_warnings) == 0
+
+    # --- Storage Speed Warnings ---
+
+    def test_warns_about_hdd_for_speed_focused_user(self):
+        """Should warn about HDD when user prioritizes speed."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware(storage_tier=StorageTier.SLOW)
+        hardware.storage.storage_type = "hdd"
+        ranked = [create_mock_ranked_candidate()]
+
+        warnings = explainer._generate_hardware_warnings(
+            ranked, hardware, user_prioritizes_speed=True
+        )
+
+        storage_warnings = [w for w in warnings if "Storage" in w.title or "Slow" in w.title]
+        assert len(storage_warnings) >= 1
+        assert "HDD" in storage_warnings[0].description
+
+    def test_warns_about_sata_for_speed_focused_user(self):
+        """Should warn about SATA SSD when user prioritizes speed."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware()
+        # Need to set both storage_type and tier since __post_init__ already ran
+        hardware.storage = StorageProfile(
+            path="C:\\",
+            total_gb=500.0,
+            free_gb=200.0,
+            storage_type="sata_ssd",
+            estimated_read_mbps=500,
+            tier=StorageTier.MODERATE,
+        )
+        ranked = [create_mock_ranked_candidate()]
+
+        warnings = explainer._generate_hardware_warnings(
+            ranked, hardware, user_prioritizes_speed=True
+        )
+
+        storage_warnings = [w for w in warnings if "SATA" in w.title]
+        assert len(storage_warnings) >= 1
+
+    def test_no_storage_warning_when_not_speed_focused(self):
+        """Should not warn about storage when user doesn't prioritize speed."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware(storage_tier=StorageTier.SLOW)
+        ranked = [create_mock_ranked_candidate()]
+
+        warnings = explainer._generate_hardware_warnings(
+            ranked, hardware, user_prioritizes_speed=False
+        )
+
+        storage_warnings = [
+            w for w in warnings
+            if "Storage" in w.title or "HDD" in w.title or "SATA" in w.title
+        ]
+        assert len(storage_warnings) == 0
+
+    def test_no_storage_warning_for_nvme(self):
+        """Should not warn about NVMe storage even when speed focused."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware(storage_tier=StorageTier.FAST)
+        ranked = [create_mock_ranked_candidate()]
+
+        warnings = explainer._generate_hardware_warnings(
+            ranked, hardware, user_prioritizes_speed=True
+        )
+
+        storage_warnings = [
+            w for w in warnings
+            if "Storage" in w.title or "HDD" in w.title or "SATA" in w.title
+        ]
+        assert len(storage_warnings) == 0
+
+    # --- Low RAM Warnings ---
+
+    def test_warns_about_low_ram_with_offload(self):
+        """Should warn about low RAM when models use offload."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware(ram_gb=16.0)
+        hardware.ram = RAMProfile(
+            total_gb=16.0,
+            available_gb=8.0,
+            usable_for_offload_gb=6.0,  # Below 16GB threshold
+        )
+        ranked = [create_mock_ranked_candidate(execution_mode="gpu_offload")]
+
+        warnings = explainer._generate_hardware_warnings(ranked, hardware)
+
+        ram_warnings = [w for w in warnings if "RAM" in w.title]
+        assert len(ram_warnings) >= 1
+        assert "6" in ram_warnings[0].description  # Shows available RAM
+
+    def test_no_ram_warning_with_adequate_ram(self):
+        """Should not warn about RAM when usable RAM is >= 16GB."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware(ram_gb=64.0)
+        hardware.ram = RAMProfile(
+            total_gb=64.0,
+            available_gb=48.0,
+            usable_for_offload_gb=32.0,  # Above 16GB threshold
+        )
+        ranked = [create_mock_ranked_candidate(execution_mode="gpu_offload")]
+
+        warnings = explainer._generate_hardware_warnings(ranked, hardware)
+
+        ram_warnings = [w for w in warnings if "RAM" in w.title]
+        assert len(ram_warnings) == 0
+
+    def test_no_ram_warning_without_offload(self):
+        """Should not warn about RAM when no models use offload."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware(ram_gb=16.0)
+        hardware.ram = RAMProfile(
+            total_gb=16.0,
+            available_gb=8.0,
+            usable_for_offload_gb=6.0,  # Low RAM, but no offload needed
+        )
+        ranked = [create_mock_ranked_candidate(execution_mode="native")]
+
+        warnings = explainer._generate_hardware_warnings(ranked, hardware)
+
+        ram_warnings = [w for w in warnings if "RAM" in w.title]
+        assert len(ram_warnings) == 0
+
+    # --- AVX2 Warnings ---
+
+    def test_warns_about_missing_avx2_with_gguf_models(self):
+        """Should warn about missing AVX2 when GGUF models are recommended."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware()
+        hardware.cpu = CPUProfile(
+            model="Intel Core i5-4570",
+            architecture="x86_64",
+            physical_cores=4,
+            logical_cores=4,
+            supports_avx=True,
+            supports_avx2=False,  # No AVX2
+            tier=CPUTier.LOW,
+        )
+
+        # Create a ranked candidate with GGUF variant
+        ranked_gguf = create_mock_ranked_candidate()
+        ranked_gguf.scored_candidate.passing_candidate.variant = MockModelVariant(
+            precision="GGUF-Q4_K_M"
+        )
+
+        warnings = explainer._generate_hardware_warnings([ranked_gguf], hardware)
+
+        avx2_warnings = [w for w in warnings if "AVX2" in w.title]
+        assert len(avx2_warnings) >= 1
+        assert "GGUF" in avx2_warnings[0].description
+
+    def test_no_avx2_warning_when_avx2_present(self):
+        """Should not warn about AVX2 when CPU supports it."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware()
+        hardware.cpu = CPUProfile(
+            model="AMD Ryzen 9 7950X",
+            architecture="x86_64",
+            physical_cores=16,
+            logical_cores=32,
+            supports_avx=True,
+            supports_avx2=True,  # Has AVX2
+            tier=CPUTier.HIGH,
+        )
+
+        # Create a ranked candidate with GGUF variant
+        ranked_gguf = create_mock_ranked_candidate()
+        ranked_gguf.scored_candidate.passing_candidate.variant = MockModelVariant(
+            precision="GGUF-Q4_K_M"
+        )
+
+        warnings = explainer._generate_hardware_warnings([ranked_gguf], hardware)
+
+        avx2_warnings = [w for w in warnings if "AVX2" in w.title]
+        assert len(avx2_warnings) == 0
+
+    def test_no_avx2_warning_for_arm64(self):
+        """Should not warn about AVX2 on ARM64 (uses NEON instead)."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware(platform=PlatformType.APPLE_SILICON)
+        hardware.cpu = CPUProfile(
+            model="Apple M3 Max",
+            architecture="arm64",  # ARM, not x86
+            physical_cores=12,
+            logical_cores=12,
+            supports_avx=False,
+            supports_avx2=False,
+            tier=CPUTier.HIGH,
+        )
+
+        # Create a ranked candidate with GGUF variant
+        ranked_gguf = create_mock_ranked_candidate()
+        ranked_gguf.scored_candidate.passing_candidate.variant = MockModelVariant(
+            precision="GGUF-Q8_0"
+        )
+
+        warnings = explainer._generate_hardware_warnings([ranked_gguf], hardware)
+
+        avx2_warnings = [w for w in warnings if "AVX2" in w.title]
+        assert len(avx2_warnings) == 0  # ARM uses NEON, no AVX2 warning needed
+
+    def test_no_avx2_warning_without_gguf_models(self):
+        """Should not warn about AVX2 when no GGUF models are recommended."""
+        explainer = RecommendationExplainer()
+        hardware = create_mock_hardware()
+        hardware.cpu = CPUProfile(
+            model="Intel Core i5-4570",
+            architecture="x86_64",
+            physical_cores=4,
+            logical_cores=4,
+            supports_avx=True,
+            supports_avx2=False,  # No AVX2, but no GGUF models
+            tier=CPUTier.LOW,
+        )
+
+        # Create a ranked candidate with FP16 variant (not GGUF)
+        ranked_fp16 = create_mock_ranked_candidate()
+        ranked_fp16.scored_candidate.passing_candidate.variant = MockModelVariant(
+            precision="fp16"
+        )
+
+        warnings = explainer._generate_hardware_warnings([ranked_fp16], hardware)
+
+        avx2_warnings = [w for w in warnings if "AVX2" in w.title]
+        assert len(avx2_warnings) == 0
+
+    # --- GGUF Detection Helper ---
+
+    def test_is_gguf_variant_detects_gguf(self):
+        """Should detect GGUF variants by precision string."""
+        explainer = RecommendationExplainer()
+
+        # Test various GGUF formats
+        for precision in ["GGUF-Q4_K_M", "GGUF-Q5_K_S", "gguf-q8_0", "Q4_0", "q5_1"]:
+            ranked = create_mock_ranked_candidate()
+            ranked.scored_candidate.passing_candidate.variant = MockModelVariant(
+                precision=precision
+            )
+            assert explainer._is_gguf_variant(ranked), f"Should detect {precision} as GGUF"
+
+    def test_is_gguf_variant_rejects_non_gguf(self):
+        """Should not detect non-GGUF variants."""
+        explainer = RecommendationExplainer()
+
+        # Test non-GGUF formats
+        for precision in ["fp16", "fp32", "bf16", "FP8", "int8"]:
+            ranked = create_mock_ranked_candidate()
+            ranked.scored_candidate.passing_candidate.variant = MockModelVariant(
+                precision=precision
+            )
+            assert not explainer._is_gguf_variant(ranked), f"Should not detect {precision} as GGUF"
+
+    # --- Integration with explain_recommendations ---
+
+    def test_hardware_warnings_included_in_report(self):
+        """Should include hardware warnings in improvement suggestions."""
+        explainer = RecommendationExplainer()
+
+        # Create hardware with laptop and slow storage
+        hardware = create_mock_hardware(storage_tier=StorageTier.SLOW)
+        hardware.form_factor = FormFactorProfile(
+            is_laptop=True,
+            power_limit_watts=175.0,
+            reference_tdp_watts=450.0,
+            sustained_performance_ratio=0.62,
+        )
+
+        ranked = [create_mock_ranked_candidate()]
+        rejected = []
+
+        report = explainer.explain_recommendations(
+            ranked, rejected, hardware, "txt2img", user_prioritizes_speed=True
+        )
+
+        # Should have laptop and storage warnings in suggestions
+        warning_titles = [s.title for s in report.improvement_suggestions]
+        assert any("Laptop" in t for t in warning_titles)
+        assert any("Storage" in t or "Slow" in t for t in warning_titles)

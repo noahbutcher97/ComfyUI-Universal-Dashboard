@@ -685,16 +685,17 @@ def _calculate_tier(self) -> HardwareTier:
   - [x] Cloud offload suggestion when local insufficient
   - [x] 39 unit tests in `tests/services/recommendation/test_resolution_cascade.py`
   
-- [ ] Implement `RecommendationExplainer`
-  - [ ] Human-readable reasoning for each recommendation
-  - [ ] Constraint rejection explanations
-  - [ ] Factor contribution breakdown
-  - [ ] Hardware warning generation (SPEC Section 6.7.6)
-    - [ ] Form factor / laptop warnings - uses is_laptop + sustained_performance_ratio
-    - [ ] Storage speed warnings for speed-focused users - uses storage_tier
-    - [ ] CPU offload notifications - when execution_mode == gpu_offload
-    - [ ] Low RAM warnings - uses ram_for_offload_gb
-    - [ ] AVX2 warnings for GGUF - uses supports_avx2
+- [x] Implement `RecommendationExplainer` ✅ 2026-01-09
+  - [x] Human-readable reasoning for each recommendation
+  - [x] Constraint rejection explanations
+  - [x] Factor contribution breakdown
+  - [x] Hardware warning generation (SPEC Section 6.7.6)
+    - [x] Form factor / laptop warnings - uses is_laptop + sustained_performance_ratio
+    - [x] Storage speed warnings for speed-focused users - uses storage_tier
+    - [x] CPU offload notifications - when execution_mode == gpu_offload
+    - [x] Low RAM warnings - uses ram_for_offload_gb
+    - [x] AVX2 warnings for GGUF - uses supports_avx2
+  - [x] 68 unit tests in `test_recommendation_explainer.py`
 
 - [x] Implement `SpaceConstrainedAdjustment` (SPEC Section 6.7.5)
   - [x] Priority-based model fitting when storage insufficient
@@ -707,12 +708,13 @@ def _calculate_tier(self) -> HardwareTier:
   - Still used by `recommendation_service.py` - full removal blocked until that migration
   - Target: Remove when Phase 4 migrates `recommendation_service.py` to 3-layer engine
 
-- [ ] Comprehensive recommendation tests
-  - [ ] All hardware tiers (WORKSTATION → MINIMAL)
-  - [ ] All platform types
-  - [ ] Edge cases (exact VRAM boundaries, mixed constraints)
-  - [ ] Form factor scenarios (desktop vs laptop)
-  - [ ] Storage tier scenarios (NVMe vs HDD)
+- [x] Comprehensive recommendation tests ✅ 2026-01-09
+  - [x] All hardware tiers (WORKSTATION → MINIMAL)
+  - [x] All platform types
+  - [x] Edge cases (exact VRAM boundaries, mixed constraints)
+  - [x] Form factor scenarios (desktop vs laptop)
+  - [x] Storage tier scenarios (NVMe vs HDD)
+  - [x] 48 edge case tests in `test_edge_cases.py`
 
 ### Phase 4: Model Management (Week 8)
 

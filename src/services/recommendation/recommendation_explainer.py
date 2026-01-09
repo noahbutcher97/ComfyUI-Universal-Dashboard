@@ -133,6 +133,7 @@ class RecommendationExplainer:
         rejected: List[RejectedCandidate],
         hardware: HardwareProfile,
         use_case: str,
+        user_prioritizes_speed: bool = False,
     ) -> RecommendationReport:
         """
         Generate complete explanation report.
@@ -142,6 +143,7 @@ class RecommendationExplainer:
             rejected: Rejected candidates from constraint layer
             hardware: User's hardware profile
             use_case: The use case being evaluated
+            user_prioritizes_speed: Whether user prioritizes generation speed
 
         Returns:
             RecommendationReport with full explanations
@@ -170,9 +172,9 @@ class RecommendationExplainer:
             rej_explanation = self._explain_rejection(rej)
             report.rejected_models.append(rej_explanation)
 
-        # Improvement suggestions
+        # Improvement suggestions (includes hardware warnings)
         report.improvement_suggestions = self._generate_improvement_suggestions(
-            ranked, rejected, hardware
+            ranked, rejected, hardware, user_prioritizes_speed
         )
 
         return report
@@ -369,9 +371,15 @@ class RecommendationExplainer:
         ranked: List[RankedCandidate],
         rejected: List[RejectedCandidate],
         hardware: HardwareProfile,
+        user_prioritizes_speed: bool = False,
     ) -> List[ExplanationItem]:
         """Generate suggestions for improving recommendations."""
         suggestions = []
+
+        # Add hardware warnings first (per SPEC Section 6.7.6)
+        suggestions.extend(self._generate_hardware_warnings(
+            ranked, hardware, user_prioritizes_speed
+        ))
 
         # Check if VRAM is limiting
         vram_rejections = [
@@ -508,6 +516,140 @@ class RecommendationExplainer:
             if required_vram_gb <= self.GPU_TIERS[tier_name]["max_vram"]:
                 return tier_name
         return "multi_gpu"
+
+    def _generate_hardware_warnings(
+        self,
+        ranked: List[RankedCandidate],
+        hardware: HardwareProfile,
+        user_prioritizes_speed: bool = False,
+    ) -> List[ExplanationItem]:
+        """
+        Generate hardware-specific warnings per SPEC Section 6.7.6.
+
+        Warns about:
+        - Form factor / laptop performance penalties
+        - Storage speed issues for speed-focused users
+        - Low RAM for offload operations
+        - Missing AVX2 for GGUF models
+
+        Args:
+            ranked: Ranked candidates from TOPSIS layer
+            hardware: User's hardware profile
+            user_prioritizes_speed: Whether user prioritizes generation speed
+
+        Returns:
+            List of warning ExplanationItems
+        """
+        warnings = []
+
+        # 1. Form factor / laptop warning (uses is_laptop + sustained_performance_ratio)
+        if hardware.form_factor and hardware.form_factor.is_laptop:
+            warning_text = hardware.form_factor.get_warning()
+            if warning_text:
+                warnings.append(ExplanationItem(
+                    type=ExplanationType.WARNING,
+                    title="Laptop GPU Detected",
+                    description=warning_text,
+                    details=(
+                        "Laptop GPUs have thermal constraints that limit sustained performance. "
+                        "Consider using smaller models or enabling CPU offload for longer tasks."
+                    ),
+                    priority=75,
+                ))
+            elif hardware.form_factor.sustained_performance_ratio < 1.0:
+                # Still warn about laptop even if ratio is > 0.8
+                pct = int(hardware.form_factor.sustained_performance_ratio * 100)
+                warnings.append(ExplanationItem(
+                    type=ExplanationType.WARNING,
+                    title="Laptop GPU Detected",
+                    description=f"Running at ~{pct}% of desktop performance due to power limits.",
+                    priority=60,
+                ))
+
+        # 2. Storage speed warning for speed-focused users
+        if user_prioritizes_speed and hardware.storage:
+            if hardware.storage.tier == StorageTier.SLOW:
+                warnings.append(ExplanationItem(
+                    type=ExplanationType.WARNING,
+                    title="Slow Storage Detected",
+                    description=(
+                        "HDD detected - model loading will be significantly slower. "
+                        "Large models (10GB+) may take 2-5 minutes to load."
+                    ),
+                    details=(
+                        "Consider installing an NVMe SSD for your models directory. "
+                        "NVMe can be 10-20x faster than HDD for model loading."
+                    ),
+                    priority=70,
+                ))
+            elif hardware.storage.tier == StorageTier.MODERATE:
+                warnings.append(ExplanationItem(
+                    type=ExplanationType.WARNING,
+                    title="SATA SSD Storage",
+                    description=(
+                        "SATA SSD detected - adequate for most models. "
+                        "Very large models may have 15-30 second load times."
+                    ),
+                    details=(
+                        "NVMe storage offers 3-5x faster model loading for power users."
+                    ),
+                    priority=40,
+                ))
+
+        # 3. Low RAM warning for offload operations
+        if hardware.ram:
+            # Check if any ranked models use offload
+            offload_models = [
+                r for r in ranked
+                if r.scored_candidate.passing_candidate.execution_mode == "gpu_offload"
+            ]
+
+            if offload_models and hardware.ram.usable_for_offload_gb < 16:
+                warnings.append(ExplanationItem(
+                    type=ExplanationType.WARNING,
+                    title="Limited RAM for Offload",
+                    description=(
+                        f"Only {hardware.ram.usable_for_offload_gb:.0f}GB RAM available for offloading. "
+                        "Some large models may not fit."
+                    ),
+                    details=(
+                        "Consider closing other applications to free up RAM, "
+                        "or upgrading to 32GB+ for comfortable offloading."
+                    ),
+                    priority=65,
+                ))
+
+        # 4. AVX2 warning for GGUF models (x86 only)
+        if hardware.cpu and hardware.cpu.architecture == "x86_64":
+            if not hardware.cpu.supports_avx2:
+                # Check if any ranked models use GGUF quantization
+                gguf_models = [
+                    r for r in ranked
+                    if self._is_gguf_variant(r)
+                ]
+
+                if gguf_models:
+                    warnings.append(ExplanationItem(
+                        type=ExplanationType.WARNING,
+                        title="No AVX2 Support",
+                        description=(
+                            "Your CPU lacks AVX2 instructions - GGUF model inference will be 2-4x slower. "
+                            f"{len(gguf_models)} recommended model(s) use GGUF quantization."
+                        ),
+                        details=(
+                            "AVX2 is required for efficient GGUF/GGML inference. "
+                            "Consider using non-quantized models or upgrading your CPU."
+                        ),
+                        priority=80,
+                    ))
+
+        return warnings
+
+    def _is_gguf_variant(self, ranked: RankedCandidate) -> bool:
+        """Check if a ranked candidate uses GGUF quantization."""
+        variant = ranked.scored_candidate.passing_candidate.variant
+        precision = variant.precision.lower() if variant.precision else ""
+        return "gguf" in precision or precision.startswith("q")
 
     def format_as_text(self, report: RecommendationReport) -> str:
         """Format report as plain text for display."""
