@@ -1,4 +1,19 @@
+"""
+DEPRECATED: Legacy single-pass weighted scoring algorithm.
+
+This module is replaced by the 3-layer recommendation engine:
+- Layer 1: src/services/recommendation/constraint_layer.py (CSP)
+- Layer 2: src/services/recommendation/content_layer.py (Content-based filtering)
+- Layer 3: src/services/recommendation/topsis_layer.py (TOPSIS ranking)
+
+Still in use by recommendation_service.py until full migration is complete.
+Target: Remove when recommendation_service.py is migrated to 3-layer engine.
+
+See SPEC_v3 Section 6 for the new architecture.
+"""
+
 import logging
+import warnings
 from typing import List, Dict, Any, Optional
 from dataclasses import replace
 
@@ -18,7 +33,14 @@ log = get_logger(__name__)
 
 class ScoringService:
     """
-    Implements the Weighted Scoring Algorithm defined in Spec Section 13.5.
+    DEPRECATED: Implements the Weighted Scoring Algorithm defined in Spec Section 13.5.
+
+    This class is deprecated and will be removed. Use the 3-layer recommendation
+    engine instead:
+    - ConstraintSatisfactionLayer (CSP binary elimination)
+    - ContentBasedLayer (cosine similarity scoring)
+    - TOPSISRanker (multi-criteria ranking)
+
     Calculates fit scores for Models and CLI providers based on:
     1. Hardware Capabilities (50%)
     2. User Preferences (35%)
@@ -30,6 +52,12 @@ class ScoringService:
         Args:
             resources: The full resources.json dictionary.
         """
+        warnings.warn(
+            "ScoringService is deprecated. Use the 3-layer recommendation engine "
+            "(constraint_layer, content_layer, topsis_layer) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.resources = resources
         self.config = resources.get("recommendation_config", {})
         self.weights = self.config.get("scoring_weights", {})

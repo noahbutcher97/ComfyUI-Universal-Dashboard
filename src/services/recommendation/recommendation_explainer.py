@@ -77,13 +77,39 @@ class RecommendationExplainer:
     4. How hardware upgrades could improve options
     """
 
+    # GPU tier thresholds (GB) - documented per ARCHITECTURE_PRINCIPLES.md
+    # Each tier represents realistic upgrade paths for different user segments
+    GPU_TIERS = {
+        "consumer": {
+            "max_vram": 24,  # RTX 4090
+            "examples": "RTX 4070 Ti Super (16GB) or RTX 4090 (24GB)",
+        },
+        "prosumer": {
+            "max_vram": 48,  # RTX A6000, RTX 6000 Ada
+            "examples": "RTX A6000 (48GB) or RTX 6000 Ada (48GB)",
+        },
+        "professional": {
+            "max_vram": 80,  # A100/H100
+            "examples": "NVIDIA A100 (80GB) or H100 (80GB)",
+        },
+        "multi_gpu": {
+            "max_vram": float("inf"),  # Multi-GPU setups
+            "examples": "Multi-GPU setup or cloud instances (A100x4, H100x8)",
+        },
+    }
+
+    # MB to GB conversion factor
+    MB_TO_GB = 1024
+
     # Friendly names for rejection reasons
     REJECTION_MESSAGES = {
-        RejectionReason.INSUFFICIENT_VRAM: "Not enough GPU memory (VRAM)",
-        RejectionReason.PLATFORM_INCOMPATIBLE: "Not compatible with your operating system",
-        RejectionReason.COMPUTE_CAPABILITY_TOO_LOW: "GPU compute capability too low",
-        RejectionReason.EXCLUDED_BY_USER: "Excluded by your preferences",
-        RejectionReason.INSUFFICIENT_STORAGE: "Not enough disk space",
+        RejectionReason.VRAM_INSUFFICIENT: "Not enough GPU memory (VRAM)",
+        RejectionReason.PLATFORM_UNSUPPORTED: "Not compatible with your operating system",
+        RejectionReason.COMPUTE_CAPABILITY: "GPU compute capability too low",
+        RejectionReason.STORAGE_INSUFFICIENT: "Not enough disk space",
+        RejectionReason.CPU_CANNOT_OFFLOAD: "CPU cannot handle model offloading",
+        RejectionReason.QUANTIZATION_UNAVAILABLE: "Required quantization format not available",
+        RejectionReason.PAIRED_MODEL_MISSING: "Required companion model not available",
         RejectionReason.MPS_KQUANT_CRASH: "This quantization format crashes on Apple Silicon",
         RejectionReason.APPLE_SILICON_EXCLUDED: "Performance too slow on Apple Silicon",
     }
@@ -163,10 +189,13 @@ class RecommendationExplainer:
 
         # Platform
         platform_names = {
-            PlatformType.NVIDIA: "NVIDIA CUDA",
+            PlatformType.WINDOWS_NVIDIA: "NVIDIA CUDA (Windows)",
+            PlatformType.LINUX_NVIDIA: "NVIDIA CUDA (Linux)",
+            PlatformType.WSL2_NVIDIA: "NVIDIA CUDA (WSL2)",
             PlatformType.APPLE_SILICON: "Apple Silicon",
-            PlatformType.AMD_ROCM: "AMD ROCm",
+            PlatformType.LINUX_ROCM: "AMD ROCm",
             PlatformType.CPU_ONLY: "CPU Only",
+            PlatformType.UNKNOWN: "Unknown Platform",
         }
         parts.append(platform_names.get(hardware.platform, str(hardware.platform)))
 
@@ -291,11 +320,9 @@ class RecommendationExplainer:
 
     def _explain_rejection(self, rejected: RejectedCandidate) -> ModelExplanation:
         """Generate explanation for a rejected model."""
-        model = rejected.model
-
         explanation = ModelExplanation(
-            model_id=model.id,
-            model_name=model.name,
+            model_id=rejected.model_id,
+            model_name=rejected.model_name,
             rank=0,
             score=0.0,
             is_recommended=False,
@@ -307,7 +334,7 @@ class RecommendationExplainer:
             rejected.reason.value.replace("_", " ").title()
         )
 
-        explanation.summary = f"{model.name} was excluded: {reason_message}"
+        explanation.summary = f"{rejected.model_name} was excluded: {reason_message}"
 
         explanation.items.append(ExplanationItem(
             type=ExplanationType.REJECTION,
@@ -349,39 +376,58 @@ class RecommendationExplainer:
         # Check if VRAM is limiting
         vram_rejections = [
             r for r in rejected
-            if r.reason == RejectionReason.INSUFFICIENT_VRAM
+            if r.reason == RejectionReason.VRAM_INSUFFICIENT
         ]
 
         if vram_rejections:
             # Find how much VRAM would help
             needed_vram = []
             for r in vram_rejections:
-                for v in r.model.variants:
-                    needed_vram.append(v.vram_min_mb)
+                if r.model and r.model.variants:
+                    for v in r.model.variants:
+                        needed_vram.append(v.vram_min_mb)
 
+            current = hardware.vram_gb
             if needed_vram:
-                min_needed = min(needed_vram) / 1024  # Convert to GB
-                current = hardware.vram_gb
+                min_needed = min(needed_vram) / self.MB_TO_GB  # Convert to GB
 
-                if min_needed <= 24:
-                    suggestions.append(ExplanationItem(
-                        type=ExplanationType.IMPROVEMENT,
-                        title="GPU Upgrade Would Help",
-                        description=(
-                            f"With {min_needed:.0f}GB+ VRAM, you could run "
-                            f"{len(vram_rejections)} additional models."
-                        ),
-                        details=(
-                            f"Current: {current:.0f}GB VRAM. "
-                            f"Consider RTX 4070 Ti Super (16GB) or RTX 4090 (24GB)."
-                        ),
-                        priority=90,
-                    ))
+                # Find appropriate GPU tier for the requirement
+                upgrade_tier = self._get_upgrade_tier(min_needed)
+                tier_info = self.GPU_TIERS[upgrade_tier]
+
+                suggestions.append(ExplanationItem(
+                    type=ExplanationType.IMPROVEMENT,
+                    title="GPU Upgrade Would Help",
+                    description=(
+                        f"With {min_needed:.0f}GB+ VRAM, you could run "
+                        f"{len(vram_rejections)} additional model(s)."
+                    ),
+                    details=(
+                        f"Current: {current:.0f}GB VRAM. "
+                        f"Consider {tier_info['examples']}."
+                    ),
+                    priority=90,
+                ))
+            else:
+                # Fallback if model data not available
+                suggestions.append(ExplanationItem(
+                    type=ExplanationType.IMPROVEMENT,
+                    title="GPU Upgrade Would Help",
+                    description=(
+                        f"{len(vram_rejections)} model(s) were excluded due to "
+                        f"insufficient VRAM."
+                    ),
+                    details=(
+                        f"Current: {current:.0f}GB VRAM. "
+                        f"Consider {self.GPU_TIERS['consumer']['examples']}."
+                    ),
+                    priority=90,
+                ))
 
         # Check storage limitations
         storage_rejections = [
             r for r in rejected
-            if r.reason == RejectionReason.INSUFFICIENT_STORAGE
+            if r.reason == RejectionReason.STORAGE_INSUFFICIENT
         ]
 
         if storage_rejections and hardware.storage:
@@ -450,6 +496,18 @@ class RecommendationExplainer:
             return "Limited"
         else:
             return "Poor"
+
+    def _get_upgrade_tier(self, required_vram_gb: float) -> str:
+        """
+        Get appropriate GPU tier for the VRAM requirement.
+
+        Returns the tier name ("consumer", "prosumer", "professional", "multi_gpu")
+        that can satisfy the requirement.
+        """
+        for tier_name in ["consumer", "prosumer", "professional", "multi_gpu"]:
+            if required_vram_gb <= self.GPU_TIERS[tier_name]["max_vram"]:
+                return tier_name
+        return "multi_gpu"
 
     def format_as_text(self, report: RecommendationReport) -> str:
         """Format report as plain text for display."""

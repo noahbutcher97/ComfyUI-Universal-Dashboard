@@ -81,6 +81,213 @@ class CLIPreferences:
     cost_sensitivity: int = 3 # 1-5
     context_window_importance: int = 3
 
+
+# --- Modular Modality Preferences (SPEC_v3 Section 6.3.1) ---
+# These schemas replace the flat ContentPreferences for multi-modal use cases.
+# Migration: ContentPreferences -> UseCaseDefinition (see convert_legacy_preferences())
+
+@dataclass
+class SharedQualityPrefs:
+    """
+    Cross-cutting quality preferences that apply across all modalities.
+
+    Per SPEC_v3 Section 6.3.1: These are shared between image, video, audio, etc.
+    Scale: 1-5 where 1=Low priority, 5=High priority
+    """
+    photorealism: int = 3
+    artistic_stylization: int = 3
+    generation_speed: int = 3
+    output_quality: int = 3
+    character_consistency: Optional[int] = None  # For character-based workflows
+
+
+@dataclass
+class ImageModalityPrefs:
+    """
+    Image generation specific preferences.
+
+    Per SPEC_v3 Section 6.3.1: Only included when use case requires image modality.
+    Scale: 1-5 where 1=Low priority, 5=High priority
+    """
+    editability: int = 3
+    pose_control: Optional[int] = None
+    holistic_edits: Optional[int] = None  # Global image edits (style transfer, etc.)
+    localized_edits: Optional[int] = None  # Inpainting, outpainting
+    style_tags: List[str] = field(default_factory=list)
+    typical_resolution: str = "1024x1024"
+
+
+@dataclass
+class VideoModalityPrefs:
+    """
+    Video generation specific preferences.
+
+    Per SPEC_v3 Section 6.3.1: Only included when use case requires video modality.
+    Scale: 1-5 where 1=Low priority, 5=High priority
+    """
+    motion_intensity: int = 3  # 1=Subtle/slow, 5=Dynamic/fast
+    temporal_coherence: int = 3  # Frame-to-frame consistency
+    duration_preference: str = "4s"  # Typical clip duration
+
+
+@dataclass
+class AudioModalityPrefs:
+    """
+    Audio generation specific preferences (future).
+
+    Per SPEC_v3 Section 6.3.1: Stub for future audio modality support.
+    """
+    pass  # TODO: Define when audio models are added
+
+
+@dataclass
+class ThreeDModalityPrefs:
+    """
+    3D generation specific preferences (future).
+
+    Per SPEC_v3 Section 6.3.1: Stub for future 3D modality support.
+    """
+    pass  # TODO: Define when 3D models are added
+
+
+@dataclass
+class UseCaseDefinition:
+    """
+    A use case that composes one or more modalities.
+
+    Per SPEC_v3 Section 6.3.1: Use cases can span multiple modalities
+    (e.g., character animation = image + video, music video = image + video + audio).
+
+    The recommendation engine scores candidates per modality, then aggregates.
+    """
+    id: str  # e.g., "character_animation", "txt2img", "music_video"
+    name: str  # e.g., "Character Animation Workflow"
+    required_modalities: List[str] = field(default_factory=list)  # ["image", "video"]
+
+    # Cross-cutting preferences (always present)
+    shared: SharedQualityPrefs = field(default_factory=SharedQualityPrefs)
+
+    # Modality-specific preferences (only populate what's needed)
+    image: Optional[ImageModalityPrefs] = None
+    video: Optional[VideoModalityPrefs] = None
+    audio: Optional[AudioModalityPrefs] = None
+    three_d: Optional[ThreeDModalityPrefs] = None
+
+    # Cross-cutting settings
+    batch_frequency: int = 3  # How often user generates (1=rarely, 5=constantly)
+    preferred_approach: Optional[str] = None  # "minimal", "monolithic", etc.
+    quantization_acceptable: bool = True
+
+
+# --- Use Case Templates ---
+# Pre-defined use case configurations for common workflows
+
+USE_CASE_TEMPLATES: Dict[str, UseCaseDefinition] = {
+    "txt2img": UseCaseDefinition(
+        id="txt2img",
+        name="Text to Image",
+        required_modalities=["image"],
+    ),
+    "img2img": UseCaseDefinition(
+        id="img2img",
+        name="Image to Image",
+        required_modalities=["image"],
+    ),
+    "inpainting": UseCaseDefinition(
+        id="inpainting",
+        name="Inpainting/Editing",
+        required_modalities=["image"],
+    ),
+    "txt2vid": UseCaseDefinition(
+        id="txt2vid",
+        name="Text to Video",
+        required_modalities=["video"],
+    ),
+    "img2vid": UseCaseDefinition(
+        id="img2vid",
+        name="Image to Video",
+        required_modalities=["image", "video"],
+    ),
+    "character_animation": UseCaseDefinition(
+        id="character_animation",
+        name="Character Animation",
+        required_modalities=["image", "video"],
+    ),
+}
+
+
+def convert_legacy_preferences(
+    use_case_id: str,
+    legacy_prefs: "ContentPreferences",
+) -> UseCaseDefinition:
+    """
+    Convert legacy flat ContentPreferences to new UseCaseDefinition.
+
+    Per PLAN_v3.md deprecation tracker: ContentPreferences is deprecated in v1.1,
+    removed in v2.0. This function enables gradual migration.
+
+    Args:
+        use_case_id: The use case identifier (e.g., "txt2img", "txt2vid")
+        legacy_prefs: The old-style flat ContentPreferences
+
+    Returns:
+        UseCaseDefinition with modality-specific preferences populated
+    """
+    # Determine required modalities from use case ID
+    modality_map = {
+        "txt2img": ["image"],
+        "img2img": ["image"],
+        "inpainting": ["image"],
+        "txt2vid": ["video"],
+        "img2vid": ["image", "video"],
+        "character_animation": ["image", "video"],
+        "flf2v": ["image", "video"],  # First/last frame to video
+    }
+    required_modalities = modality_map.get(use_case_id, ["image"])
+
+    # Build shared quality preferences
+    shared = SharedQualityPrefs(
+        photorealism=legacy_prefs.photorealism,
+        artistic_stylization=legacy_prefs.artistic_stylization,
+        generation_speed=legacy_prefs.generation_speed,
+        output_quality=legacy_prefs.output_quality,
+        character_consistency=legacy_prefs.character_consistency,
+    )
+
+    # Build image preferences if needed
+    image_prefs = None
+    if "image" in required_modalities:
+        image_prefs = ImageModalityPrefs(
+            editability=legacy_prefs.editability,
+            pose_control=legacy_prefs.pose_control,
+            holistic_edits=legacy_prefs.holistic_edits,
+            localized_edits=legacy_prefs.localized_edits,
+            style_tags=legacy_prefs.style_tags.copy() if legacy_prefs.style_tags else [],
+            typical_resolution=legacy_prefs.typical_resolution,
+        )
+
+    # Build video preferences if needed
+    video_prefs = None
+    if "video" in required_modalities:
+        video_prefs = VideoModalityPrefs(
+            motion_intensity=legacy_prefs.motion_intensity or 3,
+            temporal_coherence=legacy_prefs.temporal_coherence or 3,
+            duration_preference="4s",  # Default, not in legacy schema
+        )
+
+    return UseCaseDefinition(
+        id=use_case_id,
+        name=USE_CASE_TEMPLATES.get(use_case_id, UseCaseDefinition(id="", name="")).name or use_case_id,
+        required_modalities=required_modalities,
+        shared=shared,
+        image=image_prefs,
+        video=video_prefs,
+        batch_frequency=legacy_prefs.batch_frequency,
+        preferred_approach=legacy_prefs.preferred_approach,
+        quantization_acceptable=legacy_prefs.quantization_acceptable,
+    )
+
+
 @dataclass
 class UserProfile:
     """User's self-reported experience and preferences."""

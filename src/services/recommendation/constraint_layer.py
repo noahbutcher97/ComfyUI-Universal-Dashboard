@@ -80,6 +80,7 @@ class RejectedCandidate:
     reason: RejectionReason
     details: str
     suggestion: Optional[str] = None  # e.g., "Consider GGUF Q4 variant"
+    model: Optional[ModelEntry] = None  # Full model for explainer access to variants
 
 
 @dataclass
@@ -212,6 +213,7 @@ class ConstraintSatisfactionLayer:
                     reason=RejectionReason.APPLE_SILICON_EXCLUDED,
                     details=exclusion_reason or "Excluded for Apple Silicon",
                     suggestion=suggestion,
+                    model=model,
                 )
 
         # =================================================================
@@ -243,6 +245,7 @@ class ConstraintSatisfactionLayer:
                         "Wait for non-K GGUF variant (Q4_0, Q5_0, Q8_0) or "
                         "use native PyTorch variant"
                     ),
+                    model=model,
                 )
 
         # =================================================================
@@ -400,6 +403,7 @@ class ConstraintSatisfactionLayer:
                 reason=RejectionReason.VRAM_INSUFFICIENT,
                 details=f"Requires {min_vram}MB VRAM, you have {vram_mb}MB",
                 suggestion=suggestion,
+                model=model,
             )
 
         # Platform issue
@@ -409,6 +413,7 @@ class ConstraintSatisfactionLayer:
             reason=RejectionReason.PLATFORM_UNSUPPORTED,
             details=f"Not supported on {platform}",
             suggestion=model.explanation.rejected_platform if model.explanation else None,
+            model=model,
         )
 
     def _get_platform_key(self, hardware: HardwareProfile) -> str:
