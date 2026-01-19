@@ -82,6 +82,31 @@ class CLIPreferences:
     context_window_importance: int = 3
 
 
+# --- Cloud API Preferences (PLAN: Cloud API Integration) ---
+
+@dataclass
+class CloudAPIPreferences:
+    """
+    User's preferences for cloud vs local model execution.
+
+    Per PLAN: Cloud API Integration - these preferences shape whether
+    recommendations come from local_models or cloud_apis database sections.
+
+    Attributes:
+        cloud_willingness: How the user wants to run AI models
+            - "local_only": Only download and run locally (no cloud recommendations)
+            - "cloud_fallback": Prefer local, show cloud when hardware can't handle it (DEFAULT)
+            - "cloud_preferred": Prefer cloud APIs, show local as alternative
+            - "cloud_only": Exclusively use cloud APIs (skip GPU detection)
+        cost_sensitivity: How important keeping costs low is (1-5 scale)
+            - 1: Budget isn't a concern (quality/speed dominate)
+            - 3: Balance of cost and quality (DEFAULT)
+            - 5: Minimize cost at all costs (cost dominates, soft filter expensive)
+    """
+    cloud_willingness: Literal["local_only", "cloud_fallback", "cloud_preferred", "cloud_only"] = "cloud_fallback"
+    cost_sensitivity: int = 3  # 1-5 scale
+
+
 # --- Modular Modality Preferences (SPEC_v3 Section 6.3.1) ---
 # These schemas replace the flat ContentPreferences for multi-modal use cases.
 # Migration: ContentPreferences -> UseCaseDefinition (see convert_legacy_preferences())
@@ -299,13 +324,16 @@ class UserProfile:
     # Use Case Intent
     primary_use_cases: List[str] = field(default_factory=list)
     content_preferences: Dict[str, ContentPreferences] = field(default_factory=dict)
-    
+
     # CLI Specifics
     cli_preferences: Optional[CLIPreferences] = None
 
+    # Cloud API Preferences (PLAN: Cloud API Integration)
+    cloud_api_preferences: CloudAPIPreferences = field(default_factory=CloudAPIPreferences)
+
     # Workflow Preferences (1-5)
     prefer_simple_setup: int = 3
-    prefer_local_processing: int = 3
+    prefer_local_processing: int = 3  # DEPRECATED: Use cloud_api_preferences.cloud_willingness instead
     prefer_open_source: int = 3
 
 # --- Hardware Schemas ---
@@ -356,21 +384,119 @@ class Candidate:
 @dataclass
 class ModelCandidate(Candidate):
     tier: str = "sd15"
+    category: str = "image_generation"  # For modality filtering in UI
     capabilities: ModelCapabilityScores = field(default_factory=ModelCapabilityScores)
     requirements: Dict[str, Any] = field(default_factory=dict)
     approach: str = "minimal"
     required_nodes: List[str] = field(default_factory=list)
     
-    # Intermediate scores
-    hardware_fit_score: float = 0.0
-    user_fit_score: float = 0.0
-    approach_fit_score: float = 0.0
+    # Intermediate scores (populated by TOPSIS layer)
+    # These 5 scores match the TOPSIS criteria for consistency with cloud display
+    content_similarity_score: float = 0.0  # Use case match (like cloud's content_score)
+    hardware_fit_score: float = 0.0        # VRAM fit, form factor penalty
+    speed_fit_score: float = 0.0           # Generation speed (like cloud's latency_score)
+    user_fit_score: float = 0.0            # Preference match / ecosystem maturity
+    approach_fit_score: float = 0.0        # Workflow complexity fit
 
 @dataclass
 class CLICandidate(Candidate):
     provider: str = "gemini"
     capabilities: CLICapabilityScores = field(default_factory=CLICapabilityScores)
     requires_api_key: bool = True
+
+
+# --- Cloud Recommendation Schemas (PLAN: Cloud API Integration) ---
+
+@dataclass
+class CloudRankedCandidate:
+    """
+    A cloud model recommendation with hybrid scoring.
+
+    Per PLAN: Cloud API Integration - Cloud models use a mix of shared criteria
+    (same as local) and cloud-specific criteria (replacing hardware_fit).
+
+    Attributes:
+        model_id: Unique identifier for the cloud model
+        display_name: Human-readable name
+        provider: API provider (e.g., "openai", "stability_ai", "comfy_partner_node")
+
+        # Shared criteria scores (same as local pathway, 0.0-1.0)
+        content_score: Use case match from modality scorers
+        style_score: Aesthetic/approach alignment
+        approach_score: Workflow compatibility
+        ecosystem_score: Documentation, support, stability
+
+        # Cloud-specific criteria scores (0.0-1.0)
+        cost_score: Cost efficiency (inverse of price)
+        provider_score: Reliability (Partner Node > Major providers > Others)
+        rate_limit_score: Throttling/quota headroom
+        latency_score: API response time / generation wait time
+
+        overall_score: TOPSIS-like composite score
+        estimated_cost_per_use: Cost per generation (e.g., $0.04/image)
+        estimated_monthly_cost: Based on projected usage from batch_frequency
+        setup_type: "partner_node" or "api_key"
+        storage_boost_applied: True if score was boosted due to storage constraint
+    """
+    model_id: str
+    display_name: str
+    provider: str
+    category: str = "image_generation"  # For modality filtering in UI
+
+    # Shared criteria scores (same as local)
+    content_score: float = 0.0       # Use case match
+    style_score: float = 0.0         # Aesthetic/approach fit
+    approach_score: float = 0.0      # Workflow compatibility
+    ecosystem_score: float = 0.0     # Docs, support, stability
+
+    # Cloud-specific criteria scores
+    cost_score: float = 0.0          # Cost efficiency (inverse of price)
+    provider_score: float = 0.0      # Reliability (Partner Node bonus)
+    rate_limit_score: float = 0.0    # Throttling/quota headroom
+    latency_score: float = 0.0       # API response time
+
+    overall_score: float = 0.0       # TOPSIS-like composite
+    estimated_cost_per_use: float = 0.0
+    estimated_monthly_cost: float = 0.0  # Based on projected usage
+    setup_type: Literal["partner_node", "api_key"] = "api_key"
+    storage_boost_applied: bool = False  # True if boosted due to storage constraint
+
+    # Explanation
+    reasoning: List[str] = field(default_factory=list)
+
+
+@dataclass
+class CloudRecommendationInfo:
+    """
+    Additional cloud-specific info for display purposes.
+
+    Per PLAN: Cloud API Integration - Attached to recommendations that
+    can be fulfilled via cloud APIs.
+    """
+    is_cloud: bool = False
+    provider: str = ""
+    partner_node_available: bool = False
+    estimated_cost_per_use: float = 0.0
+    setup_instructions: str = ""  # URL or inline instructions
+
+
+@dataclass
+class RecommendationResults:
+    """
+    Combined results from both local and cloud recommendation pathways.
+
+    Per PLAN: Cloud API Integration - Parallel pathways return separate
+    recommendation lists. The primary_pathway indicates which should be
+    displayed first based on user's cloud_willingness setting.
+    """
+    local_recommendations: List[ModelCandidate] = field(default_factory=list)
+    cloud_recommendations: List[CloudRankedCandidate] = field(default_factory=list)
+    primary_pathway: Literal["local", "cloud"] = "local"
+
+    # Storage constraint info
+    storage_constrained: bool = False  # True if < 50GB free
+    storage_warnings: List[str] = field(default_factory=list)  # Warnings for large local models
+
 
 # --- Result Schema ---
 

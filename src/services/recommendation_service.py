@@ -7,7 +7,9 @@ from src.schemas.recommendation import (
     ModelCapabilityScores,
     UserProfile,
     CLICandidate,
-    CLICapabilityScores
+    CLICapabilityScores,
+    CloudRankedCandidate,
+    RecommendationResults,
 )
 from src.services.scoring_service import ScoringService
 from src.services.model_database import (
@@ -17,7 +19,12 @@ from src.services.model_database import (
     get_model_database,
     normalize_platform,
 )
+from src.services.recommendation.cloud_layer import CloudRecommendationLayer
 from src.utils.logger import log
+
+
+# Storage threshold for warnings (per PLAN: Cloud API Integration)
+STORAGE_WARNING_THRESHOLD_GB = 50
 
 
 class RecommendationService:
@@ -40,37 +47,183 @@ class RecommendationService:
         self.resources = resources
         self.model_db = model_db or get_model_database()
         self.scoring_service = ScoringService(resources)
+        self.cloud_layer = CloudRecommendationLayer(model_db=self.model_db)
 
     def generate_recommendations(
-        self, 
-        use_case: str, 
+        self,
+        use_case: str,
         env: EnvironmentReport,
         user_profile: UserProfile
     ) -> List[ModuleRecommendation]:
         """
         Generate recommendations for all modules relevant to use case.
+
+        NOTE: This is the LEGACY module-based recommendation method.
+        For the new parallel local/cloud pathway system, use generate_parallel_recommendations().
         """
         recommendations = []
         use_case_config = self.resources.get("use_cases", {}).get(use_case)
-        
+
+        log.info(f"generate_recommendations: use_case={use_case}, "
+                 f"available_use_cases={list(self.resources.get('use_cases', {}).keys())}")
+
         if not use_case_config:
             log.error(f"Unknown use case: {use_case}")
             return []
 
+        log.info(f"use_case_config: modules={use_case_config.get('modules', [])}, "
+                 f"optional_modules={use_case_config.get('optional_modules', [])}")
+
         # Convert EnvironmentReport to HardwareConstraints (Normalized)
         hardware_constraints = self._normalize_hardware(env)
-        
+
         # 1. ComfyUI Recommendation
         if "comfyui" in use_case_config.get("modules", []):
+            log.info("Generating ComfyUI recommendation...")
             comfy_rec = self._recommend_comfyui(use_case_config, env, hardware_constraints, user_profile)
             recommendations.append(comfy_rec)
-            
+            log.info(f"ComfyUI recommendation: enabled={comfy_rec.enabled}")
+
         # 2. CLI Provider Recommendation
         if "cli_provider" in use_case_config.get("modules", []) or "cli_provider" in use_case_config.get("optional_modules", []):
+            log.info("Generating CLI provider recommendation...")
             cli_rec = self._recommend_cli_provider(use_case_config, env, hardware_constraints, user_profile)
             recommendations.append(cli_rec)
-            
+            log.info(f"CLI provider recommendation: provider={cli_rec.config.get('provider')}")
+
+        log.info(f"generate_recommendations complete: {len(recommendations)} modules for use_case={use_case}")
         return recommendations
+
+    def generate_parallel_recommendations(
+        self,
+        user_profile: UserProfile,
+        env: EnvironmentReport,
+        categories: Optional[List[str]] = None,
+    ) -> RecommendationResults:
+        """
+        Generate recommendations using parallel pathways.
+
+        Per PLAN: Cloud API Integration - Runs local and/or cloud pathways
+        based on user's cloud_willingness setting.
+
+        Args:
+            user_profile: User's preferences including cloud_api_preferences
+            env: Environment report with hardware info
+            categories: Optional list of categories to filter
+
+        Returns:
+            RecommendationResults with local and/or cloud recommendations
+        """
+        results = RecommendationResults()
+        willingness = user_profile.cloud_api_preferences.cloud_willingness
+
+        # Normalize hardware for local pathway
+        hardware = self._normalize_hardware(env)
+
+        # Track storage constraint
+        storage_free_gb = env.disk_free_gb
+        results.storage_constrained = storage_free_gb < STORAGE_WARNING_THRESHOLD_GB
+
+        # Run local pathway (unless cloud_only)
+        if willingness != "cloud_only":
+            results.local_recommendations = self._run_local_pipeline(
+                user_profile, hardware, env, categories
+            )
+
+            # Add storage warnings for large local models
+            if results.storage_constrained:
+                results.storage_warnings = self._generate_storage_warnings(
+                    results.local_recommendations, storage_free_gb
+                )
+
+        # Run cloud pathway (unless local_only)
+        if willingness != "local_only":
+            results.cloud_recommendations = self.cloud_layer.recommend(
+                user_profile=user_profile,
+                categories=categories,
+                storage_free_gb=storage_free_gb,
+            )
+
+        # Determine primary pathway
+        results.primary_pathway = (
+            "cloud" if willingness in ["cloud_preferred", "cloud_only"]
+            else "local"
+        )
+
+        log.info(
+            f"Generated parallel recommendations: "
+            f"{len(results.local_recommendations)} local, "
+            f"{len(results.cloud_recommendations)} cloud, "
+            f"primary={results.primary_pathway}"
+        )
+
+        return results
+
+    def _run_local_pipeline(
+        self,
+        user_profile: UserProfile,
+        hardware: HardwareConstraints,
+        env: EnvironmentReport,
+        categories: Optional[List[str]] = None,
+    ) -> List[ModelCandidate]:
+        """
+        Run the local model recommendation pipeline.
+
+        Args:
+            user_profile: User's preferences
+            hardware: Normalized hardware constraints
+            env: Environment report
+            categories: Optional category filter
+
+        Returns:
+            List of ModelCandidate sorted by score
+        """
+        # Generate candidates from local models
+        candidates = self._generate_model_candidates(env, categories)
+
+        if not candidates:
+            return []
+
+        # Score candidates
+        scored = self.scoring_service.score_model_candidates(
+            candidates, user_profile, hardware
+        )
+
+        # Filter out rejected candidates
+        valid = [c for c in scored if c.composite_score > 0]
+
+        return valid
+
+    def _generate_storage_warnings(
+        self,
+        candidates: List[ModelCandidate],
+        storage_free_gb: float,
+    ) -> List[str]:
+        """
+        Generate storage warnings for large local models.
+
+        Per PLAN: Cloud API Integration - Warn users about storage impact.
+
+        Args:
+            candidates: Local model candidates
+            storage_free_gb: Free storage space in GB
+
+        Returns:
+            List of warning strings
+        """
+        warnings = []
+
+        for candidate in candidates[:5]:  # Top 5 candidates
+            size_gb = candidate.requirements.get("size_gb", 0)
+            if size_gb > 0:
+                usage_percent = (size_gb / storage_free_gb) * 100
+                if usage_percent > 50:
+                    warnings.append(
+                        f"{candidate.display_name} ({size_gb:.1f}GB) would use "
+                        f"{usage_percent:.0f}% of your free space"
+                    )
+
+        return warnings
 
     def _recommend_comfyui(
         self,
@@ -203,7 +356,7 @@ class RecommendationService:
         candidates = []
 
         # Determine platform key from environment
-        platform = normalize_platform(env.gpu_vendor, env.platform)
+        platform = normalize_platform(env.gpu_vendor, env.os_name)
 
         # Get VRAM in MB (convert from GB)
         vram_mb = int(env.vram_gb * 1024)
@@ -291,6 +444,7 @@ class RecommendationService:
             id=f"{model.id}_{variant.id}",
             display_name=f"{model.name} ({variant.precision.upper()})",
             tier=tier,
+            category=model.category,  # Pass category for modality filtering
             capabilities=cap_scores,
             requirements=requirements,
             approach=approach,

@@ -15,6 +15,7 @@ from src.services.model_database import (
     ModelVariant,
     ModelCapabilities,
     PlatformSupport,
+    HardwareInfo,
     normalize_platform,
     get_model_database,
     reload_model_database,
@@ -519,6 +520,350 @@ class TestSingleton:
         # After reload, singleton is updated
         db3 = get_model_database()
         assert db2 is db3
+
+
+# =============================================================================
+# Test: Hardware Info Parsing
+# =============================================================================
+
+HARDWARE_TEST_YAML = """
+image_generation:
+  explicit_hardware_model:
+    name: "Explicit Hardware Model"
+    family: "test"
+
+    architecture:
+      type: "dit"
+      parameters_b: 12.0
+
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_size_gb: 24.0
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+
+    hardware:
+      total_size_gb: 28.0
+      compute_intensity: "high"
+      supports_cpu_offload: true
+      ram_for_offload_gb: 32.0
+      supports_tensorrt: true
+      mps_performance_penalty: 0.6
+
+  derived_hardware_model:
+    name: "Derived Hardware Model"
+    family: "test"
+
+    architecture:
+      type: "unet"
+      parameters_b: 5.0
+
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_size_gb: 10.0
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+          linux_rocm: {supported: true}
+
+  small_model:
+    name: "Small Model"
+    family: "test"
+
+    architecture:
+      type: "transformer"
+      parameters_b: 0.5
+
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 2000
+        vram_recommended_mb: 4000
+        download_size_gb: 1.0
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+
+  large_moe_model:
+    name: "Large MoE Model"
+    family: "test"
+
+    architecture:
+      type: "moe"
+      parameters_b: 50.0
+
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 80000
+        vram_recommended_mb: 100000
+        download_size_gb: 100.0
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: true}
+
+  no_mps_model:
+    name: "No MPS Model"
+    family: "test"
+
+    architecture:
+      type: "dit"
+      parameters_b: 8.0
+
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 16000
+        vram_recommended_mb: 20000
+        download_size_gb: 16.0
+        platform_support:
+          windows_nvidia: {supported: true}
+          mac_mps: {supported: false}
+          linux_rocm: {supported: true}
+"""
+
+
+class TestHardwareInfoParsing:
+    """Tests for hardware info parsing and computed defaults."""
+
+    @pytest.fixture
+    def hw_yaml_path(self, tmp_path):
+        """Create temp YAML with hardware test data."""
+        yaml_file = tmp_path / "hardware_test.yaml"
+        yaml_file.write_text(HARDWARE_TEST_YAML)
+        return yaml_file
+
+    @pytest.fixture
+    def hw_db(self, hw_yaml_path):
+        """Load hardware test database."""
+        db = ModelDatabase(hw_yaml_path)
+        db.load()
+        return db
+
+    def test_explicit_hardware_values(self, hw_db):
+        """Should use explicit hardware values from YAML."""
+        model = hw_db.get_model("explicit_hardware_model")
+
+        assert model.hardware.total_size_gb == 28.0
+        assert model.hardware.compute_intensity == "high"
+        assert model.hardware.supports_cpu_offload is True
+        assert model.hardware.ram_for_offload_gb == 32.0
+        assert model.hardware.supports_tensorrt is True
+        assert model.hardware.mps_performance_penalty == 0.6
+
+    def test_derived_total_size(self, hw_db):
+        """Should derive total_size_gb from max variant size * 1.1."""
+        model = hw_db.get_model("derived_hardware_model")
+
+        # max download is 10.0, so total should be 10.0 * 1.1 = 11.0
+        assert model.hardware.total_size_gb == 11.0
+
+    def test_derived_compute_intensity_high(self, hw_db):
+        """Should derive high intensity for models >= 10B params."""
+        model = hw_db.get_model("explicit_hardware_model")
+        # 12B params -> high (but explicit overrides)
+        assert model.hardware.compute_intensity == "high"
+
+        # Large MoE with 50B
+        moe = hw_db.get_model("large_moe_model")
+        assert moe.hardware.compute_intensity == "high"
+
+    def test_derived_compute_intensity_medium(self, hw_db):
+        """Should derive medium intensity for models 3-10B params."""
+        model = hw_db.get_model("derived_hardware_model")
+        # 5B params -> medium
+        assert model.hardware.compute_intensity == "medium"
+
+    def test_derived_compute_intensity_low(self, hw_db):
+        """Should derive low intensity for models < 3B params."""
+        model = hw_db.get_model("small_model")
+        # 0.5B params -> low
+        assert model.hardware.compute_intensity == "low"
+
+    def test_derived_ram_for_offload(self, hw_db):
+        """Should derive ram_for_offload from max variant size."""
+        model = hw_db.get_model("derived_hardware_model")
+        # Max variant is 10GB
+        assert model.hardware.ram_for_offload_gb == 10.0
+
+    def test_derived_supports_tensorrt_for_unet(self, hw_db):
+        """Should derive TensorRT support for UNet architecture."""
+        model = hw_db.get_model("derived_hardware_model")
+        # UNet supports TensorRT
+        assert model.hardware.supports_tensorrt is True
+
+    def test_derived_no_tensorrt_for_moe(self, hw_db):
+        """Should derive no TensorRT support for MoE architecture."""
+        model = hw_db.get_model("large_moe_model")
+        # MoE doesn't support TensorRT
+        assert model.hardware.supports_tensorrt is False
+
+    def test_derived_supports_cpu_offload_large(self, hw_db):
+        """Should support CPU offload for models >= 1B params."""
+        model = hw_db.get_model("derived_hardware_model")
+        # 5B params -> supports offload
+        assert model.hardware.supports_cpu_offload is True
+
+    def test_derived_no_cpu_offload_small(self, hw_db):
+        """Should not need CPU offload for models < 1B params."""
+        model = hw_db.get_model("small_model")
+        # 0.5B params -> no offload benefit
+        assert model.hardware.supports_cpu_offload is False
+
+    def test_derived_mps_penalty_not_supported(self, hw_db):
+        """Should have 1.0 MPS penalty when not supported."""
+        model = hw_db.get_model("no_mps_model")
+        assert model.hardware.mps_performance_penalty == 1.0
+
+    def test_derived_mps_penalty_moe(self, hw_db):
+        """Should have higher MPS penalty for MoE models."""
+        model = hw_db.get_model("large_moe_model")
+        # MoE on MPS has 0.7 penalty
+        assert model.hardware.mps_performance_penalty == 0.7
+
+    def test_derived_mps_penalty_large(self, hw_db):
+        """Should have moderate MPS penalty for large models."""
+        model = hw_db.get_model("explicit_hardware_model")
+        # 12B params -> explicit value 0.6, otherwise would be 0.5
+        assert model.hardware.mps_performance_penalty == 0.6
+
+    def test_derived_mps_penalty_small(self, hw_db):
+        """Should have low MPS penalty for small models."""
+        model = hw_db.get_model("small_model")
+        # Small model with MPS support -> 0.3
+        assert model.hardware.mps_performance_penalty == 0.3
+
+    def test_hardware_info_defaults(self):
+        """Should have sensible defaults for empty hardware info."""
+        hw = HardwareInfo()
+        assert hw.total_size_gb == 0.0
+        assert hw.compute_intensity == "medium"
+        assert hw.supports_cpu_offload is True
+        assert hw.ram_for_offload_gb == 0.0
+        assert hw.supports_tensorrt is False
+        assert hw.mps_performance_penalty == 1.0
+
+
+# =============================================================================
+# Test: SHA256 Checksum Parsing
+# =============================================================================
+
+SHA256_TEST_YAML = """
+image_generation:
+  model_with_checksums:
+    name: "Model With Checksums"
+    family: "test"
+
+    architecture:
+      type: "unet"
+      parameters_b: 2.0
+
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_size_gb: 4.0
+        download_url: "https://example.com/model.safetensors"
+        sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        platform_support:
+          windows_nvidia: {supported: true}
+
+      - id: "fp8"
+        precision: "fp8"
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_size_gb: 2.0
+        platform_support:
+          windows_nvidia: {supported: true}
+
+  model_without_checksums:
+    name: "Model Without Checksums"
+    family: "test"
+
+    architecture:
+      type: "unet"
+      parameters_b: 1.0
+
+    variants:
+      - id: "fp16"
+        precision: "fp16"
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_size_gb: 2.0
+        platform_support:
+          windows_nvidia: {supported: true}
+"""
+
+
+class TestSHA256Checksums:
+    """Tests for SHA256 checksum parsing."""
+
+    @pytest.fixture
+    def sha256_yaml_path(self, tmp_path):
+        """Create temp YAML with checksum test data."""
+        yaml_file = tmp_path / "sha256_test.yaml"
+        yaml_file.write_text(SHA256_TEST_YAML)
+        return yaml_file
+
+    @pytest.fixture
+    def sha256_db(self, sha256_yaml_path):
+        """Load checksum test database."""
+        db = ModelDatabase(sha256_yaml_path)
+        db.load()
+        return db
+
+    def test_parses_sha256_when_present(self, sha256_db):
+        """Should parse sha256 checksum when provided."""
+        model = sha256_db.get_model("model_with_checksums")
+        fp16 = model.variants[0]
+
+        assert fp16.sha256 == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+    def test_sha256_none_when_missing(self, sha256_db):
+        """Should be None when sha256 not provided."""
+        model = sha256_db.get_model("model_with_checksums")
+        fp8 = model.variants[1]
+
+        assert fp8.sha256 is None
+
+    def test_sha256_none_for_model_without_checksums(self, sha256_db):
+        """Should be None for models without any checksums."""
+        model = sha256_db.get_model("model_without_checksums")
+        fp16 = model.variants[0]
+
+        assert fp16.sha256 is None
+
+    def test_variant_dataclass_has_sha256_field(self):
+        """ModelVariant dataclass should have sha256 field."""
+        variant = ModelVariant(
+            id="test",
+            precision="fp16",
+            vram_min_mb=8000,
+            vram_recommended_mb=12000,
+            download_size_gb=4.0,
+            sha256="abc123",
+        )
+        assert variant.sha256 == "abc123"
+
+    def test_variant_sha256_defaults_to_none(self):
+        """ModelVariant sha256 should default to None."""
+        variant = ModelVariant(
+            id="test",
+            precision="fp16",
+            vram_min_mb=8000,
+            vram_recommended_mb=12000,
+            download_size_gb=4.0,
+        )
+        assert variant.sha256 is None
 
 
 if __name__ == "__main__":

@@ -81,23 +81,27 @@ class ScoringService:
                 scored_candidates.append(candidate)
                 continue
 
-            # 2. Calculate Component Scores
+            # 2. Calculate Component Scores (5 TOPSIS-aligned criteria)
+            content_score = self._calculate_content_similarity(candidate, user_profile)
             hw_score = self._calculate_hardware_fit(candidate, hardware)
+            speed_score = self._calculate_speed_fit(candidate, hardware)
             user_score = self._calculate_user_fit(candidate, user_profile)
             approach_score = self._calculate_approach_fit(candidate, user_profile)
 
             # 3. Calculate Composite Score
-            # Weights: Hardware 50%, User 35%, Approach 15%
-            comp_weights = self.weights.get("composite", {"hardware_fit": 0.5, "user_fit": 0.35, "approach_fit": 0.15})
-            
+            # Weights aligned with TOPSIS: content 35%, hardware 25%, speed 15%, ecosystem 15%, approach 10%
             composite = (
-                (hw_score * comp_weights.get("hardware_fit", 0.5)) +
-                (user_score * comp_weights.get("user_fit", 0.35)) +
-                (approach_score * comp_weights.get("approach_fit", 0.15))
+                (content_score * 0.35) +
+                (hw_score * 0.25) +
+                (speed_score * 0.15) +
+                (user_score * 0.15) +
+                (approach_score * 0.10)
             )
 
-            # Update Candidate
+            # Update Candidate with all 5 TOPSIS-aligned scores
+            candidate.content_similarity_score = content_score
             candidate.hardware_fit_score = hw_score
+            candidate.speed_fit_score = speed_score
             candidate.user_fit_score = user_score
             candidate.approach_fit_score = approach_score
             candidate.composite_score = round(max(0.0, min(1.0, composite)), 3)
@@ -161,6 +165,69 @@ class ScoringService:
             base_score += bonuses.get("good_thermal_demanding_model", 0.05)
 
         return max(0.0, min(1.0, base_score))
+
+    def _calculate_content_similarity(self, candidate: ModelCandidate, user_profile: UserProfile) -> float:
+        """
+        Calculates 0.0-1.0 score based on how well the model's capabilities
+        match the user's content preferences.
+
+        This aligns with TOPSIS criterion: content_similarity
+        """
+        score = 0.5  # Neutral start
+
+        if not user_profile.content_preferences:
+            return score
+
+        # Get first available preference set
+        prefs = list(user_profile.content_preferences.values())[0]
+
+        # Normalize 1-5 to 0.0-1.0
+        def norm(val_1to5):
+            return (val_1to5 - 1) / 4.0
+
+        # Match photorealism preference
+        pref_photo = norm(prefs.photorealism)
+        cap_photo = candidate.capabilities.photorealism
+        photo_match = 1.0 - abs(pref_photo - cap_photo)
+
+        # Match stylization preference
+        pref_style = norm(prefs.artistic_stylization)
+        cap_style = candidate.capabilities.artistic_stylization
+        style_match = 1.0 - abs(pref_style - cap_style)
+
+        # Combine scores (equal weight for both)
+        score = 0.5 * photo_match + 0.5 * style_match
+
+        return max(0.0, min(1.0, score))
+
+    def _calculate_speed_fit(self, candidate: ModelCandidate, hardware: HardwareConstraints) -> float:
+        """
+        Calculates 0.0-1.0 score based on expected generation speed.
+
+        This aligns with TOPSIS criterion: speed_fit
+        Considers model speed capabilities and hardware constraints.
+        """
+        # Start with model's inherent speed capability
+        base_speed = candidate.capabilities.generation_speed
+
+        # Adjust based on tier (smaller models are faster)
+        tier_bonus = {
+            "sd15": 0.2,     # SD1.5 is fastest
+            "sdxl": 0.0,     # SDXL is baseline
+            "flux": -0.1,    # Flux is slower
+            "gguf": 0.1,     # Quantized models are faster
+        }
+        base_speed += tier_bonus.get(candidate.tier, 0.0)
+
+        # Penalty for storage constraints (slow loading)
+        if not hardware.storage_adequate:
+            base_speed -= 0.1
+
+        # Penalty for thermal throttling expected
+        if hardware.expected_thermal_throttle:
+            base_speed -= 0.15
+
+        return max(0.0, min(1.0, base_speed))
 
     def _calculate_user_fit(self, candidate: ModelCandidate, user_profile: UserProfile) -> float:
         """
