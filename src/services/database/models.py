@@ -115,3 +115,24 @@ class Installation(Base):
     
     installed_at = Column(DateTime)
     last_verified_at = Column(DateTime)
+
+
+class DownloadTaskRecord(Base):
+    """
+    Persistent record of a download task for the queue.
+    Part of Task SYS-02.
+    """
+    __tablename__ = "download_tasks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    url = Column(Text, nullable=False)
+    dest_path = Column(Text, nullable=False)
+    expected_hash = Column(String(64))
+    priority = Column(Integer, default=0)
+    
+    status = Column(String(20), default="pending") # pending, downloading, completed, failed, paused
+    attempts = Column(Integer, default=0)
+    last_error = Column(Text)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

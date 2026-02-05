@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from src.utils.logger import log
 from src.config.manager import config_manager
+from src.services.database.engine import db_manager
+from src.services.database.models import DownloadTaskRecord, ModelVariant
 
 
 class DownloadError(Exception):
@@ -87,8 +89,9 @@ class DownloadService:
     MAX_CONCURRENT = 3  # Max concurrent downloads
 
     def __init__(self):
-        """Initialize download service."""
+        """Initialize download service and persistent queue."""
         self._executor = None
+        db_manager.init_db()
 
     @staticmethod
     def download_file(
@@ -285,6 +288,74 @@ class DownloadService:
             log.warning(f"Failed to get file size for {url}: {e}")
             return None
 
+    def queue_persistent_task(self, url: str, dest_path: str, expected_hash: Optional[str] = None, priority: int = 0):
+        """
+        Adds a download task to the persistent database queue.
+        """
+        session = db_manager.get_session()
+        try:
+            # Check if task already exists
+            existing = session.query(DownloadTaskRecord).filter(
+                DownloadTaskRecord.url == url,
+                DownloadTaskRecord.dest_path == dest_path
+            ).first()
+            
+            if existing:
+                log.debug(f"Task already exists in queue: {dest_path}")
+                return
+
+            task = DownloadTaskRecord(
+                url=url,
+                dest_path=dest_path,
+                expected_hash=expected_hash,
+                priority=priority,
+                status="pending"
+            )
+            session.add(task)
+            session.commit()
+            log.info(f"Queued persistent task: {dest_path}")
+        finally:
+            session.close()
+
+    def get_pending_tasks(self) -> List[DownloadTask]:
+        """
+        Retrieve all pending or failed tasks from DB.
+        """
+        session = db_manager.get_session()
+        try:
+            records = session.query(DownloadTaskRecord).filter(
+                DownloadTaskRecord.status.in_(["pending", "failed", "paused"])
+            ).order_by(DownloadTaskRecord.priority).all()
+            
+            return [
+                DownloadTask(
+                    url=r.url,
+                    dest_path=r.dest_path,
+                    expected_hash=r.expected_hash,
+                    priority=r.priority
+                ) for r in records
+            ]
+        finally:
+            session.close()
+
+    def _update_task_status(self, url: str, dest_path: str, status: str, error: Optional[str] = None):
+        """Update task status in database."""
+        session = db_manager.get_session()
+        try:
+            task = session.query(DownloadTaskRecord).filter(
+                DownloadTaskRecord.url == url,
+                DownloadTaskRecord.dest_path == dest_path
+            ).first()
+            
+            if task:
+                task.status = status
+                if error:
+                    task.last_error = error
+                    task.attempts += 1
+                session.commit()
+        finally:
+            session.close()
+
     def download_queue(
         self,
         tasks: List[DownloadTask],
@@ -345,6 +416,8 @@ class DownloadService:
         progress_callback: Optional[Callable[[int, int], None]]
     ) -> DownloadResult:
         """Execute a single download task."""
+        self._update_task_status(task.url, task.dest_path, "downloading")
+        
         try:
             success = self.download_file(
                 url=task.url,
@@ -352,6 +425,9 @@ class DownloadService:
                 progress_callback=progress_callback,
                 expected_hash=task.expected_hash
             )
+
+            status = "completed" if success else "failed"
+            self._update_task_status(task.url, task.dest_path, status)
 
             return DownloadResult(
                 url=task.url,
@@ -361,6 +437,7 @@ class DownloadService:
             )
 
         except HashMismatchError as e:
+            self._update_task_status(task.url, task.dest_path, "failed", str(e))
             return DownloadResult(
                 url=task.url,
                 dest_path=task.dest_path,
@@ -368,6 +445,7 @@ class DownloadService:
                 error=str(e)
             )
         except Exception as e:
+            self._update_task_status(task.url, task.dest_path, "failed", str(e))
             return DownloadResult(
                 url=task.url,
                 dest_path=task.dest_path,
