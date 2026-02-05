@@ -104,9 +104,6 @@ class TOPSISLayer:
         if not candidates:
             return []
 
-        # TODO: Implement full TOPSIS algorithm in Phase 3
-        # Stub implementation
-
         # Step 1: Build decision matrix
         decision_matrix = self._build_decision_matrix(
             candidates, hardware, user_profile

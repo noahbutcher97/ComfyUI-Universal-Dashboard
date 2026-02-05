@@ -133,8 +133,6 @@ class ConstraintSatisfactionLayer:
         Returns:
             Tuple of (passing_candidates, rejected_candidates)
         """
-        # TODO: Implement in Phase 3
-        # This is a stub implementation
         passing: List[PassingCandidate] = []
         rejected: List[RejectedCandidate] = []
 

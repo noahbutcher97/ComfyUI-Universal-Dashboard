@@ -473,9 +473,6 @@ class ContentBasedLayer:
         Returns:
             List of ScoredCandidate, sorted by similarity (highest first)
         """
-        # TODO: Implement full logic in Phase 3
-        # Stub implementation
-
         # Get user's content preferences for this use case
         content_prefs = user_profile.content_preferences.get(use_case)
         if content_prefs is None:
