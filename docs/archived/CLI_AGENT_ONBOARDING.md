@@ -39,7 +39,7 @@ Take notes on:
 
 ### Step 2: Read the Implementation Plan
 
-**File:** `docs/plan/PLAN_v3.md`
+**File:** `docs/plans/PLAN_v3.md`
 
 Note:
 1. What phase are we in?
@@ -321,5 +321,5 @@ After completing your analysis and fixes:
 
 If something in the spec is unclear or seems wrong:
 1. Check `docs/archived/` for historical context
-2. Check `docs/plan/PLAN_v3.md` decision log for rationale
+2. Check `docs/plans/PLAN_v3.md` decision log for rationale
 3. Flag the issue rather than assuming or silently diverging

@@ -11,7 +11,7 @@ Key constraints:
 - Limited Flash Attention support
 
 NEW in Phase 1 - does not replace existing code.
-See: docs/MIGRATION_PROTOCOL.md Section 3
+See: docs/spec/MIGRATION_PROTOCOL.md Section 3
 """
 
 import platform

@@ -8,15 +8,26 @@
 
 ## 0. Current State Assessment
 
-> **Last Audited**: January 2026
-> **Auditor**: Claude Code
-> The codebase was built during earlier iterations (v1/v2) and needs alignment with SPEC_v3.
+> **Last Audited**: February 2026
+> **Auditor**: Gemini CLI Agent
+> The project has completed Phase 1 core detection and Phase 3 recommendation engine logic. 
+> Current focus: **Infrastructure Resilience & Data Migration**.
+
+### 0.1 February 2026 Refactoring Roadmap [ACTIVE]
+
+| Task ID | Component | Priority | Status |
+| :--- | :--- | :--- | :--- |
+| **DB-01** | YAML to SQLite Migration | CRITICAL | In Progress |
+| **SYS-01** | Multiprocessing Downloader | CRITICAL | Planned |
+| **SYS-05** | Dynamic Headroom Calc | HIGH | Planned |
+| **API-04** | Bearer Token Auth | HIGH | Planned |
+| **PAT-01** | Recommendation Facade | HIGH | Planned |
 
 ### What Matches the Spec ✅
 
 | Component | File(s) | SPEC Section | Notes |
 |-----------|---------|--------------|-------|
-| Model Database Schema | `data/models_database.yaml` | Section 7 | Follows spec structure with variants, platform_support, capabilities |
+| Model Database Schema | `data/models_database.yaml` | Section 7 | Two-tier architecture (local_models + cloud_apis), 225 models |
 | Installation Schemas | `src/schemas/installation.py` | Section 10 | InstallationManifest, InstallationItem align with spec |
 | Basic EnvironmentReport | `src/schemas/environment.py` | Section 4 | Has cuda_compute_capability field (not populated) |
 | UserProfile/ModelCandidate | `src/schemas/recommendation.py` | Section 10 | Core structures exist (incomplete fields) |
@@ -368,7 +379,7 @@ def _calculate_tier(self) -> HardwareTier:
 │  STEP 6: IMPLEMENT                                                      │
 │  ────────────────                                                       │
 │  Only after documentation is complete, begin implementation             │
-│  Follow Migration Protocol (docs/MIGRATION_PROTOCOL.md)                 │
+│  Follow Migration Protocol (docs/spec/MIGRATION_PROTOCOL.md)                 │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -512,7 +523,7 @@ def _calculate_tier(self) -> HardwareTier:
   - **Done**: Added `tests/utils/test_subprocess_utils.py` with 29 tests
 
 - [x] Document architecture principles ✅ 2026-01-03
-  - `docs/ARCHITECTURE_PRINCIPLES.md` - comprehensive coding patterns guide
+  - `docs/spec/ARCHITECTURE_PRINCIPLES.md` - comprehensive coding patterns guide
   - I/O normalization, no magic numbers, lookup tables, encapsulated lookups
   - Nested profile pattern, explicit failure handling
   - Updated `CLAUDE.md` to reference architecture principles in Source of Truth
@@ -720,15 +731,23 @@ def _calculate_tier(self) -> HardwareTier:
 
 **Dependencies**: Phase 3 recommendation engine should be functional to test model selection.
 
-- [ ] Populate `models_database.yaml` with remaining models
-- [ ] Add `hardware` section to model entries (SPEC Section 7.2)
-  - [ ] `total_size_gb` - total disk space needed (for space constraint)
-  - [ ] `compute_intensity` - "high", "medium", "low" (for form factor penalty)
-  - [ ] `supports_cpu_offload` - can layers offload to RAM (for resolution cascade)
-  - [ ] `ram_for_offload_gb` - RAM needed if offloading
-  - [ ] `supports_tensorrt` - TensorRT optimization available (for speed_fit bonus)
-  - [ ] `mps_performance_penalty` - performance penalty on Apple Silicon
-- [ ] Implement `ModelDatabase` class with querying/filtering
+- [x] Populate `models_database.yaml` with remaining models ✅ 2026-01-15
+  - [x] Restructured database to two-tier architecture (local_models + cloud_apis)
+  - [x] 142 local models across 12 categories
+  - [x] 83 cloud API models across 8 categories (GPT-4, Claude, DALL-E, Midjourney, Runway, ElevenLabs, etc.)
+  - [x] Updated ModelDatabase class to support two-tier parsing with backwards compatibility
+- [x] Add `hardware` section to model entries (SPEC Section 7.2) ✅ 2026-01-10
+  - [x] `total_size_gb` - total disk space needed (for space constraint)
+  - [x] `compute_intensity` - "high", "medium", "low" (for form factor penalty)
+  - [x] `supports_cpu_offload` - can layers offload to RAM (for resolution cascade)
+  - [x] `ram_for_offload_gb` - RAM needed if offloading
+  - [x] `supports_tensorrt` - TensorRT optimization available (for speed_fit bonus)
+  - [x] `mps_performance_penalty` - performance penalty on Apple Silicon
+  - [x] Values derived from existing model data (no magic numbers)
+- [x] Implement `ModelDatabase` class with querying/filtering ✅ (extended 2026-01-10)
+  - [x] `HardwareInfo` dataclass with computed defaults
+  - [x] `sha256` checksum field for download verification
+  - [x] 57 unit tests for model database
 - [ ] Implement `ModelManagerService`
 - [ ] Implement `ModelCard` component
 - [ ] Implement download queue with progress UI
@@ -808,7 +827,7 @@ def _calculate_tier(self) -> HardwareTier:
 
 ## 5. Progress Summary
 
-**Overall Progress**: Phase 1 Complete, Phase 3 Weeks 6-7 Complete
+**Overall Progress**: Phases 1, 3 Complete; Phase 4 In Progress (50%)
 
 | Phase | Status | Completion |
 |-------|--------|------------|
@@ -816,12 +835,12 @@ def _calculate_tier(self) -> HardwareTier:
 | Phase 0.5: Codebase Audit | ✅ Complete | 100% |
 | Phase 1: Core Infrastructure | ✅ Complete | 100% |
 | Phase 2: Onboarding System | ⬜ Not Started | 0% |
-| Phase 3: Recommendation Engine | 🔄 In Progress | 75% |
-| Phase 4: Model Management | ⬜ Not Started | 0% |
+| Phase 3: Recommendation Engine | ✅ Complete | 100% |
+| Phase 4: Model Management | 🔄 In Progress | 50% |
 | Phase 5: Cloud Integration | ⬜ Not Started | 0% |
 | Phase 6: Polish & Testing | ⬜ Not Started | 0% |
 
-**Test Coverage**: 403 tests passing (as of 2026-01-08)
+**Test Coverage**: 571 tests passing (as of 2026-01-15)
 
 **Completed Milestones**:
 - ✅ Hardware detection (NVIDIA, Apple Silicon, AMD ROCm, CPU, RAM, Storage, FormFactor)
@@ -831,6 +850,8 @@ def _calculate_tier(self) -> HardwareTier:
 - ✅ Full 3-layer recommendation engine (Constraint, Content, TOPSIS)
 - ✅ Modular modality architecture (ImageScorer, VideoScorer)
 - ✅ Resolution Cascade with 5-strategy fallback (Quantization → CPU Offload → Substitution → Workflow → Cloud)
+- ✅ HardwareInfo schema with computed defaults (no magic numbers in YAML)
+- ✅ Two-tier model database architecture (225 models: 142 local + 83 cloud APIs)
 
 ---
 
@@ -849,7 +870,7 @@ If you're an AI agent starting work on this project:
 
 ## 7. Deprecation Tracker
 
-See `docs/MIGRATION_PROTOCOL.md` for full migration patterns and procedures.
+See `docs/spec/MIGRATION_PROTOCOL.md` for full migration patterns and procedures.
 
 | File/Function | Deprecated | Replacement | Remove By | Status |
 |---------------|------------|-------------|-----------|--------|
@@ -874,9 +895,9 @@ See `docs/MIGRATION_PROTOCOL.md` for full migration patterns and procedures.
 | Technical Specification | `docs/spec/AI_UNIVERSAL_SUITE_SPEC_v3.md` | Source of truth |
 | Hardware Detection | `docs/spec/HARDWARE_DETECTION.md` | GPU, CPU, Storage, RAM detection |
 | CUDA/PyTorch Installation | `docs/spec/CUDA_PYTORCH_INSTALLATION.md` | PyTorch installation logic |
-| Architecture Principles | `docs/ARCHITECTURE_PRINCIPLES.md` | Coding patterns and standards |
+| Architecture Principles | `docs/spec/ARCHITECTURE_PRINCIPLES.md` | Coding patterns and standards |
 | Model Database | `data/models_database.yaml` | Model entries with variants |
-| Migration Protocol | `docs/MIGRATION_PROTOCOL.md` | How to migrate/deprecate code |
+| Migration Protocol | `docs/spec/MIGRATION_PROTOCOL.md` | How to migrate/deprecate code |
 | Claude Code Context | `CLAUDE.md` | Auto-loaded by Claude Code |
 | Gemini CLI Context | `GEMINI.md` | Auto-loaded by Gemini CLI |
 | General Agent Context | `AGENTS.md` | For other AI tools (Cursor, Aider, etc.) |
@@ -896,7 +917,7 @@ See `docs/MIGRATION_PROTOCOL.md` for full migration patterns and procedures.
 |----------|-------|---------------|--------------|--------|
 | **CRITICAL** | scoring_service.py uses old algorithm | Phase 3 Week 6 | §6 | Stubs ready, blocked by Phase 3 |
 | **CRITICAL** | Resolution cascade not implemented | Phase 3 Week 7 | §6.5 | Stub exists |
-| **CRITICAL** | models_database.yaml missing hardware section | Phase 4 Week 8 | §7.2 | Schema defined, data missing |
+| ~~**CRITICAL**~~ | ~~models_database.yaml missing hardware section~~ | Phase 4 Week 8 | §7.2 | ✅ Resolved 2026-01-10 (computed defaults) |
 | **HIGH** | Dual-path onboarding not implemented | Phase 2 Week 4-5 | §5.1-5.2 | Not started |
 | **HIGH** | show_if expression evaluator missing | Phase 2 Week 5 | §5.3 | Not started |
 | ~~**HIGH**~~ | ~~Apple Silicon thermal returns None~~ | Phase 1 Week 2a+ | §4.6.1 | ✅ Resolved 2026-01-06 |
@@ -988,7 +1009,7 @@ Phase 1 Week 3 (MANDATORY - not optional):
 | **Total** | **19** | **9** | **10** |
 
 *Note: Metrics exclude items that will be deleted (scoring_service.py magic numbers).*
-*Updated: 2026-01-08 - Phase 3 Weeks 6-7 complete (modality architecture, TOPSIS, Resolution Cascade with 403 tests).*
+*Updated: 2026-01-13 - Phase 4 hardware schema complete (HardwareInfo with computed defaults, 571 tests).*
 
 ---
 
@@ -1095,7 +1116,7 @@ The dashboard is the **main UI** after setup completes. It supports ongoing mode
 ## 11. Best Practices Integration
 
 > **Purpose**: Ensure Phase 3 implementation follows established patterns.
-> Reference: `docs/ARCHITECTURE_PRINCIPLES.md`
+> Reference: `docs/spec/ARCHITECTURE_PRINCIPLES.md`
 
 ### 11.1 Recommendation Engine Best Practices
 

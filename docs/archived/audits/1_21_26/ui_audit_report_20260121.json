@@ -1,0 +1,134 @@
+[
+  {
+    "view": "ActivityCenter",
+    "status": "PASS",
+    "widget_count": 0,
+    "interactive_count": 0
+  },
+  {
+    "view": "ActivityTask",
+    "status": "PASS",
+    "widget_count": 0,
+    "interactive_count": 0
+  },
+  {
+    "view": "Sidebar",
+    "status": "PASS",
+    "widget_count": 5,
+    "interactive_count": 5
+  },
+  {
+    "view": "ComfyUIFrame",
+    "status": "PASS",
+    "widget_count": 2,
+    "interactive_count": 2
+  },
+  {
+    "view": "DevToolsFrame",
+    "status": "PASS",
+    "widget_count": 3,
+    "interactive_count": 3
+  },
+  {
+    "view": "OverviewFrame",
+    "status": "PASS",
+    "widget_count": 0,
+    "interactive_count": 0
+  },
+  {
+    "view": "SettingsFrame",
+    "status": "PASS",
+    "widget_count": 7,
+    "interactive_count": 2
+  },
+  {
+    "view": "SetupWizard",
+    "status": "PASS",
+    "widget_count": 2,
+    "interactive_count": 2
+  },
+  {
+    "view": "ApiKeyInput",
+    "status": "PASS",
+    "widget_count": 1,
+    "interactive_count": 0
+  },
+  {
+    "view": "CapabilityCard",
+    "status": "PASS",
+    "widget_count": 1,
+    "interactive_count": 1
+  },
+  {
+    "view": "CapabilitySelector",
+    "status": "PASS",
+    "widget_count": 14,
+    "interactive_count": 14
+  },
+  {
+    "view": "ExperienceSurvey",
+    "status": "PASS",
+    "widget_count": 5,
+    "interactive_count": 5
+  },
+  {
+    "view": "ModelCard",
+    "status": "PASS",
+    "widget_count": 2,
+    "interactive_count": 2
+  },
+  {
+    "view": "LensTabBar",
+    "status": "PASS",
+    "widget_count": 5,
+    "interactive_count": 5
+  },
+  {
+    "view": "ModalityTabBar",
+    "status": "PASS",
+    "widget_count": 2,
+    "interactive_count": 2
+  },
+  {
+    "view": "ModelComparisonView",
+    "status": "PASS",
+    "widget_count": 7,
+    "interactive_count": 7
+  },
+  {
+    "view": "PathwayToggle",
+    "status": "PASS",
+    "widget_count": 2,
+    "interactive_count": 2
+  },
+  {
+    "view": "ModuleConfig",
+    "status": "PASS",
+    "widget_count": 1,
+    "interactive_count": 1
+  },
+  {
+    "view": "ProgressPanel",
+    "status": "PASS",
+    "widget_count": 1,
+    "interactive_count": 0
+  },
+  {
+    "view": "ReasoningDisplay",
+    "status": "PASS",
+    "widget_count": 0,
+    "interactive_count": 0
+  },
+  {
+    "view": "UseCaseCard",
+    "status": "PASS",
+    "widget_count": 0,
+    "interactive_count": 0
+  },
+  {
+    "view": "WarningBanner",
+    "status": "PASS",
+    "widget_count": 0,
+    "interactive_count": 0
+  }
+]

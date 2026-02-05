@@ -30,7 +30,7 @@ AI-Universal-Suite/
 │   └── models_database.yaml # Model definitions with variants and capabilities
 ├── docs/
 │   ├── context/             # Business context
-│   ├── plan/                # Implementation tracking
+│   ├── plans/               # Implementation tracking + Claude Code plans
 │   │   └── PLAN_v3.md
 │   ├── spec/                # Technical specification
 │   │   └── AI_UNIVERSAL_SUITE_SPEC_v3.md
@@ -46,8 +46,8 @@ AI-Universal-Suite/
 | [SPEC_v3](docs/spec/AI_UNIVERSAL_SUITE_SPEC_v3.md) | Complete technical specification - architecture, algorithms, schemas |
 | [HARDWARE_DETECTION](docs/spec/HARDWARE_DETECTION.md) | GPU, CPU, Storage, RAM detection and classification |
 | [CUDA_PYTORCH_INSTALLATION](docs/spec/CUDA_PYTORCH_INSTALLATION.md) | Dynamic PyTorch/CUDA installation logic |
-| [PLAN_v3](docs/plan/PLAN_v3.md) | Implementation roadmap, decision log, task tracking |
-| [MIGRATION_PROTOCOL](docs/MIGRATION_PROTOCOL.md) | How to migrate legacy code to SPEC_v3 architecture |
+| [PLAN_v3](docs/plans/PLAN_v3.md) | Implementation roadmap, decision log, task tracking |
+| [MIGRATION_PROTOCOL](docs/spec/MIGRATION_PROTOCOL.md) | How to migrate legacy code to SPEC_v3 architecture |
 | [models_database.yaml](data/models_database.yaml) | Model database with 100+ entries, variants, and hardware requirements |
 | [CLAUDE.md](CLAUDE.md) | Claude Code context (auto-loaded) |
 | [GEMINI.md](GEMINI.md) | Gemini CLI context (auto-loaded) |
@@ -64,7 +64,7 @@ The specification consolidates all research into a single source of truth coveri
 - Cloud API integration via ComfyUI Partner Nodes
 - Complete model database schema
 
-See [PLAN_v3.md](docs/plan/PLAN_v3.md) for current progress and next steps.
+See [PLAN_v3.md](docs/plans/PLAN_v3.md) for current progress and next steps.
 
 ## Quick Start
 

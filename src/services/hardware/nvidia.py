@@ -12,7 +12,7 @@ Key features:
 - Phase 1 Week 2a: CPU, RAM, Storage, Form Factor detection
 
 NEW in Phase 1 - does not replace existing code.
-See: docs/MIGRATION_PROTOCOL.md Section 3
+See: docs/spec/MIGRATION_PROTOCOL.md Section 3
 """
 
 import platform
@@ -151,16 +151,16 @@ class NVIDIADetector(HardwareDetector):
             NoCUDAError: If CUDA is not available
             DetectionFailedError: If detection fails
         """
+        # Try PyTorch CUDA first for best detection (compute capability, etc.)
+        torch_available = False
         try:
             import torch
+            torch_available = torch.cuda.is_available()
         except ImportError:
-            raise DetectionFailedError(
-                component="PyTorch",
-                message="PyTorch not installed",
-                details="Install PyTorch with CUDA support for full detection."
-            )
+            # PyTorch not installed - will use nvidia-smi fallback
+            log.info("PyTorch not installed, using nvidia-smi for GPU detection")
 
-        if not torch.cuda.is_available():
+        if not torch_available:
             # Try nvidia-smi as fallback for basic info
             if shutil.which("nvidia-smi"):
                 return self._detect_via_nvidia_smi()

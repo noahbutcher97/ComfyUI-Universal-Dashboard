@@ -1,0 +1,2807 @@
+{
+  "timestamp": "2026-01-22T12:02:29.486990",
+  "summary": {
+    "total": 466,
+    "valid": 294,
+    "invalid": 172,
+    "warnings": 133
+  },
+  "details": [
+    {
+      "model_id": "comfyui_gguf",
+      "variant_id": "repository",
+      "status": "pass",
+      "message": "Repo accessible"
+    },
+    {
+      "model_id": "comfyui_ipadapter_plus",
+      "variant_id": "repository",
+      "status": "pass",
+      "message": "Repo accessible"
+    },
+    {
+      "model_id": "comfyui_controlnet_aux",
+      "variant_id": "repository",
+      "status": "pass",
+      "message": "Repo accessible"
+    },
+    {
+      "model_id": "comfyui_replicate",
+      "variant_id": "repository",
+      "status": "pass",
+      "message": "Repo accessible"
+    },
+    {
+      "model_id": "comfyui_fal",
+      "variant_id": "repository",
+      "status": "fail",
+      "message": "HTTP 404"
+    },
+    {
+      "model_id": "comfyui_runpod",
+      "variant_id": "repository",
+      "status": "fail",
+      "message": "HTTP 404"
+    },
+    {
+      "model_id": "comfyui_essentials",
+      "variant_id": "repository",
+      "status": "pass",
+      "message": "Repo accessible"
+    },
+    {
+      "model_id": "comfyui_was_node_suite",
+      "variant_id": "repository",
+      "status": "pass",
+      "message": "Repo accessible"
+    },
+    {
+      "model_id": "comfyui_videohelpersuite",
+      "variant_id": "repository",
+      "status": "pass",
+      "message": "Repo accessible"
+    },
+    {
+      "model_id": "comfyui_animatediff_evolved",
+      "variant_id": "repository",
+      "status": "pass",
+      "message": "Repo accessible"
+    },
+    {
+      "model_id": "hidream_i1_full",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=34.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "hidream_i1_full",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hidream_i1_full",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hidream_i1_fast",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "hidream_i1_fast",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "flux_dev",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=23.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_dev",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=12.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_dev",
+      "variant_id": "gguf_q8",
+      "status": "warning",
+      "message": "Size mismatch: DB=12.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_dev",
+      "variant_id": "gguf_q5",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "flux_dev",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "flux_schnell",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=23.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_schnell",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "flux_schnell",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sd35_large",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sd35_large",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sd35_medium",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sdxl_base",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sdxl_base",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sd15",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "sd15",
+      "variant_id": "fp32",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sd15_inpainting",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "dreamshaper_8",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "dreamshaper_8_inpainting",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "deliberate_v6",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "realistic_vision_v6",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "epicrealism_v5",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "anything_v5",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "meinamix_v11",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "pony_v6",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "pony_v6",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "illustrious_xl",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=6.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "illustrious_xl",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "noobai_xl",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "noobai_xl",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "realvis_xl",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "realvis_xl",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "juggernaut_xl_v9",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "juggernaut_xl_v9",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "dreamshaper_xl",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "dreamshaper_xl",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "leosam_helloworld_xl",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "animagine_xl_v3",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=6.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "animagine_xl_v3",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "copax_timeless_xl",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "playground_v25",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=6.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "pixart_sigma",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "stable_cascade",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=10.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "kandinsky_3",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=11.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "abyssorangemix_3",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "counterfeit_v3",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "realcartoon3d",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "proteus_xl",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 404"
+    },
+    {
+      "model_id": "zavychroma_xl",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "qwen_image",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=40.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=20.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image",
+      "variant_id": "dfloat11_offload",
+      "status": "warning",
+      "message": "Size mismatch: DB=22.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "z_image_turbo",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=12.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "z_image_turbo",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=6.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "z_image_turbo",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "z_image_turbo",
+      "variant_id": "gguf_q8",
+      "status": "warning",
+      "message": "Size mismatch: DB=6.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "z_image_base",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "glm_image",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=32.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "glm_image",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=16.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "glm_image",
+      "variant_id": "sdnq_4bit",
+      "status": "warning",
+      "message": "Size mismatch: DB=10.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "wan_22_t2i",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_22_t2i",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "qwen_image_2512",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=40.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_2512",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=20.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_2512",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=13.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_lightning",
+      "variant_id": "bf16_lora",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_2512_lightning",
+      "variant_id": "bf16_lora",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_layered",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=40.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_layered",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=13.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "hunyuan_image_3",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=170.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "hunyuan_image_3",
+      "variant_id": "nf4",
+      "status": "warning",
+      "message": "Size mismatch: DB=45.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux2_klein_9b",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=18.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux2_klein_9b",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=9.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux2_klein_4b",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=8.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux2_klein_4b",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux2_klein_4b",
+      "variant_id": "nvfp4",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux2_klein_base_9b",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=18.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux2_klein_base_9b",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=9.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux2_klein_base_4b",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=8.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux1_kontext_dev",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=24.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux1_kontext_dev",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sana_1600m",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=3.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "sana_1600m",
+      "variant_id": "int4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sana_4800m",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "sana_4800m",
+      "variant_id": "int4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "vibe_image_edit",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=7.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "chroma_unlocked",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "chroma_unlocked",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "chroma_unlocked",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "chroma_unlocked_v11",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "chroma_unlocked_v11",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "chroma_hd",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "chroma_hd",
+      "variant_id": "fp8_scaled",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "chroma_radiance",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "chroma_radiance",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "cosmos_predict2_t2i",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "cosmos_predict2_t2i",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "flux_fill_dev",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=23.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_fill_dev",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=11.90GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_fill_dev",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "flux_canny_dev",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=23.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_canny_dev",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=11.90GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_depth_dev",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=23.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_depth_dev",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=11.90GB, Real=0.00GB"
+    },
+    {
+      "model_id": "flux_redux_dev",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=23.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "kandinsky_5_lite",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "kandinsky_5_lite",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "lotus_depth_d",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "lotus_depth_g",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "lotus_normal_g",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "humo_17b",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "humo_17b",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "humo_17b",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "ovis_image",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "omnigen",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=7.60GB, Real=0.00GB"
+    },
+    {
+      "model_id": "omnigen",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "instructpix2pix",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "sdxl_inpainting",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=6.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_edit",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "qwen_image_edit",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "qwen_image_edit",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "qwen_image_edit_2511",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=40.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_edit_2511",
+      "variant_id": "fp8",
+      "status": "warning",
+      "message": "Size mismatch: DB=20.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_edit_2511",
+      "variant_id": "dfloat11_offload",
+      "status": "warning",
+      "message": "Size mismatch: DB=22.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_edit_2511_lightning",
+      "variant_id": "bf16_lora",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_edit_2511_lightning",
+      "variant_id": "fp8_lora",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "z_image_edit",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "z_image_edit",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hidream_edit",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hidream_edit",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "hidream_edit",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "flux_kontext",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "flux_kontext",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "flux_kontext",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "chromaedit",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "ic_light",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "instantid",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.70GB, Real=0.00GB"
+    },
+    {
+      "model_id": "pulid",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "gfpgan_v14",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.32GB)"
+    },
+    {
+      "model_id": "codeformer",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.35GB)"
+    },
+    {
+      "model_id": "rmbg_14",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "sam2_large",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.30GB, Real=0.00GB"
+    },
+    {
+      "model_id": "sam2_base",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "depth_anything_v2_large",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=0.66GB, Real=0.00GB"
+    },
+    {
+      "model_id": "depth_anything_v2_small",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "wan_22_t2v_14b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_t2v_14b",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_t2v_14b",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_t2v_14b",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_i2v_14b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_i2v_14b",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_i2v_14b",
+      "variant_id": "gguf_q5",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_i2v_14b",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_ti2v_5b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_ti2v_5b",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_ti2v_5b",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "wan_22_ti2v_5b",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "ltx_video_2b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "ltx_video_2b",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "ltx_video_13b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "ltx_video_13b",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "ltx_video_2_19b",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "ltx_video_2_19b",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "ltx_video_2_19b_distilled",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "ltx_video_2_19b_distilled",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "animatediff_sd15",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "cogvideox_5b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=10.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "cogvideox_5b",
+      "variant_id": "int8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "cogvideox_2b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "mochi_1_preview",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=20.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "svd_xt",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=3.10GB, Real=0.00GB"
+    },
+    {
+      "model_id": "svd",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=3.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "hunyuan_video",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=26.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "opensora_12",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "dynamicrafter",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=5.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "tooncrafter",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=5.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "rife_4_15",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "film",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "pyramid_flow",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=8.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "hunyuanvideo_15_t2v",
+      "variant_id": "bf16_480p",
+      "status": "warning",
+      "message": "Size mismatch: DB=16.60GB, Real=0.00GB"
+    },
+    {
+      "model_id": "hunyuanvideo_15_t2v",
+      "variant_id": "bf16_720p",
+      "status": "warning",
+      "message": "Size mismatch: DB=16.60GB, Real=0.00GB"
+    },
+    {
+      "model_id": "hunyuanvideo_15_t2v",
+      "variant_id": "bf16_1080p",
+      "status": "warning",
+      "message": "Size mismatch: DB=16.60GB, Real=0.00GB"
+    },
+    {
+      "model_id": "hunyuanvideo_15_t2v",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hunyuanvideo_15_t2v",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hunyuanvideo_15_i2v",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hunyuanvideo_15_i2v",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hunyuanvideo_15_cfg_distilled",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hunyuanvideo_15_cfg_distilled",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hunyuanvideo_15_step_distilled",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hunyuanvideo_15_step_distilled",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "cosmos_predict2_v2w",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "cosmos_predict2_v2w",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_fun_control",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_fun_control",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_fun_camera",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_fun_camera",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_fun_inpaint",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_fun_inpaint",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_vace_14b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_vace_14b",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_vace_1_3b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_vace_1_3b",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_phantom",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_phantom",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_skyreels",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_skyreels",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_anisora",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_anisora",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_fast",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan_fast",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "clip_vit_large",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=0.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "blip2_opt_2_7b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=5.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "blip2_opt_2_7b",
+      "variant_id": "int8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "florence2_large",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "florence2_base",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "wd_tagger_v3",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "joycaption_alpha_two",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=16.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "joycaption_alpha_two",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "cogvlm2_llama3_chat",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=38.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "cogvlm2_llama3_chat",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "llava_v1_6_34b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=68.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "llava_v1_6_34b",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "llava_v1_6_7b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=14.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "llava_v1_6_7b",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "internvl2_8b",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=16.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "internvl2_8b",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "realesrgan_x4plus",
+      "variant_id": "fp32",
+      "status": "fail",
+      "message": "Unreachable: HTTP 404"
+    },
+    {
+      "model_id": "realesrgan_x4plus_anime",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.02GB)"
+    },
+    {
+      "model_id": "ultrasharp_4x",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "nmkd_superscale_8x",
+      "variant_id": "fp32",
+      "status": "fail",
+      "message": "Unreachable: HTTP 404"
+    },
+    {
+      "model_id": "supir",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=5.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "swinir_large",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.13GB)"
+    },
+    {
+      "model_id": "remacri_4x",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "hat_large",
+      "variant_id": "fp32",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "clearreality_4x",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "nomos_unidat_4x",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "df2k_jpeg",
+      "variant_id": "fp32",
+      "status": "fail",
+      "message": "Unreachable: HTTP 404"
+    },
+    {
+      "model_id": "hunyuanvideo15_latent_upsampler_720p",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hunyuanvideo15_latent_upsampler_1080p",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "ltx2_spatial_upscaler",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "ltx2_temporal_upscaler",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "controlnet_canny_sdxl",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "controlnet_depth_sdxl",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "controlnet_openpose_sd15",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "controlnet_canny_sd15",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "controlnet_depth_sd15",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "controlnet_lineart_sd15",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "controlnet_union_flux",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=6.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen_image_controlnet_inpainting",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=3.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "controlnet_blur_sd35_large",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "controlnet_canny_sd35_large",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "controlnet_depth_sd35_large",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan21_controlnet_canny_14b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan21_controlnet_depth_14b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan21_controlnet_hed_14b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan21_controlnet_canny_1_3b",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "wan21_uni3c",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "qwen_image_controlnet_union",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=3.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "z_image_turbo_controlnet_union",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "z_image_turbo_controlnet_tile",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "clip_vit_l_14",
+      "variant_id": "fp16",
+      "status": "pass",
+      "message": "URL OK. Size verified (0.00GB)"
+    },
+    {
+      "model_id": "clip_vit_g_14",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "t5_xxl",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=22.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "t5_xxl",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "t5_xxl",
+      "variant_id": "gguf_q4",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "mistral_3_small_flux2",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 404"
+    },
+    {
+      "model_id": "mistral_3_small_flux2",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "qwen_3_8b_flux2",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 404"
+    },
+    {
+      "model_id": "qwen_3_8b_flux2",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "gemma_3_4b_flux2",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 404"
+    },
+    {
+      "model_id": "gemma_3_4b_flux2",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "ovis_encoder",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "llama_3_2_3b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=6.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "llama_3_2_3b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "llama_3_2_3b",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "llama_3_1_8b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=16.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "llama_3_1_8b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.90GB, Real=0.00GB"
+    },
+    {
+      "model_id": "llama_3_1_8b",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "qwen2_5_7b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=15.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen2_5_7b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen2_5_7b",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "qwen2_5_3b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=6.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen2_5_3b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.90GB, Real=0.00GB"
+    },
+    {
+      "model_id": "mistral_7b_v03",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=14.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "mistral_7b_v03",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "mistral_7b_v03",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "phi3_mini",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=7.60GB, Real=0.00GB"
+    },
+    {
+      "model_id": "phi3_mini",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.30GB, Real=0.00GB"
+    },
+    {
+      "model_id": "gemma2_9b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=18.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "gemma2_9b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=5.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "gemma2_9b",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "gemma2_2b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=5.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "gemma2_2b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.60GB, Real=0.00GB"
+    },
+    {
+      "model_id": "deepseek_r1_7b",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=14.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "deepseek_r1_7b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.30GB, Real=0.00GB"
+    },
+    {
+      "model_id": "deepseek_r1_7b",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "deepseek_r1_32b",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=64.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "deepseek_r1_32b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=19.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "deepseek_r1_32b",
+      "variant_id": "gguf_q8",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "smollm2_1_7b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=3.40GB, Real=0.00GB"
+    },
+    {
+      "model_id": "smollm2_1_7b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.10GB, Real=0.00GB"
+    },
+    {
+      "model_id": "smollm2_360m",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=0.72GB, Real=0.00GB"
+    },
+    {
+      "model_id": "tinyllama_1_1b",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "tinyllama_1_1b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=0.67GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen2_5_72b",
+      "variant_id": "bf16",
+      "status": "warning",
+      "message": "Size mismatch: DB=144.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen2_5_72b",
+      "variant_id": "gguf_q4",
+      "status": "warning",
+      "message": "Size mismatch: DB=42.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "qwen2_5_72b",
+      "variant_id": "gguf_q3",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "f5_tts",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "kokoro_tts",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "xtts_v2",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "musicgen_medium",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "ace_step",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "styletts2",
+      "variant_id": "fp32",
+      "status": "warning",
+      "message": "Size mismatch: DB=0.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "parler_tts_mini",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "parler_tts_large",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=4.70GB, Real=0.00GB"
+    },
+    {
+      "model_id": "stable_audio_open",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.20GB, Real=0.00GB"
+    },
+    {
+      "model_id": "bark",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "bark",
+      "variant_id": "fp16_small",
+      "status": "warning",
+      "message": "Size mismatch: DB=0.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "demucs_htdemucs",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "deepfilternet3",
+      "variant_id": "fp32",
+      "status": "pass",
+      "message": "URL OK (Size check skipped)"
+    },
+    {
+      "model_id": "mmaudio",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "mmaudio",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "mmaudio_large",
+      "variant_id": "bf16",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "mmaudio_large",
+      "variant_id": "fp8",
+      "status": "fail",
+      "message": "Unreachable: HTTP 401"
+    },
+    {
+      "model_id": "hunyuan3d_2_mini",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "hunyuan3d_21",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "triposr",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "trellis_2",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "instantmesh",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=2.50GB, Real=0.00GB"
+    },
+    {
+      "model_id": "zero123plus_v12",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=3.80GB, Real=0.00GB"
+    },
+    {
+      "model_id": "shap_e",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=1.00GB, Real=0.00GB"
+    },
+    {
+      "model_id": "sv3d",
+      "variant_id": "fp16",
+      "status": "warning",
+      "message": "Size mismatch: DB=9.60GB, Real=0.00GB"
+    },
+    {
+      "model_id": "wav2lip",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "latentsync_16",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "sadtalker",
+      "variant_id": "fp16",
+      "status": "fail",
+      "message": "Missing download_url"
+    },
+    {
+      "model_id": "openai_dalle_3",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_dalle_2",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_gpt_image_1",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "midjourney_v6",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "stability_sd3_turbo",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "stability_ultra",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "stability_core",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "ideogram_v2",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "ideogram_v3",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "leonardo_phoenix",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "flux_pro_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "flux_11_pro_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "flux_11_pro_ultra_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "flux_kontext_max_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "flux_kontext_pro_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "flux_fill_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "flux_canny_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "flux_depth_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "flux_expand_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "recraft_v3",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "fal_flux_dev",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "replicate_sdxl",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "getimg_ai",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "dreamstudio_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_gpt4_vision_edit",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "stability_inpaint",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "stability_outpaint",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "stability_search_replace",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "stability_remove_bg",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "photoroom_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "clipdrop_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "remove_bg_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "bytedance_seedream_30",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "veo_31",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "veo_3",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "kling_26",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "kling_25_turbo",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "kling_21_master",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "kling_21",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "kling_20",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "kling_16",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "kling_lip_sync",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "kling_virtual_tryon",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "luma_ray_2",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "luma_ray_flash_2",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "luma_ray_3",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "runway_gen4_turbo",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "runway_gen3_alpha",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "runway_gen3_turbo",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "runway_flf",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "minimax_hailuo_02",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "minimax_hailuo",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "pika_labs_15",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "sora_2",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "sora_2_pro",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "sora",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "google_veo_2",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "haiper_20",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "stable_video_diffusion_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "pixverse_v2",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "ltx_2_fast",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "ltx_2_pro",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "wan_25_video",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "wan_26_reference",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "vidu_video",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "bytedance_seedance_lite",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "bytedance_seedance_pro",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "moonvalley_video",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "topaz_video",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "krea_video",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "genmo_mochi",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "elevenlabs_tts",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "elevenlabs_sfx",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "suno_v4",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "udio",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_tts",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_whisper_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "google_cloud_tts",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "amazon_polly",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "azure_speech",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "stable_audio_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "mubert_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "soundraw",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_gpt4_turbo",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_gpt4o",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_gpt4o_mini",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_o1",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_o1_mini",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "anthropic_claude_35_sonnet",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "anthropic_claude_3_opus",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "anthropic_claude_3_haiku",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "google_gemini_pro",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "google_gemini_flash",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "google_gemini_ultra",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "mistral_large",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "cohere_command_r_plus",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "perplexity_sonar",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "groq_llama",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "together_ai",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "deepseek_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "fireworks_ai",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "meshy_ai",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "luma_genie",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "csm_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "kaedim_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "tripo_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "rodin_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "openai_vision",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "google_vision_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "anthropic_vision",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "aws_rekognition",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "azure_computer_vision",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "sync_labs",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "hedra_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "d_id_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "heygen_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    },
+    {
+      "model_id": "synthesia_api",
+      "variant_id": "schema",
+      "status": "pass",
+      "message": "Cloud API configuration valid"
+    }
+  ]
+}

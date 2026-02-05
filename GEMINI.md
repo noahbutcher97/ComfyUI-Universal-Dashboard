@@ -23,7 +23,7 @@ python launch.py
 - **Specification**: `docs/spec/AI_UNIVERSAL_SUITE_SPEC_v3.md` - Architecture, algorithms, schemas
 - **Hardware Detection**: `docs/spec/HARDWARE_DETECTION.md` - GPU, CPU, Storage, RAM detection
 - **CUDA/PyTorch**: `docs/spec/CUDA_PYTORCH_INSTALLATION.md` - PyTorch installation logic
-- **Task Tracker**: `docs/plan/PLAN_v3.md` - Current phase, decisions, gaps
+- **Task Tracker**: `docs/plans/PLAN_v3.md` - Current phase, decisions, gaps
 - **Model Database**: `data/models_database.yaml` - 100+ model definitions
 
 **If code contradicts the spec, the spec is correct.**
@@ -40,34 +40,27 @@ Tech stack: Python 3.10+, CustomTkinter, Service-Oriented Architecture
 
 | Area | Current Code | Spec Requires | Files to Fix |
 |------|--------------|---------------|--------------|
-| Recommendation | Single-pass weighted scoring | 3-layer: CSP→Content→TOPSIS | `scoring_service.py`, `recommendation_service.py` |
-| Hardware Detection | 16GB fallback on error | Platform-specific detectors, no fallbacks | `system_service.py` |
-| Model Source | Reads `resources.json` | Use `models_database.yaml` | `recommendation_service.py` |
-| Onboarding | Single use-case-first path | Dual-path (Quick 5 / Comprehensive 15-20) | `setup_wizard.py` |
-| Platform Constraints | Not enforced | K-quant filtering, memory ceiling | `system_service.py` |
+| Data Layer | Flat YAML (14k lines) | Relational SQLite (DB-01) | `model_database.py` |
+| Concurrency | Threading (GIL Block) | Multiprocessing (SYS-01) | `download_service.py` |
+| Resiliency | In-memory Queue | Persistent SQLite Queue (SYS-02) | `download_service.py` |
+| Orchestration | "God Class" Service | Facade Pattern (PAT-01) | `recommendation_service.py` |
+| Security | No local API auth | Bearer Token JWT (API-04) | `auth_service.py` |
+| Storage | Static 50GB Check | Dynamic Headroom (SYS-05) | `system_service.py` |
 
 ## Architecture
 
-### Three-Layer Recommendation Engine (SPEC Section 6)
+### 1. Three-Layer Recommendation Engine [STABLE/STUBS]
+*Current state: Files exist as functional stubs; integration into Orchestrator is pending.*
+- **Layer 1: CSP** (Binary Rejection) - `constraint_layer.py` [STUB]
+- **Layer 2: Content** (Modular Modality Scorer) - `content_layer.py` [FUNCTIONAL]
+- **Layer 3: TOPSIS** (Multi-Criteria Ranking) - `topsis_layer.py` [STUB]
 
-```
-Layer 1: CSP (Constraint Satisfaction)
-    → Binary elimination: VRAM, platform, compute capability
-    → Files needed: constraint_layer.py (TO CREATE)
-
-Layer 2: Content-Based Filtering (Modular Modality Architecture)
-    → Modality-specific scorers (ImageScorer, VideoScorer, etc.)
-    → Cosine similarity per modality, not flat vector
-    → UseCaseDefinition composes required modalities
-    → Files: content_layer.py ✅ (stubs exist in `recommendation/`)
-
-Layer 3: TOPSIS Multi-Criteria Ranking
-    → 5 criteria: content_similarity, hardware_fit, speed_fit, ecosystem_maturity, approach_fit
-    → Closeness coefficients with explainable scores
-    → Files needed: topsis_layer.py (TO CREATE)
-
-Resolution Cascade: quantization → cpu_offload → substitution → workflow → cloud
-```
+### 2. Target Architecture (2026-02-04 Audit Roadmap)
+*These components are the primary focus of Phase 1-3 refactoring.*
+- **Orchestration**: `RecommendationOrchestrator` Facade (PAT-01) - *To replace "God Class" Service*
+- **Local Server**: FastAPI Desktop Agent for Mobile Sync (SYS-04)
+- **Persistence**: SQLite-backed installation and task tracking (DB-03, SYS-02)
+- **Performance**: Multiprocess file operations (SYS-01) - *Migration from Threads*
 
 ### Hardware → Recommendation Integration
 
@@ -159,7 +152,7 @@ src/
 3. **Schemas not Models**: Use `src/schemas/` for dataclasses
 4. **Spec Citations**: Reference in commits: `fix(hardware): Apple Silicon RAM per SPEC_v3 4.2`
 5. **Model Data**: Use `data/models_database.yaml`, NOT `resources.json`
-6. **Migration Protocol**: See `docs/MIGRATION_PROTOCOL.md` - don't break working app during refactor
+6. **Migration Protocol**: See `docs/spec/MIGRATION_PROTOCOL.md` - don't break working app during refactor
 7. **Commit Messages**: Never add co-author tags, AI tool attribution, or "Generated with" footers to commit messages unless explicitly requested by the user
 
 ## Locked Decisions (Do Not Relitigate)
@@ -188,14 +181,15 @@ This ensures all documentation stays in sync with code changes.
 
 ## Current Phase
 
-**Phase 1: Core Infrastructure** - IN PROGRESS
+**Phase 1: Core Infrastructure & Resiliency** - IN PROGRESS
 
-Priority tasks:
-1. ~~Audit codebase against spec~~ ✅
-2. Fix Apple Silicon RAM detection (CRITICAL)
-3. Create `HardwareProfile` dataclass per SPEC 4.5
-4. Implement platform-specific `HardwareDetector` classes
-5. Migrate model loading to `models_database.yaml`
-6. Stub out 3-layer recommendation classes
+Priority tasks (from 2026-02-04 Refactoring Roadmap):
+1. **DB-01**: Migrate YAML to SQLite (Foundation for all relational logic)
+2. **SYS-01**: Implement Multiprocessing Download Handler (Fix UI Freezes)
+3. **SYS-05**: Implement Dynamic Storage Headroom Calculation (Fix OS stability)
+4. **API-04**: Secure Local API with Bearer Token Auth (Security hardening)
+5. **PAT-01**: Extract Recommendation Orchestrator Facade (Decouple logic)
 
-See `docs/plan/PLAN_v3.md` Section 2 for full task list.
+See `docs/audits/2_4_26/Executive_Refactoring_Report_2026-02-04.md` for full 20-item roadmap.
+
+See `docs/plans/PLAN_v3.md` Section 2 for full task list.

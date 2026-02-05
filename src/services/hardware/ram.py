@@ -245,13 +245,7 @@ def _calculate_offload_capacity(available_gb: float) -> float:
     Returns:
         Usable RAM for offload in GB (minimum 0)
     """
-    # Leave 4GB for OS (Windows ~2GB, macOS ~3GB, Linux ~1GB + apps)
-    os_reserve_gb = 4.0
-
-    # Use 80% of what's left as safety margin
-    safety_factor = 0.8
-
-    usable = (available_gb - os_reserve_gb) * safety_factor
+    usable = (available_gb - OS_RESERVED_RAM_GB) * OFFLOAD_SAFETY_FACTOR
 
     # Never return negative
     return max(0.0, usable)
@@ -310,7 +304,7 @@ def calculate_offload_viability(
     # Get RAM bandwidth from profile (encapsulated lookup)
     ram_bandwidth_gbps = ram_profile.bandwidth_gbps or 0.0
 
-    if cpu_can_offload and ram_profile.usable_for_offload_gb > 4.0:
+    if cpu_can_offload and ram_profile.usable_for_offload_gb > OS_RESERVED_RAM_GB:
         with_offload = vram_gb + ram_profile.usable_for_offload_gb
         offload_viable = True
 

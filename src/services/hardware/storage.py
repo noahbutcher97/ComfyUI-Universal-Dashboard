@@ -12,7 +12,7 @@ Storage speed significantly impacts model loading times.
 | HDD          | 120-160 MB/s    | 83 seconds      |
 
 NEW in Phase 1 - does not replace existing code.
-See: docs/MIGRATION_PROTOCOL.md Section 3
+See: docs/spec/MIGRATION_PROTOCOL.md Section 3
 """
 
 import os

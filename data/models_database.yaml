@@ -2016,6 +2016,2287 @@ local_models:
         - colorful
         - cinematic
         - dramatic
+    # ==========================================
+    # New 2025 Image Generation Models
+    # ==========================================
+    qwen_image:
+      name: Qwen-Image
+      family: qwen
+      release_date: '2025-08-04'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: mmdit
+        parameters_b: 20
+        text_encoder: qwen_t5
+        vae: qwen_vae
+        notes: First Qwen image generation model with SOTA text rendering
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 48000
+        vram_recommended_mb: 64000
+        download_url: https://huggingface.co/Qwen/Qwen-Image
+        download_size_gb: 40
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.0
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/Qwen/Qwen-Image
+        download_size_gb: 20
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      - id: dfloat11_offload
+        precision: dfloat11
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/Qwen/Qwen-Image
+        download_size_gb: 22
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+        notes: DFloat11 quantization + CPU offload, fits RTX 3090
+      capabilities:
+        primary:
+        - text_to_image
+        - image_editing
+        - image_understanding
+        scores:
+          photorealism: 0.95
+          artistic_quality: 0.93
+          text_rendering: 0.98
+          speed: 0.4
+          consistency: 0.92
+        features:
+        - id: text_rendering
+          quality: excellent
+          notes: SOTA English and Chinese text, rivals GPT-4o
+        - id: in_pixel_editing
+          quality: excellent
+        - id: style_transfer
+          quality: excellent
+        style_strengths:
+        - photorealistic
+        - graphic_design
+        - poster
+        - typography
+        - concept_art
+      hardware:
+        total_size_gb: 40.0
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      explanation:
+        selected: SOTA text rendering, powerful unified generation/editing model
+        rejected_vram: Requires {required}GB VRAM. Consider DFloat11 variant for RTX 3090.
+        rejected_platform: Not supported on Apple Silicon.
+    z_image_turbo:
+      name: Z-Image Turbo
+      family: z_image
+      release_date: '2025-11-26'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: s3_dit
+        parameters_b: 6
+        text_encoder: t5_encoder
+        vae: z_vae
+        notes: Single-Stream DiT, 8 NFEs, #1 open-source on Artificial Analysis
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 16000
+        vram_recommended_mb: 20000
+        download_url: https://huggingface.co/Tongyi-MAI/Z-Image-Turbo
+        download_size_gb: 12
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/T5B/Z-Image-Turbo-FP8
+        download_size_gb: 6
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      - id: gguf_q4
+        precision: gguf_q4_k_m
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_url: https://huggingface.co/unsloth/Z-Image-Turbo-GGUF
+        download_size_gb: 4
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+            notes: Use Q4_0 variant only
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+        notes: Unsloth community GGUF quantization
+      - id: gguf_q8
+        precision: gguf_q8_0
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/jayn7/Z-Image-Turbo-GGUF
+        download_size_gb: 6.5
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+        notes: Higher quality GGUF from jayn7
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.94
+          artistic_quality: 0.91
+          text_rendering: 0.95
+          speed: 0.85
+          consistency: 0.90
+        features:
+        - id: text_rendering
+          quality: excellent
+          notes: Bilingual English/Chinese text rendering
+        - id: fast_inference
+          quality: excellent
+          notes: Sub-second on H800, 8 NFEs only
+        style_strengths:
+        - photorealistic
+        - portrait
+        - product
+        - typography
+      hardware:
+        total_size_gb: 12.0
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 24.0
+      explanation:
+        selected: Fastest high-quality open-source T2I, excellent text rendering
+        rejected_vram: Requires {required}GB VRAM. Consider FP8 variant.
+    z_image_base:
+      name: Z-Image Base
+      family: z_image
+      release_date: '2025-11-26'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: s3_dit
+        parameters_b: 6
+        text_encoder: t5_encoder
+        vae: z_vae
+        notes: Foundation model for fine-tuning, non-distilled
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 18000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/Tongyi-MAI/Z-Image-Base
+        download_size_gb: 12
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.92
+          artistic_quality: 0.90
+          text_rendering: 0.93
+          speed: 0.6
+          consistency: 0.88
+        features:
+        - id: fine_tuning_base
+          quality: excellent
+          notes: Optimal for custom LoRA/fine-tune training
+      hardware:
+        total_size_gb: 12.0
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 24.0
+      explanation:
+        selected: Foundation model for custom fine-tuning
+        rejected_vram: Requires {required}GB VRAM.
+    glm_image:
+      name: GLM-Image
+      family: glm
+      release_date: '2025-12-01'
+      license: mit
+      commercial_use: true
+      architecture:
+        type: ar_dit_hybrid
+        parameters_b: 16
+        ar_params_b: 9
+        decoder_params_b: 7
+        text_encoder: glm_glyph
+        vae: glm_vae
+        notes: Hybrid autoregressive + diffusion decoder, from GLM-4-9B
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 40000
+        vram_recommended_mb: 48000
+        download_url: https://huggingface.co/zai-org/GLM-Image
+        download_size_gb: 32
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.0
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 20000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/zai-org/GLM-Image
+        download_size_gb: 16
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      - id: sdnq_4bit
+        precision: nf4_dynamic
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/Disty0/GLM-Image-SDNQ-4bit-dynamic
+        download_size_gb: 10
+        quality_retention_percent: 85
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+        notes: Community SDNQ 4-bit dynamic quantization
+      capabilities:
+        primary:
+        - text_to_image
+        - image_editing
+        - style_transfer
+        - identity_preservation
+        scores:
+          photorealism: 0.93
+          artistic_quality: 0.91
+          text_rendering: 0.96
+          speed: 0.5
+          consistency: 0.90
+        features:
+        - id: text_rendering
+          quality: excellent
+          notes: NED 0.9557, best-in-class for dense text
+        - id: knowledge_intensive
+          quality: excellent
+          notes: Excels at complex semantic understanding
+        - id: multi_subject
+          quality: excellent
+        style_strengths:
+        - photorealistic
+        - infographic
+        - typography
+        - diagram
+        - concept_art
+      hardware:
+        total_size_gb: 32.0
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 40.0
+      explanation:
+        selected: Best for knowledge-intensive and text-heavy image generation
+        rejected_vram: Requires {required}GB VRAM. Consider FP8 variant.
+        rejected_platform: Not supported on Apple Silicon.
+    wan_22_t2i:
+      name: Wan 2.2 Text-to-Image
+      family: wan
+      release_date: '2025-12-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: moe_dit
+        parameters_b: 14
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: Video model used for single-frame T2I, requires high+low noise experts
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/Wan-AI/Wan2.2-T2V-14B
+        download_size_gb: 28
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.0
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: gguf_q4
+        precision: gguf_q4_k_m
+        vram_min_mb: 10000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/city96/Wan2.2-GGUF
+        download_size_gb: 8
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+            notes: Use Q4_0 variant only
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.90
+          artistic_quality: 0.92
+          text_rendering: 0.75
+          speed: 0.35
+          consistency: 0.85
+        features:
+        - id: high_resolution
+          quality: excellent
+          notes: Up to 1920x1536 on 16GB VRAM
+        - id: diverse_styles
+          quality: excellent
+          notes: Creative, anime, realistic all strong
+        - id: bilingual_prompts
+          quality: good
+          notes: Chinese and English prompts supported
+        style_strengths:
+        - creative
+        - anime
+        - cinematic
+        - portrait
+        - surreal
+      dependencies:
+        paired_models:
+        - model_id: wan_22_t2v_14b_low
+          reason: MoE requires both high-noise and low-noise experts
+      hardware:
+        total_size_gb: 28.0
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 32.0
+      explanation:
+        selected: Diverse creative styles, high resolution output
+        rejected_vram: Requires {required}GB VRAM. Consider GGUF Q4 variant.
+        rejected_platform: Not recommended on Apple Silicon (impractically slow).
+    # ==========================================
+    # Qwen-Image Family (Full Catalog)
+    # ==========================================
+    qwen_image_2512:
+      name: Qwen-Image-2512
+      family: qwen
+      release_date: '2025-12-25'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: mmdit
+        parameters_b: 20
+        text_encoder: qwen_t5
+        vae: qwen_vae
+        notes: December 2025 update with enhanced realism and natural detail
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 48000
+        vram_recommended_mb: 64000
+        download_url: https://huggingface.co/Qwen/Qwen-Image-2512
+        download_size_gb: 40
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.0
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 20000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/unsloth/Qwen-Image-2512-FP8
+        download_size_gb: 20
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      - id: gguf_q4
+        precision: gguf_q4_k_m
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/unsloth/Qwen-Image-2512-GGUF
+        download_size_gb: 13
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+            notes: Use Q4_0 variant only
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.97
+          artistic_quality: 0.94
+          text_rendering: 0.98
+          speed: 0.4
+          consistency: 0.93
+        features:
+        - id: text_rendering
+          quality: excellent
+          notes: Best-in-class text rendering
+        - id: human_realism
+          quality: excellent
+          notes: Enhanced human rendering vs original
+        style_strengths:
+        - photorealistic
+        - portrait
+        - graphic_design
+        - typography
+      hardware:
+        total_size_gb: 40.0
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      explanation:
+        selected: Latest Qwen-Image with best realism and text rendering
+        rejected_vram: Requires {required}GB VRAM. Consider GGUF Q4 variant.
+    qwen_image_lightning:
+      name: Qwen-Image-Lightning
+      family: qwen
+      release_date: '2025-10-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: mmdit
+        parameters_b: 20
+        text_encoder: qwen_t5
+        vae: qwen_vae
+        notes: Distilled for 8-step inference, LoRA-based acceleration
+      variants:
+      - id: bf16_lora
+        precision: bf16
+        vram_min_mb: 48000
+        vram_recommended_mb: 64000
+        download_url: https://huggingface.co/lightx2v/Qwen-Image-Lightning
+        download_size_gb: 1.5
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+        notes: LoRA weights, requires base Qwen-Image model
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.92
+          artistic_quality: 0.90
+          text_rendering: 0.95
+          speed: 0.75
+          consistency: 0.88
+        features:
+        - id: fast_inference
+          quality: excellent
+          notes: 8-step generation, 3.5x faster with cache-dit
+      hardware:
+        total_size_gb: 1.5
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      dependencies:
+        paired_models:
+        - model_id: qwen_image
+          reason: LoRA weights require base Qwen-Image model
+      explanation:
+        selected: Fast Qwen-Image inference with distilled LoRA
+        rejected_vram: Requires base model + LoRA. See Qwen-Image requirements.
+    qwen_image_2512_lightning:
+      name: Qwen-Image-2512-Lightning
+      family: qwen
+      release_date: '2026-01-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: mmdit
+        parameters_b: 20
+        text_encoder: qwen_t5
+        vae: qwen_vae
+        notes: Lightning distillation of Qwen-Image-2512
+      variants:
+      - id: bf16_lora
+        precision: bf16
+        vram_min_mb: 48000
+        vram_recommended_mb: 64000
+        download_url: https://huggingface.co/lightx2v/Qwen-Image-2512-Lightning
+        download_size_gb: 1.5
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+        notes: LoRA weights for Qwen-Image-2512
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.94
+          artistic_quality: 0.91
+          text_rendering: 0.96
+          speed: 0.75
+          consistency: 0.90
+        features:
+        - id: fast_inference
+          quality: excellent
+          notes: 8-step generation for 2512 model
+      dependencies:
+        paired_models:
+        - model_id: qwen_image_2512
+          reason: LoRA weights require Qwen-Image-2512 base
+      explanation:
+        selected: Fastest high-quality Qwen generation
+    qwen_image_layered:
+      name: Qwen-Image-Layered
+      family: qwen
+      release_date: '2025-12-19'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: vld_mmdit
+        parameters_b: 20
+        text_encoder: qwen_t5
+        vae: rgba_vae
+        notes: Variable Layer Decomposition MMDiT for layer-based generation
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 48000
+        vram_recommended_mb: 64000
+        download_url: https://huggingface.co/Qwen/Qwen-Image-Layered
+        download_size_gb: 40
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: gguf_q4
+        precision: gguf_q4_k_m
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/unsloth/Qwen-Image-Layered-GGUF
+        download_size_gb: 13
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - text_to_image
+        - layer_decomposition
+        scores:
+          photorealism: 0.90
+          artistic_quality: 0.92
+          text_rendering: 0.85
+          speed: 0.35
+          consistency: 0.88
+        features:
+        - id: layer_decomposition
+          quality: excellent
+          notes: Variable 3-8+ RGBA layers, recursive decomposition
+        - id: inherent_editability
+          quality: excellent
+          notes: Each layer independently editable
+      hardware:
+        total_size_gb: 40.0
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      explanation:
+        selected: Unique layer-based generation for design workflows
+        rejected_vram: Requires {required}GB VRAM. Consider GGUF variant.
+    # ==========================================
+    # HunyuanImage 3.0 (Tencent)
+    # ==========================================
+    hunyuan_image_3:
+      name: HunyuanImage 3.0
+      family: hunyuan
+      release_date: '2025-09-27'
+      license: tencent_hunyuan
+      commercial_use: true
+      architecture:
+        type: moe_transfusion
+        parameters_b: 80
+        active_params_b: 13
+        text_encoder: hunyuan_llm
+        vae: hunyuan_vae
+        notes: 80B total params, 13B active per token, 64 experts (8 active)
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 180000
+        vram_recommended_mb: 240000
+        download_url: https://huggingface.co/tencent/HunyuanImage-3.0
+        download_size_gb: 170
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+            notes: Requires 3x 80GB GPUs minimum
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      - id: nf4
+        precision: nf4
+        vram_min_mb: 48000
+        vram_recommended_mb: 64000
+        download_url: https://huggingface.co/EricRollei/HunyuanImage-3-NF4-ComfyUI
+        download_size_gb: 45
+        quality_retention_percent: 85
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.0
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+        notes: Community NF4 quantization for consumer GPUs
+      capabilities:
+        primary:
+        - text_to_image
+        - multimodal_understanding
+        scores:
+          photorealism: 0.96
+          artistic_quality: 0.95
+          text_rendering: 0.94
+          speed: 0.2
+          consistency: 0.92
+        features:
+        - id: knowledge_intensive
+          quality: excellent
+          notes: Deep semantic understanding from LLM backbone
+        - id: multimodal
+          quality: excellent
+          notes: Unified understanding and generation
+        style_strengths:
+        - photorealistic
+        - artistic
+        - concept_art
+        - chinese_style
+      hardware:
+        total_size_gb: 170.0
+        compute_intensity: extreme
+        supports_cpu_offload: false
+        ram_for_offload_gb: 256.0
+      explanation:
+        selected: Largest open-source T2I, state-of-the-art quality
+        rejected_vram: Requires 180GB+ VRAM (3x 80GB GPUs). Consider NF4 quantization.
+        rejected_platform: Only supported on multi-GPU NVIDIA setups.
+    # ==========================================
+    # FLUX.2 [klein] Family (Black Forest Labs)
+    # ==========================================
+    flux2_klein_9b:
+      name: FLUX.2 [klein] 9B
+      family: flux
+      release_date: '2026-01-16'
+      license: flux_ncl
+      commercial_use: false
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 9
+        text_encoder: qwen3_8b
+        vae: flux_vae
+        notes: Step-distilled to 4 inference steps
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.2-klein-9B
+        download_size_gb: 18
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 16000
+        vram_recommended_mb: 20000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-fp8
+        download_size_gb: 9
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - text_to_image
+        - image_editing
+        - multi_reference
+        scores:
+          photorealism: 0.93
+          artistic_quality: 0.91
+          text_rendering: 0.88
+          speed: 0.90
+          consistency: 0.90
+        features:
+        - id: fast_inference
+          quality: excellent
+          notes: 4 steps, 0.5-2s per image
+        - id: unified_editing
+          quality: excellent
+          notes: Generation + editing in one model
+        - id: multi_reference
+          quality: excellent
+      hardware:
+        total_size_gb: 18.0
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 32.0
+      explanation:
+        selected: Fastest high-quality FLUX, unified gen+edit
+        rejected_vram: Requires {required}GB VRAM. Consider FP8 variant.
+    flux2_klein_4b:
+      name: FLUX.2 [klein] 4B
+      family: flux
+      release_date: '2026-01-16'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 4
+        text_encoder: qwen3_8b
+        vae: flux_vae
+        notes: Smallest FLUX.2, step-distilled to 4 steps
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 13000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.2-klein-4B
+        download_size_gb: 8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 8000
+        vram_recommended_mb: 10000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.2-klein-4b-fp8
+        download_size_gb: 4
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      - id: nvfp4
+        precision: nvfp4
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.2-klein-4b-nvfp4
+        download_size_gb: 2.5
+        quality_retention_percent: 92
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+        notes: NVIDIA FP4 quantization, RTX 40 series optimized
+      capabilities:
+        primary:
+        - text_to_image
+        - image_editing
+        - multi_reference
+        scores:
+          photorealism: 0.88
+          artistic_quality: 0.86
+          text_rendering: 0.82
+          speed: 0.95
+          consistency: 0.85
+        features:
+        - id: fast_inference
+          quality: excellent
+          notes: 0.3-1.2s per image, fastest FLUX
+        - id: low_vram
+          quality: excellent
+          notes: Runs on RTX 3090/4070
+      hardware:
+        total_size_gb: 8.0
+        compute_intensity: low
+        supports_cpu_offload: true
+        ram_for_offload_gb: 16.0
+      explanation:
+        selected: Smallest FLUX with commercial license, very fast
+        rejected_vram: Requires {required}GB VRAM. Try NVFP4 variant.
+    flux2_klein_base_9b:
+      name: FLUX.2 [klein] Base 9B
+      family: flux
+      release_date: '2026-01-16'
+      license: flux_ncl
+      commercial_use: false
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 9
+        text_encoder: qwen3_8b
+        vae: flux_vae
+        notes: Undistilled foundation model for fine-tuning
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.2-klein-base-9B
+        download_size_gb: 18
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 16000
+        vram_recommended_mb: 20000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.2-klein-base-9b-fp8
+        download_size_gb: 9
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - text_to_image
+        - fine_tuning_base
+        scores:
+          photorealism: 0.92
+          artistic_quality: 0.90
+          text_rendering: 0.87
+          speed: 0.5
+          consistency: 0.92
+        features:
+        - id: fine_tuning_base
+          quality: excellent
+          notes: Optimal for LoRA/fine-tune training
+        - id: higher_diversity
+          quality: excellent
+          notes: More diverse outputs than distilled
+      hardware:
+        total_size_gb: 18.0
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 32.0
+      explanation:
+        selected: Foundation model for custom FLUX.2 fine-tuning
+    flux2_klein_base_4b:
+      name: FLUX.2 [klein] Base 4B
+      family: flux
+      release_date: '2026-01-16'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 4
+        text_encoder: qwen3_8b
+        vae: flux_vae
+        notes: Undistilled 4B foundation model, Apache licensed
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 13000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.2-klein-base-4B
+        download_size_gb: 8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_image
+        - fine_tuning_base
+        scores:
+          photorealism: 0.86
+          artistic_quality: 0.84
+          text_rendering: 0.80
+          speed: 0.6
+          consistency: 0.88
+        features:
+        - id: fine_tuning_base
+          quality: excellent
+          notes: Commercial-friendly fine-tuning base
+      hardware:
+        total_size_gb: 8.0
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 16.0
+      explanation:
+        selected: Commercial-licensed FLUX.2 fine-tuning base
+    flux1_kontext_dev:
+      name: FLUX.1 Kontext [dev]
+      family: flux
+      release_date: '2025-05-29'
+      license: flux_ncl
+      commercial_use: false
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 12
+        text_encoder: t5_xxl
+        vae: flux_vae
+        notes: Context-aware editing model, guidance distilled
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev
+        download_size_gb: 24
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_size_gb: 12
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - image_editing
+        - character_consistency
+        - style_transfer
+        - text_in_image_editing
+        scores:
+          photorealism: 0.92
+          artistic_quality: 0.90
+          text_rendering: 0.88
+          speed: 0.6
+          consistency: 0.95
+        features:
+        - id: context_awareness
+          quality: excellent
+          notes: Understands and modifies existing images
+        - id: character_consistency
+          quality: excellent
+          notes: Maintains character across scenes without finetuning
+        - id: localized_editing
+          quality: excellent
+          notes: Targeted modifications without affecting other areas
+        - id: iterative_refinement
+          quality: excellent
+          notes: Multiple edits with minimal visual drift
+      hardware:
+        total_size_gb: 24.0
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 32.0
+      explanation:
+        selected: Best-in-class context-aware image editing
+        rejected_vram: Requires {required}GB VRAM. Consider FP8 variant.
+    # ==========================================
+    # SANA Family (NVIDIA)
+    # ==========================================
+    sana_1600m:
+      name: SANA 1.6B
+      family: sana
+      release_date: '2025-01-11'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: linear_dit
+        parameters_b: 1.6
+        text_encoder: gemma_2b
+        vae: dc_ae
+        notes: Linear attention DiT, 20x smaller than FLUX
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_url: https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px
+        download_size_gb: 3.2
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      - id: int4
+        precision: int4
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_size_gb: 1.0
+        quality_retention_percent: 92
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        notes: SVDQuant 4-bit, runs in 8GB VRAM
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.85
+          artistic_quality: 0.83
+          text_rendering: 0.70
+          speed: 0.98
+          consistency: 0.82
+        features:
+        - id: ultra_fast
+          quality: excellent
+          notes: 0.1s on H100, 0.3s on RTX 4090
+        - id: 4k_generation
+          quality: good
+          notes: Up to 4096x4096 with tiling
+        style_strengths:
+        - anime
+        - illustration
+        - concept_art
+      hardware:
+        total_size_gb: 3.2
+        compute_intensity: low
+        supports_cpu_offload: true
+        ram_for_offload_gb: 8.0
+      explanation:
+        selected: Ultra-fast generation, great for iteration
+        rejected_vram: Very low requirements, runs on most GPUs.
+    sana_4800m:
+      name: SANA 4.8B
+      family: sana
+      release_date: '2025-06-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: linear_dit
+        parameters_b: 4.8
+        text_encoder: gemma_2b
+        vae: dc_ae
+        notes: Scaled SANA with depth-growth paradigm
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 16000
+        vram_recommended_mb: 20000
+        download_url: https://huggingface.co/Efficient-Large-Model/Sana_4800M_1024px
+        download_size_gb: 9.6
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: int4
+        precision: int4
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_size_gb: 2.5
+        quality_retention_percent: 90
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        notes: SVDQuant 4-bit
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.90
+          artistic_quality: 0.88
+          text_rendering: 0.78
+          speed: 0.92
+          consistency: 0.88
+        features:
+        - id: fast_inference
+          quality: excellent
+          notes: Much faster than comparable quality models
+        - id: text_alignment
+          quality: excellent
+          notes: 0.96 GenEval with inference scaling
+      hardware:
+        total_size_gb: 9.6
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 20.0
+      explanation:
+        selected: Best quality/speed ratio in its class
+    # ==========================================
+    # VIBE (ai-forever)
+    # ==========================================
+    vibe_image_edit:
+      name: VIBE Image Edit
+      family: vibe
+      release_date: '2025-11-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: sana_qwen
+        parameters_b: 3.6
+        diffusion_params_b: 1.6
+        encoder_params_b: 2.0
+        text_encoder: qwen3_vl_2b
+        vae: sana_vae
+        notes: Sana1.5 diffusion + Qwen3-VL-2B instruction encoder
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/iitolstykh/VIBE-Image-Edit
+        download_size_gb: 7.2
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - image_editing
+        - text_guided_editing
+        scores:
+          accuracy: 0.88
+          speed: 0.85
+          instruction_following: 0.90
+        features:
+        - id: fast_editing
+          quality: excellent
+          notes: ~4s per edit at 2K on H100
+        - id: instruction_following
+          quality: excellent
+          notes: Natural language edit instructions
+        - id: compact
+          quality: excellent
+          notes: Only 3.6B params total
+      hardware:
+        total_size_gb: 7.2
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 16.0
+      explanation:
+        selected: Fast, compact instruction-based editing
+        rejected_vram: Requires {required}GB VRAM.
+
+    # =========================================================================
+    # CHROMA FAMILY
+    # 8.9B params, FLUX.1-schnell based, Apache 2.0 license
+    # =========================================================================
+    chroma_unlocked:
+      name: Chroma Unlocked
+      family: chroma
+      release_date: '2025-03-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 8.9
+        base_model: flux_schnell
+        text_encoder: t5_xxl
+        vae: flux_vae
+        notes: Unfiltered FLUX.1-schnell distillation with enhanced prompt adherence
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/lodestone-horizon/chroma-unlocked
+        download_size_gb: 17.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/lodestone-horizon/chroma-unlocked-fp8
+        download_size_gb: 8.9
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: gguf_q4
+        precision: gguf_q4_k_s
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_url: https://huggingface.co/city96/Chroma-unlocked-gguf
+        download_size_gb: 5.3
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.90
+          artistic_quality: 0.92
+          text_rendering: 0.88
+          speed: 0.95
+          prompt_adherence: 0.93
+        features:
+        - id: fast_generation
+          quality: excellent
+          notes: 4 steps typical, FLUX-schnell distillation
+        - id: unfiltered
+          quality: excellent
+          notes: No content filtering, enhanced creativity
+        - id: prompt_following
+          quality: excellent
+          notes: Strong natural language understanding
+      hardware:
+        total_size_gb: 17.8
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 32.0
+      explanation:
+        selected: Fast unfiltered FLUX variant with excellent prompt adherence
+        rejected_vram: Requires {required}GB VRAM.
+
+    chroma_unlocked_v11:
+      name: Chroma Unlocked v1.1
+      family: chroma
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 8.9
+        base_model: flux_schnell
+        text_encoder: t5_xxl
+        vae: flux_vae
+        notes: Improved v1.1 with better anatomy and text rendering
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/lodestone-horizon/chroma-unlocked-v1.1
+        download_size_gb: 17.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/lodestone-horizon/chroma-unlocked-v1.1-fp8
+        download_size_gb: 8.9
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.92
+          artistic_quality: 0.93
+          text_rendering: 0.90
+          speed: 0.95
+          prompt_adherence: 0.94
+        features:
+        - id: improved_anatomy
+          quality: excellent
+          notes: Better hands and body proportions vs v1.0
+        - id: text_rendering
+          quality: good
+          notes: Improved in-image text generation
+      hardware:
+        total_size_gb: 17.8
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 32.0
+      explanation:
+        selected: Improved Chroma with better anatomy
+        rejected_vram: Requires {required}GB VRAM.
+
+    chroma_hd:
+      name: Chroma HD
+      family: chroma
+      release_date: '2025-05-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 8.9
+        base_model: flux_schnell
+        text_encoder: t5_xxl
+        vae: flux_vae
+        notes: High-resolution Chroma variant optimized for 2K+ output
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 32000
+        vram_recommended_mb: 40000
+        download_url: https://huggingface.co/lodestone-horizon/chroma-hd
+        download_size_gb: 17.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8_scaled
+        precision: fp8_e4m3fn
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/lodestone-horizon/chroma-hd-fp8-scaled
+        download_size_gb: 8.9
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_image
+        - high_resolution
+        scores:
+          photorealism: 0.93
+          artistic_quality: 0.94
+          text_rendering: 0.88
+          speed: 0.80
+          detail: 0.95
+        features:
+        - id: high_resolution
+          quality: excellent
+          notes: Native 2K+ generation without upscaling
+        - id: detail_preservation
+          quality: excellent
+          notes: Fine details preserved at high resolution
+      hardware:
+        total_size_gb: 17.8
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 40.0
+      explanation:
+        selected: High-resolution native generation
+        rejected_vram: Requires {required}GB VRAM for native 2K.
+
+    chroma_radiance:
+      name: Chroma Radiance
+      family: chroma
+      release_date: '2025-06-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 8.9
+        base_model: flux_schnell
+        text_encoder: t5_xxl
+        vae: flux_vae
+        notes: Premium quality Chroma variant with enhanced lighting and color
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/lodestone-horizon/chroma-radiance
+        download_size_gb: 17.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/lodestone-horizon/chroma-radiance-fp8
+        download_size_gb: 8.9
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.95
+          artistic_quality: 0.96
+          lighting: 0.97
+          color_accuracy: 0.95
+          speed: 0.85
+        features:
+        - id: lighting_quality
+          quality: excellent
+          notes: Superior lighting and shadow rendering
+        - id: color_vibrancy
+          quality: excellent
+          notes: Rich, accurate color reproduction
+      hardware:
+        total_size_gb: 17.8
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 32.0
+      explanation:
+        selected: Premium quality with superior lighting
+        rejected_vram: Requires {required}GB VRAM.
+
+    # =========================================================================
+    # COSMOS PREDICT 2 (NVIDIA) - Text2Image variant
+    # =========================================================================
+    cosmos_predict2_t2i:
+      name: Cosmos Predict 2 Text2Image
+      family: cosmos
+      release_date: '2025-06-01'
+      license: nvidia_open
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 2.0
+        text_encoder: t5_xxl
+        vae: cosmos_vae
+        notes: NVIDIA world foundation model for text-to-image
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/nvidia/Cosmos-Predict2-2B-Text2Image
+        download_size_gb: 4.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+            notes: NVIDIA CUDA only
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/nvidia/Cosmos-Predict2-2B-Text2Image-FP8
+        download_size_gb: 2.0
+        quality_retention_percent: 96
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - text_to_image
+        - world_simulation
+        scores:
+          photorealism: 0.88
+          consistency: 0.90
+          physical_accuracy: 0.92
+          speed: 0.85
+        features:
+        - id: world_model
+          quality: excellent
+          notes: Physically grounded world understanding
+        - id: consistency
+          quality: excellent
+          notes: Consistent physics and lighting
+      hardware:
+        total_size_gb: 4.0
+        compute_intensity: medium
+        supports_cpu_offload: false
+        cuda_required: true
+      explanation:
+        selected: NVIDIA world foundation model with physical consistency
+        rejected_vram: Requires {required}GB VRAM. NVIDIA GPU required.
+
+    # =========================================================================
+    # FLUX VARIANTS (Fill, Canny, Depth, Redux)
+    # =========================================================================
+    flux_fill_dev:
+      name: FLUX.1 Fill [dev]
+      family: flux
+      release_date: '2024-11-01'
+      license: flux_dev_ncl
+      commercial_use: false
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 12.0
+        text_encoder: t5_xxl
+        vae: flux_vae
+        notes: Inpainting/outpainting variant of FLUX.1
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev
+        download_size_gb: 23.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/Kijai/flux-fp8
+        download_size_gb: 11.9
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: gguf_q4
+        precision: gguf_q4_k_s
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/city96/FLUX.1-Fill-dev-gguf
+        download_size_gb: 7.0
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - inpainting
+        - outpainting
+        - image_editing
+        scores:
+          accuracy: 0.92
+          seamlessness: 0.94
+          prompt_adherence: 0.90
+        features:
+        - id: seamless_fill
+          quality: excellent
+          notes: Superior edge blending
+        - id: context_aware
+          quality: excellent
+          notes: Understands surrounding context
+      hardware:
+        total_size_gb: 23.8
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      explanation:
+        selected: Best-in-class inpainting/outpainting
+        rejected_vram: Requires {required}GB VRAM.
+
+    flux_canny_dev:
+      name: FLUX.1 Canny [dev]
+      family: flux
+      release_date: '2024-11-01'
+      license: flux_dev_ncl
+      commercial_use: false
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 12.0
+        text_encoder: t5_xxl
+        vae: flux_vae
+        notes: Canny edge ControlNet integrated into FLUX
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.1-Canny-dev
+        download_size_gb: 23.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/Kijai/flux-fp8
+        download_size_gb: 11.9
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - controlnet
+        - edge_guided_generation
+        scores:
+          edge_adherence: 0.95
+          quality: 0.92
+        features:
+        - id: integrated_control
+          quality: excellent
+          notes: Native canny control, no separate ControlNet needed
+      hardware:
+        total_size_gb: 23.8
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      explanation:
+        selected: Native edge-guided FLUX generation
+        rejected_vram: Requires {required}GB VRAM.
+
+    flux_depth_dev:
+      name: FLUX.1 Depth [dev]
+      family: flux
+      release_date: '2024-11-01'
+      license: flux_dev_ncl
+      commercial_use: false
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 12.0
+        text_encoder: t5_xxl
+        vae: flux_vae
+        notes: Depth-guided ControlNet integrated into FLUX
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.1-Depth-dev
+        download_size_gb: 23.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/Kijai/flux-fp8
+        download_size_gb: 11.9
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - controlnet
+        - depth_guided_generation
+        scores:
+          depth_adherence: 0.94
+          quality: 0.92
+        features:
+        - id: integrated_control
+          quality: excellent
+          notes: Native depth control
+      hardware:
+        total_size_gb: 23.8
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      explanation:
+        selected: Native depth-guided FLUX generation
+        rejected_vram: Requires {required}GB VRAM.
+
+    flux_redux_dev:
+      name: FLUX.1 Redux [dev]
+      family: flux
+      release_date: '2024-11-01'
+      license: flux_dev_ncl
+      commercial_use: false
+      architecture:
+        type: rectified_flow_transformer
+        parameters_b: 12.0
+        text_encoder: t5_xxl
+        vae: flux_vae
+        notes: Image variation/remixing variant of FLUX
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/black-forest-labs/FLUX.1-Redux-dev
+        download_size_gb: 23.8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - image_variation
+        - style_transfer
+        scores:
+          style_preservation: 0.90
+          variation_quality: 0.92
+        features:
+        - id: image_remix
+          quality: excellent
+          notes: Create variations while preserving style/content
+      hardware:
+        total_size_gb: 23.8
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      explanation:
+        selected: Image remixing and variation
+        rejected_vram: Requires {required}GB VRAM.
+
+    # =========================================================================
+    # KANDINSKY 5 LITE
+    # =========================================================================
+    kandinsky_5_lite:
+      name: Kandinsky 5 Lite
+      family: kandinsky
+      release_date: '2025-05-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 3.0
+        text_encoder: t5_base
+        vae: kandinsky_vae
+        notes: Lightweight Kandinsky 5 for efficient generation
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/ai-forever/kandinsky-5-lite
+        download_size_gb: 6.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_url: https://huggingface.co/ai-forever/kandinsky-5-lite-fp8
+        download_size_gb: 3.0
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.82
+          artistic_quality: 0.85
+          speed: 0.90
+        features:
+        - id: efficient
+          quality: excellent
+          notes: Good quality with low VRAM requirement
+        - id: multilingual
+          quality: good
+          notes: Russian and English prompt support
+      hardware:
+        total_size_gb: 6.0
+        compute_intensity: low
+        supports_cpu_offload: true
+        ram_for_offload_gb: 12.0
+      explanation:
+        selected: Efficient multilingual image generation
+        rejected_vram: Requires {required}GB VRAM.
+
+    # =========================================================================
+    # LOTUS (Depth/Normal Estimation)
+    # =========================================================================
+    lotus_depth_d:
+      name: Lotus Depth-D v2
+      family: lotus
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: diffusion_depth
+        parameters_b: 1.0
+        notes: Discriminative depth estimation via diffusion denoising
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_url: https://huggingface.co/jingheya/lotus-depth-d-v2-bf16
+        download_size_gb: 2.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - depth_estimation
+        scores:
+          accuracy: 0.92
+          speed: 0.85
+          edge_quality: 0.90
+        features:
+        - id: single_step
+          quality: excellent
+          notes: Single diffusion step for fast inference
+        - id: sharp_edges
+          quality: excellent
+          notes: Clean depth boundaries
+      hardware:
+        total_size_gb: 2.0
+        compute_intensity: low
+        supports_cpu_offload: true
+        ram_for_offload_gb: 8.0
+      explanation:
+        selected: Fast discriminative depth estimation
+        rejected_vram: Requires {required}GB VRAM.
+
+    lotus_depth_g:
+      name: Lotus Depth-G v2
+      family: lotus
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: diffusion_depth
+        parameters_b: 1.0
+        notes: Generative depth estimation with detail hallucination
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_url: https://huggingface.co/jingheya/lotus-depth-g-v2-bf16
+        download_size_gb: 2.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - depth_estimation
+        scores:
+          accuracy: 0.88
+          detail: 0.95
+          creativity: 0.90
+        features:
+        - id: detail_hallucination
+          quality: excellent
+          notes: Can infer fine depth details
+        - id: multi_step
+          quality: good
+          notes: Multiple steps for higher quality
+      hardware:
+        total_size_gb: 2.0
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 8.0
+      explanation:
+        selected: Generative depth with detail enhancement
+        rejected_vram: Requires {required}GB VRAM.
+
+    lotus_normal_g:
+      name: Lotus Normal-G v2
+      family: lotus
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: diffusion_normal
+        parameters_b: 1.0
+        notes: Normal map estimation via diffusion
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_url: https://huggingface.co/jingheya/lotus-normal-g-v2-bf16
+        download_size_gb: 2.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - normal_estimation
+        scores:
+          accuracy: 0.90
+          surface_detail: 0.92
+        features:
+        - id: surface_normals
+          quality: excellent
+          notes: High-quality normal maps for relighting/3D
+      hardware:
+        total_size_gb: 2.0
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 8.0
+      explanation:
+        selected: Diffusion-based normal map estimation
+        rejected_vram: Requires {required}GB VRAM.
+
+    # =========================================================================
+    # HUMO 17B
+    # =========================================================================
+    humo_17b:
+      name: Humo 17B
+      family: humo
+      release_date: '2025-05-01'
+      license: mit
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 17.0
+        text_encoder: t5_xxl
+        vae: sd3_vae
+        notes: Large-scale DiT for high-quality generation
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 48000
+        vram_recommended_mb: 80000
+        download_url: https://huggingface.co/humo-ai/humo-17b
+        download_size_gb: 34.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/humo-ai/humo-17b-fp8
+        download_size_gb: 17.0
+        quality_retention_percent: 96
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: gguf_q4
+        precision: gguf_q4_k_m
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/city96/humo-17b-gguf
+        download_size_gb: 10.0
+        quality_retention_percent: 85
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - text_to_image
+        scores:
+          photorealism: 0.94
+          artistic_quality: 0.95
+          text_rendering: 0.90
+          detail: 0.96
+        features:
+        - id: high_detail
+          quality: excellent
+          notes: Exceptional fine detail rendering
+        - id: large_scale
+          quality: excellent
+          notes: 17B parameters for superior quality
+      hardware:
+        total_size_gb: 34.0
+        compute_intensity: very_high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 64.0
+      explanation:
+        selected: High-end 17B model for maximum quality
+        rejected_vram: Requires {required}GB VRAM. Consider quantized variant.
+
+    # =========================================================================
+    # OVIS IMAGE (Vision-Language Model)
+    # =========================================================================
+    ovis_image:
+      name: Ovis 2.5
+      family: ovis
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: vision_language
+        parameters_b: 7.0
+        text_encoder: ovis_encoder
+        notes: Vision-language model for image understanding and generation guidance
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/AIDC-AI/Ovis2.5-8B
+        download_size_gb: 14.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - image_understanding
+        - caption_generation
+        - visual_qa
+        scores:
+          understanding: 0.90
+          captioning: 0.92
+          qa_accuracy: 0.88
+        features:
+        - id: visual_understanding
+          quality: excellent
+          notes: Strong image analysis capabilities
+        - id: generation_guidance
+          quality: good
+          notes: Can guide image generation with visual understanding
+      hardware:
+        total_size_gb: 14.0
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 28.0
+      explanation:
+        selected: Vision-language model for image understanding
+        rejected_vram: Requires {required}GB VRAM.
+
   image_editing:
     omnigen:
       name: OmniGen
@@ -2223,6 +4504,228 @@ local_models:
         - id: instruction_following
           quality: excellent
           notes: Understands complex edit instructions
+    qwen_image_edit_2511:
+      name: Qwen Image Edit 2511
+      family: qwen
+      release_date: '2025-12-23'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: mmdit
+        parameters_b: 20
+        text_encoder: qwen_t5
+        vae: qwen_vae
+        notes: Updated version with improved editing precision and text handling
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 48000
+        vram_recommended_mb: 64000
+        download_url: https://huggingface.co/Qwen/Qwen-Image-Edit-2511
+        download_size_gb: 40
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.0
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/Qwen/Qwen-Image-Edit-2511
+        download_size_gb: 20
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      - id: dfloat11_offload
+        precision: dfloat11
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/Qwen/Qwen-Image-Edit-2511
+        download_size_gb: 22
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+        notes: DFloat11 quantization + CPU offload
+      capabilities:
+        primary:
+        - image_editing
+        - style_transfer
+        - object_manipulation
+        - text_editing
+        scores:
+          accuracy: 0.95
+          speed: 0.4
+          instruction_following: 0.96
+        features:
+        - id: text_editing
+          quality: excellent
+          notes: Can edit text within images accurately
+        - id: object_removal
+          quality: excellent
+        - id: style_transfer
+          quality: excellent
+        - id: pose_manipulation
+          quality: excellent
+      hardware:
+        total_size_gb: 40.0
+        compute_intensity: high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      explanation:
+        selected: Most capable open-source image editing model
+        rejected_vram: Requires {required}GB VRAM. Consider DFloat11 variant.
+    qwen_image_edit_2511_lightning:
+      name: Qwen-Image-Edit-2511-Lightning
+      family: qwen
+      release_date: '2026-01-05'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: mmdit
+        parameters_b: 20
+        text_encoder: qwen_t5
+        vae: qwen_vae
+        notes: Lightning distillation for fast editing, 8-step inference
+      variants:
+      - id: bf16_lora
+        precision: bf16
+        vram_min_mb: 48000
+        vram_recommended_mb: 64000
+        download_url: https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning
+        download_size_gb: 1.5
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+        notes: LoRA weights for Qwen-Image-Edit-2511
+      - id: fp8_lora
+        precision: fp8
+        vram_min_mb: 20000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning
+        download_size_gb: 1.5
+        quality_retention_percent: 93
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+        notes: FP8-optimized LoRA weights to avoid grid artifacts
+      capabilities:
+        primary:
+        - image_editing
+        - fast_editing
+        scores:
+          accuracy: 0.92
+          speed: 0.75
+          instruction_following: 0.93
+        features:
+        - id: fast_inference
+          quality: excellent
+          notes: 8-step editing, 3-4x faster than base
+        - id: no_artifacts
+          quality: excellent
+          notes: FP8 LoRA specifically distilled to avoid grid artifacts
+      dependencies:
+        paired_models:
+        - model_id: qwen_image_edit_2511
+          reason: LoRA weights require Qwen-Image-Edit-2511 base
+      hardware:
+        total_size_gb: 1.5
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 48.0
+      explanation:
+        selected: Fast editing with Qwen-Image quality
+        rejected_vram: Requires base model. See Qwen-Image-Edit-2511 requirements.
+    z_image_edit:
+      name: Z-Image Edit
+      family: z_image
+      release_date: '2025-11-26'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: s3_dit
+        parameters_b: 6
+        text_encoder: t5_encoder
+        vae: z_vae
+        notes: Editing variant fine-tuned from Z-Image base
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 16000
+        vram_recommended_mb: 20000
+        download_url: https://huggingface.co/Tongyi-MAI/Z-Image-Edit
+        download_size_gb: 12
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Tongyi-MAI/Z-Image-Edit
+        download_size_gb: 6
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute_capability: 8.9
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - image_editing
+        - image_to_image
+        - style_transfer
+        scores:
+          accuracy: 0.90
+          speed: 0.75
+          instruction_following: 0.88
+        features:
+        - id: fast_editing
+          quality: excellent
+          notes: Fast inference like Z-Image-Turbo
+        - id: instruction_following
+          quality: excellent
+      hardware:
+        total_size_gb: 12.0
+        compute_intensity: medium
+        supports_cpu_offload: true
+        ram_for_offload_gb: 24.0
+      explanation:
+        selected: Fast, efficient image editing with good quality
+        rejected_vram: Requires {required}GB VRAM. Consider FP8 variant.
     hidream_edit:
       name: HiDream Edit
       family: hidream
@@ -3188,6 +5691,140 @@ local_models:
         - id: distilled
           quality: excellent
           notes: 4-8 steps for high quality
+
+    # =========================================================================
+    # LTX VIDEO 2 19B
+    # =========================================================================
+    ltx_video_2_19b:
+      name: LTX-Video 2 19B
+      family: ltx
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 19
+        text_encoder: t5_xxl
+        vae: ltx2_vae
+        notes: Latest LTX Video with 19B parameters
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 40000
+        vram_recommended_mb: 48000
+        download_url: https://huggingface.co/Lightricks/ltx-2-19b-dev
+        download_size_gb: 38
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 20000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/Lightricks/ltx-2-19b-dev-fp8
+        download_size_gb: 19
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 15
+        max_resolution: 1080p
+        audio_support: false
+        scores:
+          photorealism: 0.92
+          motion_quality: 0.93
+          temporal_coherence: 0.91
+          speed: 0.40
+        features:
+        - id: high_quality
+          quality: excellent
+          notes: State-of-the-art video quality
+        - id: long_form
+          quality: excellent
+          notes: Up to 15 seconds at high resolution
+
+    ltx_video_2_19b_distilled:
+      name: LTX-Video 2 19B Distilled
+      family: ltx
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 19
+        text_encoder: t5_xxl
+        vae: ltx2_vae
+        notes: Step-distilled version for faster inference
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 40000
+        vram_recommended_mb: 48000
+        download_url: https://huggingface.co/Lightricks/ltx-2-19b-distilled
+        download_size_gb: 38
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 20000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/Lightricks/ltx-2-19b-distilled-fp8
+        download_size_gb: 19
+        quality_retention_percent: 93
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 15
+        max_resolution: 1080p
+        audio_support: false
+        scores:
+          photorealism: 0.88
+          motion_quality: 0.90
+          temporal_coherence: 0.88
+          speed: 0.70
+        features:
+        - id: fast_inference
+          quality: excellent
+          notes: 4-8 steps, ~3x faster than base model
+        - id: step_distillation
+          quality: good
+          notes: Reduced steps with minimal quality loss
+
     animatediff_sd15:
       name: AnimateDiff (SD1.5)
       family: animatediff
@@ -3762,6 +6399,896 @@ local_models:
           motion_quality: 0.75
           temporal_coherence: 0.8
           speed: 0.6
+
+    # =========================================================================
+    # HUNYUANVIDEO 1.5 COMPLETE LINEUP
+    # 8.3B DiT, 480p/720p/1080p, CFG/step distilled variants
+    # =========================================================================
+    hunyuanvideo_15_t2v:
+      name: HunyuanVideo 1.5 T2V
+      family: hunyuan
+      release_date: '2025-05-01'
+      license: tencent-hunyuan
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 8.3
+        text_encoder: llava
+        vae: hunyuanvideo15_vae
+        notes: Improved HunyuanVideo with CFG and step distillation variants
+      variants:
+      - id: bf16_480p
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/tencent/HunyuanVideo-1.5
+        download_size_gb: 16.6
+        quality_retention_percent: 100
+        max_resolution: 480p
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: bf16_720p
+        precision: bf16
+        vram_min_mb: 40000
+        vram_recommended_mb: 48000
+        download_url: https://huggingface.co/tencent/HunyuanVideo-1.5
+        download_size_gb: 16.6
+        quality_retention_percent: 100
+        max_resolution: 720p
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: bf16_1080p
+        precision: bf16
+        vram_min_mb: 80000
+        vram_recommended_mb: 80000
+        download_url: https://huggingface.co/tencent/HunyuanVideo-1.5
+        download_size_gb: 16.6
+        quality_retention_percent: 100
+        max_resolution: 1080p
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/Kijai/HunyuanVideo-1.5-fp8
+        download_size_gb: 8.3
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: gguf_q8
+        precision: gguf_q8_0
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/city96/HunyuanVideo-1.5-gguf
+        download_size_gb: 8.8
+        quality_retention_percent: 96
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - text_to_video
+        video_modes:
+        - t2v
+        max_duration_seconds: 10
+        audio_support: false
+        scores:
+          photorealism: 0.94
+          motion_quality: 0.93
+          temporal_coherence: 0.92
+          speed: 0.35
+        features:
+        - id: quality_improvement
+          quality: excellent
+          notes: Significant quality improvement over 1.0
+        - id: resolution_options
+          quality: excellent
+          notes: 480p/720p/1080p native support
+      hardware:
+        total_size_gb: 16.6
+        compute_intensity: very_high
+        supports_cpu_offload: true
+        ram_for_offload_gb: 32.0
+
+    hunyuanvideo_15_i2v:
+      name: HunyuanVideo 1.5 I2V
+      family: hunyuan
+      release_date: '2025-05-01'
+      license: tencent-hunyuan
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 8.3
+        text_encoder: llava
+        vae: hunyuanvideo15_vae
+        notes: Image-to-video variant
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 28000
+        vram_recommended_mb: 40000
+        download_url: https://huggingface.co/tencent/HunyuanVideo-1.5-I2V
+        download_size_gb: 16.6
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/Kijai/HunyuanVideo-1.5-I2V-fp8
+        download_size_gb: 8.3
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - image_to_video
+        video_modes:
+        - i2v
+        max_duration_seconds: 10
+        audio_support: false
+        scores:
+          photorealism: 0.94
+          motion_quality: 0.92
+          temporal_coherence: 0.93
+          speed: 0.35
+
+    hunyuanvideo_15_cfg_distilled:
+      name: HunyuanVideo 1.5 CFG-Distilled
+      family: hunyuan
+      release_date: '2025-05-01'
+      license: tencent-hunyuan
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 8.3
+        text_encoder: llava
+        vae: hunyuanvideo15_vae
+        notes: CFG-distilled for 2x faster inference
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/tencent/HunyuanVideo-1.5-CFG-Distilled
+        download_size_gb: 16.6
+        quality_retention_percent: 98
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/Kijai/HunyuanVideo-1.5-CFG-Distilled-fp8
+        download_size_gb: 8.3
+        quality_retention_percent: 96
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_video
+        video_modes:
+        - t2v
+        max_duration_seconds: 10
+        audio_support: false
+        scores:
+          photorealism: 0.92
+          motion_quality: 0.91
+          temporal_coherence: 0.90
+          speed: 0.55
+        features:
+        - id: cfg_distillation
+          quality: excellent
+          notes: No classifier-free guidance needed, 2x faster
+
+    hunyuanvideo_15_step_distilled:
+      name: HunyuanVideo 1.5 Step-Distilled
+      family: hunyuan
+      release_date: '2025-05-01'
+      license: tencent-hunyuan
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 8.3
+        text_encoder: llava
+        vae: hunyuanvideo15_vae
+        notes: Step-distilled for fewer inference steps
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 24000
+        vram_recommended_mb: 32000
+        download_url: https://huggingface.co/tencent/HunyuanVideo-1.5-Step-Distilled
+        download_size_gb: 16.6
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/Kijai/HunyuanVideo-1.5-Step-Distilled-fp8
+        download_size_gb: 8.3
+        quality_retention_percent: 93
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_to_video
+        video_modes:
+        - t2v
+        max_duration_seconds: 10
+        audio_support: false
+        scores:
+          photorealism: 0.88
+          motion_quality: 0.88
+          temporal_coherence: 0.87
+          speed: 0.70
+        features:
+        - id: step_distillation
+          quality: good
+          notes: 8-12 steps vs 50+ steps, ~4x faster
+
+    # =========================================================================
+    # COSMOS PREDICT 2 - Video2World variant
+    # =========================================================================
+    cosmos_predict2_v2w:
+      name: Cosmos Predict 2 Video2World
+      family: cosmos
+      release_date: '2025-06-01'
+      license: nvidia_open
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 2.0
+        text_encoder: t5_xxl
+        vae: cosmos_vae
+        notes: NVIDIA world foundation model for video-to-world prediction
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/nvidia/Cosmos-Predict2-2B-Video2World
+        download_size_gb: 4.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 10000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/nvidia/Cosmos-Predict2-2B-Video2World-FP8
+        download_size_gb: 2.0
+        quality_retention_percent: 96
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - video_to_video
+        - world_simulation
+        video_modes:
+        - v2v
+        - world_prediction
+        audio_support: false
+        scores:
+          physical_accuracy: 0.93
+          temporal_coherence: 0.91
+          consistency: 0.92
+          speed: 0.70
+        features:
+        - id: world_model
+          quality: excellent
+          notes: Predicts future frames with physical understanding
+        - id: action_conditioned
+          quality: excellent
+          notes: Can condition on actions for simulation
+
+    # =========================================================================
+    # WAN FUN ECOSYSTEM (Control, Camera, Inpaint)
+    # =========================================================================
+    wan_fun_control:
+      name: Wan Fun Control
+      family: wan
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: moe_dit
+        parameters_b: 14
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: ControlNet-style guidance for Wan video
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 32000
+        vram_recommended_mb: 48000
+        download_url: https://huggingface.co/Wan-AI/Wan-Fun-Control-14B
+        download_size_gb: 28
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 20000
+        vram_recommended_mb: 28000
+        download_url: https://huggingface.co/Wan-AI/Wan-Fun-Control-14B-FP8
+        download_size_gb: 14
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - controlled_video_generation
+        video_modes:
+        - t2v_controlled
+        - i2v_controlled
+        control_types:
+        - depth
+        - canny
+        - pose
+        audio_support: false
+        scores:
+          control_adherence: 0.92
+          motion_quality: 0.88
+          temporal_coherence: 0.87
+          speed: 0.30
+      dependencies:
+        base_model: wan_22_t2v_14b
+
+    wan_fun_camera:
+      name: Wan Fun Camera
+      family: wan
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: moe_dit
+        parameters_b: 14
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: Camera motion control for Wan video
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 32000
+        vram_recommended_mb: 48000
+        download_url: https://huggingface.co/Wan-AI/Wan-Fun-Camera-14B
+        download_size_gb: 28
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 20000
+        vram_recommended_mb: 28000
+        download_url: https://huggingface.co/Wan-AI/Wan-Fun-Camera-14B-FP8
+        download_size_gb: 14
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - camera_controlled_video
+        video_modes:
+        - t2v_camera
+        camera_controls:
+        - pan
+        - tilt
+        - zoom
+        - orbit
+        - dolly
+        audio_support: false
+        scores:
+          camera_adherence: 0.94
+          motion_quality: 0.90
+          temporal_coherence: 0.88
+          speed: 0.30
+      dependencies:
+        base_model: wan_22_t2v_14b
+
+    wan_fun_inpaint:
+      name: Wan Fun Inpaint
+      family: wan
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: moe_dit
+        parameters_b: 14
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: Video inpainting with Wan
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 32000
+        vram_recommended_mb: 48000
+        download_url: https://huggingface.co/Wan-AI/Wan-Fun-Inpaint-14B
+        download_size_gb: 28
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 20000
+        vram_recommended_mb: 28000
+        download_url: https://huggingface.co/Wan-AI/Wan-Fun-Inpaint-14B-FP8
+        download_size_gb: 14
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - video_inpainting
+        video_modes:
+        - inpaint
+        audio_support: false
+        scores:
+          seamlessness: 0.90
+          temporal_coherence: 0.88
+          speed: 0.30
+      dependencies:
+        base_model: wan_22_t2v_14b
+
+    # =========================================================================
+    # WAN VACE MODELS
+    # =========================================================================
+    wan_vace_14b:
+      name: Wan VACE 14B
+      family: wan
+      release_date: '2025-05-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: moe_dit
+        parameters_b: 14
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: Video Acceleration and Consistency Enhancement
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 32000
+        vram_recommended_mb: 48000
+        download_url: https://huggingface.co/Wan-AI/Wan-VACE-14B
+        download_size_gb: 28
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 20000
+        vram_recommended_mb: 28000
+        download_url: https://huggingface.co/Wan-AI/Wan-VACE-14B-FP8
+        download_size_gb: 14
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - accelerated_video_generation
+        video_modes:
+        - t2v
+        - i2v
+        audio_support: false
+        scores:
+          photorealism: 0.90
+          motion_quality: 0.88
+          temporal_coherence: 0.90
+          speed: 0.50
+        features:
+        - id: faster_inference
+          quality: excellent
+          notes: ~2x faster than base Wan with improved consistency
+
+    wan_vace_1_3b:
+      name: Wan VACE 1.3B
+      family: wan
+      release_date: '2025-05-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: dit
+        parameters_b: 1.3
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: Lightweight VACE variant
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Wan-AI/Wan-VACE-1.3B
+        download_size_gb: 2.6
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_url: https://huggingface.co/Wan-AI/Wan-VACE-1.3B-FP8
+        download_size_gb: 1.3
+        quality_retention_percent: 96
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - accelerated_video_generation
+        video_modes:
+        - t2v
+        - i2v
+        audio_support: false
+        scores:
+          photorealism: 0.78
+          motion_quality: 0.75
+          temporal_coherence: 0.80
+          speed: 0.80
+        features:
+        - id: lightweight
+          quality: good
+          notes: Good quality at low VRAM requirement
+
+    # =========================================================================
+    # WAN FINE-TUNES (Phantom, SkyReels, AniSora, FastWan)
+    # =========================================================================
+    wan_phantom:
+      name: Wan Phantom
+      family: wan
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: moe_dit
+        parameters_b: 14
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: Stylized/surreal video fine-tune
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 60000
+        vram_recommended_mb: 80000
+        download_url: https://huggingface.co/community/Wan-Phantom-14B
+        download_size_gb: 28
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: gguf_q4
+        precision: gguf_q4_k_m
+        vram_min_mb: 9600
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/city96/Wan-Phantom-gguf
+        download_size_gb: 9.6
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - stylized_video_generation
+        video_modes:
+        - t2v
+        - i2v
+        style: surreal_phantom
+        audio_support: false
+        scores:
+          artistic_quality: 0.92
+          motion_quality: 0.85
+          style_adherence: 0.95
+
+    wan_skyreels:
+      name: Wan SkyReels
+      family: wan
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: moe_dit
+        parameters_b: 14
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: Cinematic video fine-tune
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 60000
+        vram_recommended_mb: 80000
+        download_url: https://huggingface.co/SkyReels/Wan-SkyReels-14B
+        download_size_gb: 28
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: gguf_q4
+        precision: gguf_q4_k_m
+        vram_min_mb: 9600
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/city96/Wan-SkyReels-gguf
+        download_size_gb: 9.6
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - cinematic_video_generation
+        video_modes:
+        - t2v
+        - i2v
+        style: cinematic
+        audio_support: false
+        scores:
+          photorealism: 0.93
+          cinematic_quality: 0.95
+          motion_quality: 0.90
+
+    wan_anisora:
+      name: Wan AniSora
+      family: wan
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: moe_dit
+        parameters_b: 14
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: Anime-style video fine-tune
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 60000
+        vram_recommended_mb: 80000
+        download_url: https://huggingface.co/AniSora/Wan-AniSora-14B
+        download_size_gb: 28
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: gguf_q4
+        precision: gguf_q4_k_m
+        vram_min_mb: 9600
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/city96/Wan-AniSora-gguf
+        download_size_gb: 9.6
+        quality_retention_percent: 88
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+        requires_nodes:
+        - ComfyUI-GGUF
+      capabilities:
+        primary:
+        - anime_video_generation
+        video_modes:
+        - t2v
+        - i2v
+        style: anime
+        audio_support: false
+        scores:
+          anime_quality: 0.94
+          motion_quality: 0.88
+          style_consistency: 0.92
+
+    wan_fast:
+      name: FastWan
+      family: wan
+      release_date: '2025-05-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: moe_dit
+        parameters_b: 14
+        text_encoder: t5_umt5
+        vae: wan_vae
+        notes: Speed-optimized Wan with step distillation
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 32000
+        vram_recommended_mb: 48000
+        download_url: https://huggingface.co/community/FastWan-14B
+        download_size_gb: 28
+        quality_retention_percent: 92
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 20000
+        vram_recommended_mb: 28000
+        download_url: https://huggingface.co/community/FastWan-14B-FP8
+        download_size_gb: 14
+        quality_retention_percent: 90
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: false
+      capabilities:
+        primary:
+        - fast_video_generation
+        video_modes:
+        - t2v
+        - i2v
+        audio_support: false
+        scores:
+          photorealism: 0.85
+          motion_quality: 0.82
+          temporal_coherence: 0.84
+          speed: 0.75
+        features:
+        - id: step_distillation
+          quality: excellent
+          notes: 8-12 steps, ~4x faster than base Wan
+
   image_interrogation:
     clip_vit_large:
       name: CLIP ViT-L/14
@@ -4589,6 +8116,278 @@ local_models:
         - id: video_frame_processing
           quality: exceptional
           notes: Best quality but slower, for high-value video projects
+
+    # =========================================================================
+    # ADDITIONAL UPSCALERS
+    # =========================================================================
+    clearreality_4x:
+      name: 4x-ClearReality v1
+      family: clearreality
+      release_date: '2024-01-01'
+      license: cc-by-4.0
+      commercial_use: true
+      architecture:
+        type: rrdb
+        parameters_b: 0.016
+        scale_factor: 4
+        notes: Excellent for realistic photos with natural detail
+      variants:
+      - id: fp32
+        precision: fp32
+        vram_min_mb: 1000
+        vram_recommended_mb: 2000
+        download_url: https://openmodeldb.info/models/4x-ClearRealityV1
+        download_size_gb: 0.064
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - image_upscaling
+        - video_upscaling
+        scores:
+          quality: 0.94
+          speed: 0.88
+        features:
+        - id: realistic_detail
+          quality: excellent
+          notes: Natural detail enhancement without over-sharpening
+        - id: video_frame_processing
+          quality: excellent
+
+    nomos_unidat_4x:
+      name: 4x-NomosUniDAT-otf
+      family: nomos
+      release_date: '2024-03-01'
+      license: cc-by-4.0
+      commercial_use: true
+      architecture:
+        type: dat
+        parameters_b: 0.024
+        scale_factor: 4
+        notes: Dual aggregation transformer, on-the-fly degradation training
+      variants:
+      - id: fp32
+        precision: fp32
+        vram_min_mb: 2000
+        vram_recommended_mb: 4000
+        download_url: https://openmodeldb.info/models/4x-NomosUniDAT-otf
+        download_size_gb: 0.096
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - image_upscaling
+        - video_upscaling
+        scores:
+          quality: 0.95
+          speed: 0.70
+        features:
+        - id: degradation_handling
+          quality: excellent
+          notes: Handles various degradation types
+        - id: video_frame_processing
+          quality: excellent
+
+    df2k_jpeg:
+      name: DF2K JPEG Restoration
+      family: df2k
+      release_date: '2023-06-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: rrdb
+        parameters_b: 0.016
+        scale_factor: 1
+        notes: JPEG artifact removal and quality enhancement
+      variants:
+      - id: fp32
+        precision: fp32
+        vram_min_mb: 1000
+        vram_recommended_mb: 2000
+        download_url: https://openmodeldb.info/models/DF2K-JPEG
+        download_size_gb: 0.064
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - image_restoration
+        - jpeg_artifact_removal
+        scores:
+          quality: 0.90
+          speed: 0.92
+        features:
+        - id: artifact_removal
+          quality: excellent
+          notes: Removes JPEG compression artifacts
+        - id: preprocessing
+          quality: excellent
+          notes: Use before upscaling for better results
+
+    # =========================================================================
+    # LATENT UPSCALERS (HunyuanVideo 1.5, LTX)
+    # =========================================================================
+    hunyuanvideo15_latent_upsampler_720p:
+      name: HunyuanVideo 1.5 Latent Upsampler 720p
+      family: hunyuan
+      release_date: '2025-05-01'
+      license: tencent-hunyuan
+      commercial_use: true
+      architecture:
+        type: latent_upsampler
+        scale_factor: 2
+        notes: Upsamples latents from 480p to 720p
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/tencent/HunyuanVideo-1.5-latent-upsamplers
+        download_size_gb: 2.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - latent_upscaling
+        - video_upscaling
+        scores:
+          quality: 0.92
+          speed: 0.80
+        features:
+        - id: latent_space
+          quality: excellent
+          notes: Upscales in latent space, faster than pixel upscaling
+
+    hunyuanvideo15_latent_upsampler_1080p:
+      name: HunyuanVideo 1.5 Latent Upsampler 1080p
+      family: hunyuan
+      release_date: '2025-05-01'
+      license: tencent-hunyuan
+      commercial_use: true
+      architecture:
+        type: latent_upsampler
+        scale_factor: 3
+        notes: Upsamples latents from 480p to 1080p
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 12000
+        vram_recommended_mb: 16000
+        download_url: https://huggingface.co/tencent/HunyuanVideo-1.5-latent-upsamplers
+        download_size_gb: 3.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - latent_upscaling
+        - video_upscaling
+        scores:
+          quality: 0.90
+          speed: 0.70
+        features:
+        - id: latent_space
+          quality: excellent
+          notes: Direct 480p to 1080p in latent space
+
+    ltx2_spatial_upscaler:
+      name: LTX 2 Spatial Upscaler x2
+      family: ltx
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: latent_spatial_upsampler
+        scale_factor: 2
+        notes: Spatial upscaling for LTX Video 2
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Lightricks/ltx-2-spatial-upscaler
+        download_size_gb: 1.5
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - latent_upscaling
+        - video_upscaling
+        scores:
+          quality: 0.90
+          speed: 0.85
+
+    ltx2_temporal_upscaler:
+      name: LTX 2 Temporal Upscaler x2
+      family: ltx
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: latent_temporal_upsampler
+        scale_factor: 2
+        notes: Frame interpolation in latent space for LTX Video 2
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Lightricks/ltx-2-temporal-upscaler
+        download_size_gb: 1.5
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - temporal_upscaling
+        - frame_interpolation
+        scores:
+          quality: 0.88
+          speed: 0.85
+        features:
+        - id: frame_doubling
+          quality: excellent
+          notes: Double frame rate in latent space
+
   controlnet:
     controlnet_canny_sdxl:
       name: ControlNet Canny SDXL
@@ -4818,6 +8617,444 @@ local_models:
         scores:
           control_precision: 0.9
           quality: 0.92
+    qwen_image_controlnet_inpainting:
+      name: Qwen-Image ControlNet Inpainting
+      family: qwen
+      release_date: '2025-10-15'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: controlnet
+        base_model: qwen_image
+        control_type: inpainting
+        parameters_b: 1.5
+        notes: InstantX ControlNet for Qwen-Image inpainting workflows
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_url: https://huggingface.co/InstantX/Qwen-Image-ControlNet-Inpainting
+        download_size_gb: 3
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - controlnet
+        - inpainting_control
+        scores:
+          control_precision: 0.92
+          quality: 0.95
+        features:
+        - id: precise_inpainting
+          quality: excellent
+          notes: High-quality inpainting with Qwen-Image
+      dependencies:
+        paired_models:
+        - model_id: qwen_image
+          reason: ControlNet for Qwen-Image architecture
+
+    # =========================================================================
+    # SD3.5 CONTROLNETS
+    # =========================================================================
+    controlnet_blur_sd35_large:
+      name: SD3.5 Large ControlNet Blur
+      family: controlnet_sd35
+      release_date: '2024-12-01'
+      license: stabilityai
+      commercial_use: true
+      architecture:
+        type: controlnet
+        base_model: sd35_large
+        control_type: blur
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_url: https://huggingface.co/stabilityai/sd3.5-large-controlnet-blur
+        download_size_gb: 4.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - controlnet
+        - blur_control
+        scores:
+          control_precision: 0.90
+          quality: 0.92
+
+    controlnet_canny_sd35_large:
+      name: SD3.5 Large ControlNet Canny
+      family: controlnet_sd35
+      release_date: '2024-12-01'
+      license: stabilityai
+      commercial_use: true
+      architecture:
+        type: controlnet
+        base_model: sd35_large
+        control_type: canny
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_url: https://huggingface.co/stabilityai/sd3.5-large-controlnet-canny
+        download_size_gb: 4.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - controlnet
+        - edge_control
+        scores:
+          control_precision: 0.94
+          quality: 0.92
+
+    controlnet_depth_sd35_large:
+      name: SD3.5 Large ControlNet Depth
+      family: controlnet_sd35
+      release_date: '2024-12-01'
+      license: stabilityai
+      commercial_use: true
+      architecture:
+        type: controlnet
+        base_model: sd35_large
+        control_type: depth
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_url: https://huggingface.co/stabilityai/sd3.5-large-controlnet-depth
+        download_size_gb: 4.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - controlnet
+        - depth_control
+        scores:
+          control_precision: 0.92
+          quality: 0.90
+
+    # =========================================================================
+    # WAN 2.1 CONTROLNETS
+    # =========================================================================
+    wan21_controlnet_canny_14b:
+      name: Wan 2.1 T2V 14B ControlNet Canny
+      family: wan_controlnet
+      release_date: '2025-03-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: controlnet
+        base_model: wan_22_t2v_14b
+        control_type: canny
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Wan-AI/wan2.1-t2v-14b-controlnet-canny
+        download_size_gb: 8.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - video_controlnet
+        - edge_control
+        scores:
+          control_precision: 0.90
+          quality: 0.88
+
+    wan21_controlnet_depth_14b:
+      name: Wan 2.1 T2V 14B ControlNet Depth
+      family: wan_controlnet
+      release_date: '2025-03-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: controlnet
+        base_model: wan_22_t2v_14b
+        control_type: depth
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Wan-AI/wan2.1-t2v-14b-controlnet-depth
+        download_size_gb: 8.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - video_controlnet
+        - depth_control
+        scores:
+          control_precision: 0.88
+          quality: 0.88
+
+    wan21_controlnet_hed_14b:
+      name: Wan 2.1 T2V 14B ControlNet HED
+      family: wan_controlnet
+      release_date: '2025-03-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: controlnet
+        base_model: wan_22_t2v_14b
+        control_type: hed
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Wan-AI/wan2.1-t2v-14b-controlnet-hed
+        download_size_gb: 8.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - video_controlnet
+        - edge_control
+        scores:
+          control_precision: 0.88
+          quality: 0.88
+
+    wan21_controlnet_canny_1_3b:
+      name: Wan 2.1 T2V 1.3B ControlNet Canny
+      family: wan_controlnet
+      release_date: '2025-03-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: controlnet
+        base_model: wan_22_ti2v_5b
+        control_type: canny
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_url: https://huggingface.co/Wan-AI/wan2.1-t2v-1.3b-controlnet-canny
+        download_size_gb: 2.6
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - video_controlnet
+        - edge_control
+        scores:
+          control_precision: 0.85
+          quality: 0.80
+
+    wan21_uni3c:
+      name: Wan 2.1 Uni3C ControlNet
+      family: wan_controlnet
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: controlnet_union
+        base_model: wan_22_t2v_14b
+        control_types:
+        - canny
+        - depth
+        - hed
+        - pose
+        notes: Unified ControlNet supporting multiple control types
+      variants:
+      - id: fp16
+        precision: fp16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Wan-AI/Wan21-Uni3C-controlnet
+        download_size_gb: 8.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - video_controlnet
+        - multi_control
+        scores:
+          control_precision: 0.88
+          quality: 0.88
+          flexibility: 0.95
+
+    # =========================================================================
+    # QWEN-IMAGE CONTROLNETS
+    # =========================================================================
+    qwen_image_controlnet_union:
+      name: Qwen-Image ControlNet Union
+      family: qwen
+      release_date: '2025-10-15'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: controlnet_union
+        base_model: qwen_image
+        control_types:
+        - canny
+        - depth
+        - pose
+        - tile
+        notes: InstantX Union ControlNet for Qwen-Image
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 4000
+        vram_recommended_mb: 6000
+        download_url: https://huggingface.co/InstantX/Qwen-Image-ControlNet-Union
+        download_size_gb: 3.5
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - controlnet
+        - multi_control
+        scores:
+          control_precision: 0.92
+          quality: 0.94
+          flexibility: 0.96
+
+    # =========================================================================
+    # Z-IMAGE-TURBO CONTROLNETS
+    # =========================================================================
+    z_image_turbo_controlnet_union:
+      name: Z-Image-Turbo Fun ControlNet Union
+      family: z_image
+      release_date: '2025-08-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: controlnet_union
+        base_model: z_image_turbo
+        control_types:
+        - canny
+        - depth
+        - pose
+        - tile
+        notes: Multi-control ControlNet for Z-Image-Turbo
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 3000
+        vram_recommended_mb: 4000
+        download_url: https://huggingface.co/Z-Image/Z-Image-Turbo-Fun-Controlnet-Union
+        download_size_gb: 2.5
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - controlnet
+        - multi_control
+        scores:
+          control_precision: 0.88
+          quality: 0.85
+          speed: 0.95
+
+    z_image_turbo_controlnet_tile:
+      name: Z-Image-Turbo Fun ControlNet Tile
+      family: z_image
+      release_date: '2025-08-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: controlnet
+        base_model: z_image_turbo
+        control_type: tile
+        notes: Tile upscale ControlNet for Z-Image-Turbo
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 2000
+        vram_recommended_mb: 3000
+        download_url: https://huggingface.co/Z-Image/Z-Image-Turbo-Fun-Controlnet-Tile
+        download_size_gb: 1.5
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - controlnet
+        - tile_upscale
+        scores:
+          control_precision: 0.90
+          quality: 0.88
+          speed: 0.95
+
   text_encoders:
     clip_vit_l_14:
       name: CLIP ViT-L/14 Text Encoder
@@ -4947,6 +9184,199 @@ local_models:
           quality: 0.98
           speed: 0.45
         notes: Required for FLUX.1, SD3
+
+    # =========================================================================
+    # FLUX 2 TEXT ENCODERS (Mistral, Qwen, Gemma)
+    # =========================================================================
+    mistral_3_small_flux2:
+      name: Mistral 3 Small (FLUX 2)
+      family: mistral
+      release_date: '2025-05-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: transformer_decoder
+        parameters_b: 8.0
+        context_length: 32768
+        notes: Optimized for FLUX 2 text encoding
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 16000
+        vram_recommended_mb: 20000
+        download_url: https://huggingface.co/black-forest-labs/flux2-text-encoders/mistral-3-small
+        download_size_gb: 16
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Kijai/flux2-text-encoders-fp8
+        download_size_gb: 8
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_encoding
+        - prompt_encoding
+        scores:
+          quality: 0.96
+          instruction_understanding: 0.95
+          speed: 0.55
+        notes: Used by FLUX.2 [klein] models instead of T5
+
+    qwen_3_8b_flux2:
+      name: Qwen 3 8B (FLUX 2)
+      family: qwen
+      release_date: '2025-05-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: transformer_decoder
+        parameters_b: 8.0
+        context_length: 32768
+        notes: Qwen 3 variant optimized for FLUX 2
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 16000
+        vram_recommended_mb: 20000
+        download_url: https://huggingface.co/black-forest-labs/flux2-text-encoders/qwen-3-8b
+        download_size_gb: 16
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/Kijai/flux2-text-encoders-fp8
+        download_size_gb: 8
+        quality_retention_percent: 97
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_encoding
+        - prompt_encoding
+        scores:
+          quality: 0.95
+          multilingual: 0.98
+          speed: 0.55
+        notes: Alternative encoder for FLUX.2, excellent multilingual
+
+    gemma_3_4b_flux2:
+      name: Gemma 3 4B (FLUX 2)
+      family: gemma
+      release_date: '2025-05-01'
+      license: gemma
+      commercial_use: true
+      architecture:
+        type: transformer_decoder
+        parameters_b: 4.0
+        context_length: 8192
+        notes: Lightweight Gemma 3 for FLUX 2
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 10000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/black-forest-labs/flux2-text-encoders/gemma-3-4b
+        download_size_gb: 8
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_url: https://huggingface.co/Kijai/flux2-text-encoders-fp8
+        download_size_gb: 4
+        quality_retention_percent: 96
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_encoding
+        - prompt_encoding
+        scores:
+          quality: 0.90
+          speed: 0.75
+        notes: Efficient encoder option for FLUX.2
+
+    ovis_encoder:
+      name: Ovis 2.5 Text Encoder
+      family: ovis
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: vision_language_encoder
+        parameters_b: 2.0
+        context_length: 4096
+        notes: Vision-language encoder for multimodal generation guidance
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_url: https://huggingface.co/AIDC-AI/Ovis2.5-encoder
+        download_size_gb: 4
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - text_encoding
+        - vision_encoding
+        - multimodal_encoding
+        scores:
+          quality: 0.88
+          visual_understanding: 0.90
+          speed: 0.70
+        notes: Combines text and image understanding for better generation guidance
+
   text_generation:
     llama_3_2_3b:
       name: Llama 3.2 3B Instruct
@@ -6356,6 +10786,145 @@ local_models:
         - id: voice_enhancement
           quality: good
           notes: Improves speech clarity
+
+    # =========================================================================
+    # MMAUDIO (Video-to-Audio Synthesis)
+    # =========================================================================
+    mmaudio:
+      name: MMAudio
+      family: mmaudio
+      release_date: '2025-03-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: multimodal_transformer
+        parameters_b: 1.5
+        vae: mmaudio_vae
+        notes: Generates synchronized audio from video content
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 8000
+        vram_recommended_mb: 12000
+        download_url: https://huggingface.co/MMAudio/MMAudio
+        download_size_gb: 3.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: true
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 6000
+        vram_recommended_mb: 8000
+        download_url: https://huggingface.co/MMAudio/MMAudio-FP8
+        download_size_gb: 1.5
+        quality_retention_percent: 95
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - video_to_audio
+        - synchronized_audio
+        scores:
+          audio_quality: 0.88
+          sync_accuracy: 0.92
+          naturalness: 0.85
+          speed: 0.70
+        features:
+        - id: video_sync
+          quality: excellent
+          notes: Audio synchronized to video events
+        - id: sound_effects
+          quality: excellent
+          notes: Generates appropriate sounds for video content
+        - id: ambient_audio
+          quality: good
+          notes: Creates background audio that matches video mood
+      dependencies:
+        required_nodes:
+        - package: ComfyUI-MMAudio
+          repo: https://github.com/kijai/ComfyUI-MMAudio
+          required_for:
+          - all
+
+    mmaudio_large:
+      name: MMAudio Large
+      family: mmaudio
+      release_date: '2025-04-01'
+      license: apache-2.0
+      commercial_use: true
+      architecture:
+        type: multimodal_transformer
+        parameters_b: 4.0
+        vae: mmaudio_vae
+        notes: Larger MMAudio for higher quality audio synthesis
+      variants:
+      - id: bf16
+        precision: bf16
+        vram_min_mb: 16000
+        vram_recommended_mb: 24000
+        download_url: https://huggingface.co/MMAudio/MMAudio-Large
+        download_size_gb: 8.0
+        quality_retention_percent: 100
+        platform_support:
+          windows_nvidia:
+            supported: true
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      - id: fp8
+        precision: fp8_e4m3fn
+        vram_min_mb: 10000
+        vram_recommended_mb: 14000
+        download_url: https://huggingface.co/MMAudio/MMAudio-Large-FP8
+        download_size_gb: 4.0
+        quality_retention_percent: 96
+        platform_support:
+          windows_nvidia:
+            supported: true
+            min_compute: '8.9'
+          mac_mps:
+            supported: false
+          linux_rocm:
+            supported: true
+      capabilities:
+        primary:
+        - video_to_audio
+        - synchronized_audio
+        - music_from_video
+        scores:
+          audio_quality: 0.93
+          sync_accuracy: 0.95
+          naturalness: 0.90
+          speed: 0.50
+        features:
+        - id: high_fidelity
+          quality: excellent
+          notes: Higher audio fidelity than base model
+        - id: complex_scenes
+          quality: excellent
+          notes: Handles complex multi-source audio scenes
+        - id: music_generation
+          quality: good
+          notes: Can generate background music matching video mood
+      dependencies:
+        required_nodes:
+        - package: ComfyUI-MMAudio
+          repo: https://github.com/kijai/ComfyUI-MMAudio
+          required_for:
+          - all
+
   3d_generation:
     hunyuan3d_2_mini:
       name: Hunyuan3D 2-mini
@@ -6818,6 +11387,7 @@ cloud_apis:
       family: dalle
       provider: openai
       partner_node: true
+      comfyui_node_name: Image Generation (DALL·E 3)
       capabilities:
         primary:
         - text_to_image
@@ -6841,6 +11411,13 @@ cloud_apis:
           quality: good
           notes: Improved text in images
       pricing:
+        # ComfyUI Partner Node credits (Jan 2026)
+        partner_node_credits:
+          standard_1024: 8.44
+          standard_1792: 16.88
+          hd_1024: 16.88
+          hd_1792: 25.32
+        # USD equivalent (~$0.00474 per credit)
         standard_1024: 0.04
         standard_1792: 0.08
         hd_1024: 0.08
@@ -6851,6 +11428,7 @@ cloud_apis:
       family: dalle
       provider: openai
       partner_node: true
+      comfyui_node_name: Image Generation (DALL·E 2)
       capabilities:
         primary:
         - text_to_image
@@ -6865,10 +11443,53 @@ cloud_apis:
           consistency: 0.8
           prompt_adherence: 0.65
       pricing:
+        partner_node_credits:
+          standard_256: 3.38
+          standard_512: 3.80
+          standard_1024: 4.22
         standard_256: 0.016
         standard_512: 0.018
         standard_1024: 0.02
         estimated_cost_per_generation: 0.02
+    # OpenAI GPT-Image-1 (gpt-image-1)
+    openai_gpt_image_1:
+      name: GPT-Image-1
+      family: gpt_image
+      provider: openai
+      partner_node: true
+      comfyui_node_name: GPT-Image-1
+      capabilities:
+        primary:
+        - text_to_image
+        - image_editing
+        style_strengths:
+        - photorealistic
+        - artistic
+        - text_rendering
+        max_resolution: 1536x1024
+        scores:
+          photorealism: 0.92
+          artistic_quality: 0.90
+          text_rendering: 0.88
+          speed: 0.75
+          consistency: 0.88
+          prompt_adherence: 0.90
+        features:
+        - id: native_editing
+          quality: excellent
+          notes: Built-in image editing capabilities
+        - id: text_rendering
+          quality: excellent
+          notes: Superior text-in-image generation
+      pricing:
+        partner_node_credits:
+          low_1024: 2.32
+          low_1536: 3.38
+          medium_1024: 8.86
+          medium_1536: 13.29
+          high_1024: 35.24
+          high_1536: 52.75
+        estimated_cost_per_generation: 0.04  # medium quality default
     midjourney_v6:
       name: Midjourney v6.1
       family: midjourney
@@ -6968,6 +11589,7 @@ cloud_apis:
       family: ideogram
       provider: ideogram
       partner_node: true
+      comfyui_node_name: Ideogram V2
       capabilities:
         primary:
         - text_to_image
@@ -6976,8 +11598,6 @@ cloud_apis:
         - graphic_design
         - logos
         max_resolution: 1024x1024
-        # Source: Hugging Face benchmark, Ideogram 2.0 announcement (Aug 2024)
-        # "Significantly outperforms Flux Pro and DALL-E 3" per human evaluations
         scores:
           photorealism: 0.85
           artistic_quality: 0.88
@@ -6992,7 +11612,49 @@ cloud_apis:
         - id: magic_prompt
           quality: excellent
       pricing:
-        estimated_cost_per_generation: 0.08
+        partner_node_credits:
+          standard: 24.14
+          turbo: 15.09
+        estimated_cost_per_generation: 0.11
+    # Ideogram V3 (latest)
+    ideogram_v3:
+      name: Ideogram 3.0
+      family: ideogram
+      provider: ideogram
+      partner_node: true
+      comfyui_node_name: Ideogram V3
+      capabilities:
+        primary:
+        - text_to_image
+        style_strengths:
+        - typography
+        - graphic_design
+        - logos
+        - photorealistic
+        max_resolution: 1536x1536
+        scores:
+          photorealism: 0.90
+          artistic_quality: 0.92
+          text_rendering: 0.99
+          speed: 0.7
+          consistency: 0.92
+          prompt_adherence: 0.94
+        features:
+        - id: text_rendering
+          quality: excellent
+          notes: Industry-leading text rendering
+        - id: character_reference
+          quality: excellent
+          notes: Character consistency feature
+      pricing:
+        partner_node_credits:
+          turbo: 9.05
+          balanced: 18.1
+          quality: 27.16
+          character_ref_turbo: 30.17
+          character_ref_balanced: 45.26
+          character_ref_quality: 60.35
+        estimated_cost_per_generation: 0.086  # balanced default
     leonardo_phoenix:
       name: Leonardo Phoenix
       family: leonardo
@@ -7023,6 +11685,7 @@ cloud_apis:
       family: flux
       provider: black_forest_labs
       partner_node: true
+      comfyui_node_name: Flux.1 [pro] Image
       capabilities:
         primary:
         - text_to_image
@@ -7030,8 +11693,6 @@ cloud_apis:
         - photorealistic
         - artistic
         max_resolution: 2048x2048
-        # Source: Black Forest Labs pricing page, VentureBeat (Oct 2024)
-        # "Most photorealistic images with exceptional detail and lighting"
         scores:
           photorealism: 0.95
           artistic_quality: 0.9
@@ -7040,12 +11701,14 @@ cloud_apis:
           consistency: 0.88
           prompt_adherence: 0.85
       pricing:
-        estimated_cost_per_generation: 0.055
+        partner_node_credits: 10.55
+        estimated_cost_per_generation: 0.05
     flux_11_pro_api:
       name: FLUX 1.1 Pro API
       family: flux
       provider: black_forest_labs
       partner_node: true
+      comfyui_node_name: Flux.1 [pro] Image
       capabilities:
         primary:
         - text_to_image
@@ -7053,8 +11716,6 @@ cloud_apis:
         - photorealistic
         - artistic
         max_resolution: 2048x2048
-        # Source: Artificial Analysis ELO ranking (Oct 2024)
-        # "Highest ELO score of 1153, surpassing Midjourney 6.1 (1100)"
         scores:
           photorealism: 0.96
           artistic_quality: 0.92
@@ -7062,17 +11723,183 @@ cloud_apis:
           speed: 0.7
           consistency: 0.9
           prompt_adherence: 0.88
-        features:
-        - id: ultra_mode
-          quality: excellent
-          notes: 4MP raw output
       pricing:
+        partner_node_credits: 10.55
+        estimated_cost_per_generation: 0.05
+    # BFL FLUX 1.1 Pro Ultra (4MP output)
+    flux_11_pro_ultra_api:
+      name: FLUX 1.1 Pro Ultra API
+      family: flux
+      provider: black_forest_labs
+      partner_node: true
+      comfyui_node_name: Flux 1.1 [pro] Ultra Image
+      capabilities:
+        primary:
+        - text_to_image
+        style_strengths:
+        - photorealistic
+        - artistic
+        - ultra_high_resolution
+        max_resolution: 2048x2048
+        scores:
+          photorealism: 0.97
+          artistic_quality: 0.94
+          text_rendering: 0.78
+          speed: 0.6
+          consistency: 0.92
+          prompt_adherence: 0.90
+        features:
+        - id: ultra_resolution
+          quality: excellent
+          notes: 4MP raw output capability
+      pricing:
+        partner_node_credits: 12.66
+        estimated_cost_per_generation: 0.06
+    # BFL FLUX.1 Kontext (character consistency)
+    flux_kontext_max_api:
+      name: FLUX.1 Kontext [max] API
+      family: flux
+      provider: black_forest_labs
+      partner_node: true
+      comfyui_node_name: Flux.1 Kontext [max] Image
+      capabilities:
+        primary:
+        - text_to_image
+        - character_consistency
+        - style_reference
+        style_strengths:
+        - photorealistic
+        - character_preservation
+        max_resolution: 2048x2048
+        scores:
+          photorealism: 0.95
+          artistic_quality: 0.92
+          text_rendering: 0.72
+          speed: 0.55
+          consistency: 0.96
+          prompt_adherence: 0.88
+        features:
+        - id: character_consistency
+          quality: excellent
+          notes: Best-in-class character preservation
+        - id: style_reference
+          quality: excellent
+      pricing:
+        partner_node_credits: 16.88
+        estimated_cost_per_generation: 0.08
+    flux_kontext_pro_api:
+      name: FLUX.1 Kontext [pro] API
+      family: flux
+      provider: black_forest_labs
+      partner_node: true
+      comfyui_node_name: Flux.1 Kontext [pro] Image
+      capabilities:
+        primary:
+        - text_to_image
+        - character_consistency
+        - style_reference
+        max_resolution: 2048x2048
+        scores:
+          photorealism: 0.93
+          artistic_quality: 0.90
+          text_rendering: 0.70
+          speed: 0.65
+          consistency: 0.92
+          prompt_adherence: 0.85
+        features:
+        - id: character_consistency
+          quality: excellent
+      pricing:
+        partner_node_credits: 8.44  # alternate: 10.55
         estimated_cost_per_generation: 0.04
+    # BFL FLUX.1 Fill (inpainting/outpainting)
+    flux_fill_api:
+      name: FLUX.1 Fill API
+      family: flux
+      provider: black_forest_labs
+      partner_node: true
+      comfyui_node_name: Flux.1 Fill Image
+      capabilities:
+        primary:
+        - inpainting
+        - outpainting
+        - image_editing
+        max_resolution: 2048x2048
+        scores:
+          inpainting_quality: 0.94
+          seamless_blending: 0.92
+          speed: 0.65
+          prompt_adherence: 0.88
+      pricing:
+        partner_node_credits: 10.55
+        estimated_cost_per_generation: 0.05
+    # BFL FLUX.1 Canny Control
+    flux_canny_api:
+      name: FLUX.1 Canny Control API
+      family: flux
+      provider: black_forest_labs
+      partner_node: true
+      comfyui_node_name: Flux.1 Canny Control Image
+      capabilities:
+        primary:
+        - controlnet
+        - edge_guided_generation
+        control_types:
+        - canny_edges
+        max_resolution: 2048x2048
+        scores:
+          control_adherence: 0.94
+          artistic_quality: 0.88
+          speed: 0.65
+      pricing:
+        partner_node_credits: 10.55
+        estimated_cost_per_generation: 0.05
+    # BFL FLUX.1 Depth Control
+    flux_depth_api:
+      name: FLUX.1 Depth Control API
+      family: flux
+      provider: black_forest_labs
+      partner_node: true
+      comfyui_node_name: Flux.1 Depth Control Image
+      capabilities:
+        primary:
+        - controlnet
+        - depth_guided_generation
+        control_types:
+        - depth_map
+        max_resolution: 2048x2048
+        scores:
+          control_adherence: 0.93
+          artistic_quality: 0.88
+          speed: 0.65
+      pricing:
+        partner_node_credits: 10.55
+        estimated_cost_per_generation: 0.05
+    # BFL FLUX.1 Expand (outpainting)
+    flux_expand_api:
+      name: FLUX.1 Expand API
+      family: flux
+      provider: black_forest_labs
+      partner_node: true
+      comfyui_node_name: Flux.1 Expand Image
+      capabilities:
+        primary:
+        - outpainting
+        - canvas_expansion
+        max_resolution: 2048x2048
+        scores:
+          seamless_blending: 0.93
+          artistic_quality: 0.90
+          speed: 0.65
+      pricing:
+        partner_node_credits: 10.55
+        estimated_cost_per_generation: 0.05
     recraft_v3:
       name: Recraft V3
       family: recraft
       provider: recraft
       partner_node: true
+      comfyui_node_name: Recraft Text to Image
       capabilities:
         primary:
         - text_to_image
@@ -7081,9 +11908,8 @@ cloud_apis:
         - vector_art
         - icons
         - illustrations
+        - typography
         max_resolution: 2048x2048
-        # Source: Hugging Face Text-to-Image Benchmark (Oct 2024)
-        # "Top position with ELO 1172, ahead of Midjourney and OpenAI"
         scores:
           photorealism: 0.88
           artistic_quality: 0.95
@@ -7094,8 +11920,20 @@ cloud_apis:
         features:
         - id: svg_output
           quality: excellent
-          notes: Native vector output
+          notes: Native vector output via Recraft Text to Vector
+        - id: text_rendering
+          quality: excellent
+          notes: Best-in-class text rendering
       pricing:
+        partner_node_credits:
+          text_to_image: 8.44
+          image_to_image: 8.44
+          inpainting: 8.44
+          text_to_vector: 16.88
+          vectorize: 2.11
+          remove_bg: 2.11
+          crisp_upscale: 0.84
+          creative_upscale: 52.75
         estimated_cost_per_generation: 0.04
     fal_flux_dev:
       name: FAL FLUX.1 Dev
@@ -7288,12 +12126,70 @@ cloud_apis:
         - background_removal
       pricing:
         estimated_cost_per_generation: 0.09
+    # ByteDance Seedream (image)
+    bytedance_seedream_30:
+      name: ByteDance Seedream 3.0
+      family: seedream
+      provider: bytedance
+      partner_node: true
+      comfyui_node_name: Seedream 3.0
+      capabilities:
+        primary:
+        - text_to_image
+        max_resolution: 2048x2048
+        features:
+        - id: photorealistic
+          quality: excellent
+        - id: artistic
+          quality: excellent
+        - id: chinese_cultural
+          quality: excellent
+      pricing:
+        partner_node_credits: 6.33
+        estimated_cost_per_generation: 0.03
   video_generation:
+    # Google Veo 3.1 (latest)
+    veo_31:
+      name: Google Veo 3.1
+      family: veo
+      provider: google
+      partner_node: true
+      comfyui_node_name: Google Veo 3.1 Video Generation
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 8
+        max_resolution: 1080p
+        audio_support: true
+        camera_control: true
+        scores:
+          motion_quality: 0.94
+          temporal_coherence: 0.92
+          photorealism: 0.92
+          speed: 0.65
+          prompt_adherence: 0.90
+        features:
+        - id: native_audio
+          quality: excellent
+          notes: Synchronized audio generation
+      pricing:
+        partner_node_credits:
+          fast_no_audio: 21.1  # per second
+          fast_with_audio: 31.65  # per second
+          standard_no_audio: 42.2  # per second
+          standard_with_audio: 84.4  # per second
+        pricing_unit: per_second
+        estimated_cost_per_generation: 0.40  # 5 sec standard with audio
     veo_3:
       name: Google Veo 3
       family: veo
       provider: google
       partner_node: true
+      comfyui_node_name: Google Veo 3 Video Generation
       capabilities:
         primary:
         - text_to_video
@@ -7306,8 +12202,6 @@ cloud_apis:
         max_resolution: 1080p
         audio_support: true
         camera_control: true
-        # Source: Skywork AI comparison (2025)
-        # Google's flagship, native audio generation
         scores:
           motion_quality: 0.92
           temporal_coherence: 0.9
@@ -7319,7 +12213,132 @@ cloud_apis:
           quality: excellent
           notes: Synchronized audio generation
       pricing:
-        estimated_cost_per_generation: 0.2
+        partner_node_credits:
+          fast_no_audio: 21.1  # per second
+          fast_with_audio: 31.65  # per second
+          standard_no_audio: 42.2  # per second
+          standard_with_audio: 84.4  # per second
+        pricing_unit: per_second
+        estimated_cost_per_generation: 0.40
+    # Kling 2.6 (latest with motion control)
+    kling_26:
+      name: Kling 2.6
+      family: kling
+      provider: kuaishou
+      partner_node: true
+      comfyui_node_name: Kling 2.6 Motion Control
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        - motion_control
+        video_modes:
+        - t2v
+        - i2v
+        - motion_control
+        max_duration_seconds: 10
+        max_resolution: 1080p
+        audio_support: false
+        camera_control: true
+        scores:
+          motion_quality: 0.96
+          temporal_coherence: 0.94
+          photorealism: 0.90
+          speed: 0.5
+          prompt_adherence: 0.88
+        features:
+        - id: motion_control
+          quality: excellent
+          notes: Advanced motion trajectory control
+      pricing:
+        partner_node_credits:
+          standard: 15  # per second
+          pro: 24  # per second
+        pricing_unit: per_second
+        estimated_cost_per_generation: 0.36  # 5 sec standard
+    # Kling 2.5 Turbo (fast)
+    kling_25_turbo:
+      name: Kling 2.5 Turbo
+      family: kling
+      provider: kuaishou
+      partner_node: true
+      comfyui_node_name: Kling Text to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 10
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.90
+          temporal_coherence: 0.88
+          photorealism: 0.85
+          speed: 0.85
+          prompt_adherence: 0.82
+      pricing:
+        partner_node_credits:
+          5s: 73.85
+          10s: 147.7
+        estimated_cost_per_generation: 0.35  # 5 sec
+    # Kling 2.1 Master (highest quality)
+    kling_21_master:
+      name: Kling 2.1 Master
+      family: kling
+      provider: kuaishou
+      partner_node: true
+      comfyui_node_name: Kling Image to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 10
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.96
+          temporal_coherence: 0.94
+          photorealism: 0.92
+          speed: 0.4
+          prompt_adherence: 0.90
+      pricing:
+        partner_node_credits:
+          5s: 295.4
+          10s: 590.8
+        estimated_cost_per_generation: 1.40  # 5 sec
+    # Kling 2.1 Pro/Standard
+    kling_21:
+      name: Kling 2.1
+      family: kling
+      provider: kuaishou
+      partner_node: true
+      comfyui_node_name: Kling Image to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 10
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.94
+          temporal_coherence: 0.92
+          photorealism: 0.90
+          speed: 0.55
+          prompt_adherence: 0.87
+      pricing:
+        partner_node_credits:
+          pro_5s: 103.39
+          pro_10s: 206.78
+          std_5s: 59.08
+          std_10s: 118.16
+        estimated_cost_per_generation: 0.49  # pro 5 sec
     kling_20:
       name: Kling 2.0
       family: kling
@@ -7338,8 +12357,6 @@ cloud_apis:
         max_resolution: 1080p
         audio_support: false
         camera_control: true
-        # Source: Segmind, Hotelemarketer shootout (2024)
-        # "Overall winner for quality" - best motion, longer clips
         scores:
           motion_quality: 0.95
           temporal_coherence: 0.92
@@ -7355,7 +12372,143 @@ cloud_apis:
         - id: virtual_tryon
           quality: excellent
       pricing:
-        estimated_cost_per_generation: 0.15
+        partner_node_credits:
+          pro_5s: 103.39
+          pro_10s: 206.78
+          std_5s: 59.08
+          std_10s: 118.16
+        estimated_cost_per_generation: 0.49
+    # Kling 1.5/1.6 (legacy but still popular)
+    kling_16:
+      name: Kling 1.6
+      family: kling
+      provider: kuaishou
+      partner_node: true
+      comfyui_node_name: Kling Image to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 10
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.88
+          temporal_coherence: 0.85
+          photorealism: 0.82
+          speed: 0.65
+          prompt_adherence: 0.80
+      pricing:
+        partner_node_credits:
+          pro_5s: 103.39
+          pro_10s: 206.78
+          std_5s: 59.08
+          std_10s: 118.16
+        estimated_cost_per_generation: 0.28  # std 5 sec
+    # Kling special features
+    kling_lip_sync:
+      name: Kling Lip Sync
+      family: kling
+      provider: kuaishou
+      partner_node: true
+      comfyui_node_name: Kling Lip Sync Video
+      capabilities:
+        primary:
+        - lip_sync
+        - audio_driven_video
+        max_duration_seconds: 10
+        scores:
+          lip_sync_quality: 0.90
+          expression_transfer: 0.85
+      pricing:
+        partner_node_credits:
+          5s: 14.77
+          10s: 29.54
+        estimated_cost_per_generation: 0.07  # 5 sec
+    kling_virtual_tryon:
+      name: Kling Virtual Try On
+      family: kling
+      provider: kuaishou
+      partner_node: true
+      comfyui_node_name: Kling Virtual Try On
+      capabilities:
+        primary:
+        - virtual_tryon
+        - clothing_transfer
+      pricing:
+        partner_node_credits: 14.77
+        estimated_cost_per_generation: 0.07
+    # Luma Ray 2 (primary video model)
+    luma_ray_2:
+      name: Luma Ray 2
+      family: luma
+      provider: luma
+      partner_node: true
+      comfyui_node_name: Luma Image to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 9
+        max_resolution: 4k
+        scores:
+          motion_quality: 0.88
+          temporal_coherence: 0.85
+          photorealism: 0.90
+          speed: 0.6
+          prompt_adherence: 0.85
+        features:
+        - id: 4k_output
+          quality: excellent
+      pricing:
+        partner_node_credits:
+          540p_5s: 120.69
+          540p_9s: 217.25
+          720p_5s: 214.23
+          720p_9s: 383.2
+          1080p_5s: 479.75
+          1080p_9s: 865.97
+          4k_5s: 9.11  # Note: 4K is cheaper per pricing table
+          4k_9s: 16.4
+        estimated_cost_per_generation: 1.02  # 720p 5s
+    # Luma Ray Flash 2 (faster, cheaper)
+    luma_ray_flash_2:
+      name: Luma Ray Flash 2
+      family: luma
+      provider: luma
+      partner_node: true
+      comfyui_node_name: Luma Image to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 9
+        max_resolution: 4k
+        scores:
+          motion_quality: 0.82
+          temporal_coherence: 0.80
+          photorealism: 0.85
+          speed: 0.9
+          prompt_adherence: 0.78
+      pricing:
+        partner_node_credits:
+          540p_5s: 42.24
+          540p_9s: 75.43
+          720p_5s: 72.42
+          720p_9s: 132.76
+          1080p_5s: 165.95
+          1080p_9s: 298.71
+          4k_5s: 660.79
+          4k_9s: 1188.82
+        estimated_cost_per_generation: 0.34  # 720p 5s
     luma_ray_3:
       name: Luma Ray 3
       family: luma
@@ -7373,25 +12526,54 @@ cloud_apis:
         max_resolution: 4k_hdr
         audio_support: true
         camera_control: true
-        # Source: Multiple comparisons (2024)
-        # "Fastest" generation, budget-friendly, 4K HDR output
         scores:
-          motion_quality: 0.85
-          temporal_coherence: 0.82
-          photorealism: 0.88
-          speed: 0.95
-          prompt_adherence: 0.8
+          motion_quality: 0.90
+          temporal_coherence: 0.88
+          photorealism: 0.90
+          speed: 0.85
+          prompt_adherence: 0.85
         features:
         - id: 4k_hdr
           quality: excellent
           notes: Hi-Fi Diffusion mastering
       pricing:
-        estimated_cost_per_generation: 0.18
+        estimated_cost_per_generation: 0.50  # estimated future pricing
+    # Runway Gen4 Turbo (latest)
+    runway_gen4_turbo:
+      name: Runway Gen-4 Turbo
+      family: runway
+      provider: runway
+      partner_node: true
+      comfyui_node_name: Runway Image to Video (Gen4 Turbo)
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 10
+        max_resolution: 1280x768
+        scores:
+          motion_quality: 0.92
+          temporal_coherence: 0.90
+          photorealism: 0.88
+          speed: 0.9
+          prompt_adherence: 0.88
+        features:
+        - id: improved_motion
+          quality: excellent
+      pricing:
+        partner_node_credits:
+          5s: 75.43
+          10s: 150.86
+        estimated_cost_per_generation: 0.36  # 5 sec
     runway_gen3_alpha:
       name: Runway Gen-3 Alpha
       family: runway
       provider: runway
       partner_node: true
+      comfyui_node_name: Runway Image to Video (Gen3a Turbo)
       capabilities:
         primary:
         - text_to_video
@@ -7402,8 +12584,6 @@ cloud_apis:
         - i2v
         max_duration_seconds: 10
         max_resolution: 1280x768
-        # Source: Segmind, nugg.ad benchmark (2024-2025)
-        # "Most polished interface" - professional tools, i2v leader
         scores:
           motion_quality: 0.9
           temporal_coherence: 0.88
@@ -7416,12 +12596,16 @@ cloud_apis:
         - id: camera_control
           quality: excellent
       pricing:
-        estimated_cost_per_generation: 0.25
+        partner_node_credits:
+          5s: 75.43
+          10s: 150.86
+        estimated_cost_per_generation: 0.36  # 5 sec
     runway_gen3_turbo:
       name: Runway Gen-3 Alpha Turbo
       family: runway
       provider: runway
       partner_node: true
+      comfyui_node_name: Runway Image to Video (Gen3a Turbo)
       capabilities:
         primary:
         - text_to_video
@@ -7431,8 +12615,6 @@ cloud_apis:
         - i2v
         max_duration_seconds: 10
         max_resolution: 1280x768
-        # Source: Runway documentation
-        # 50% faster than Alpha, slightly lower quality
         scores:
           motion_quality: 0.82
           temporal_coherence: 0.8
@@ -7444,12 +12626,69 @@ cloud_apis:
           quality: excellent
           notes: 50% faster than Alpha
       pricing:
-        estimated_cost_per_generation: 0.1
-    minimax_hailuo:
-      name: Minimax Hailuo
+        partner_node_credits:
+          5s: 75.43
+          10s: 150.86
+        estimated_cost_per_generation: 0.36
+    # Runway First-Last-Frame to Video
+    runway_flf:
+      name: Runway First-Last-Frame
+      family: runway
+      provider: runway
+      partner_node: true
+      comfyui_node_name: Runway First-Last-Frame to Video
+      capabilities:
+        primary:
+        - keyframe_interpolation
+        - video_generation
+        video_modes:
+        - flf2v
+        max_duration_seconds: 10
+        scores:
+          interpolation_quality: 0.90
+          temporal_coherence: 0.88
+      pricing:
+        partner_node_credits:
+          5s: 75.43
+          10s: 150.86
+        estimated_cost_per_generation: 0.36
+    # Minimax Hailuo-02 (latest)
+    minimax_hailuo_02:
+      name: Minimax Hailuo-02
       family: hailuo
       provider: minimax
       partner_node: true
+      comfyui_node_name: Minimax Text to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 10
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.90
+          temporal_coherence: 0.88
+          photorealism: 0.85
+          speed: 0.75
+          prompt_adherence: 0.82
+        features:
+        - id: realistic_motion
+          quality: excellent
+      pricing:
+        partner_node_credits:
+          768p_6s: 59.08
+          768p_10s: 118.16
+          1080p_6s: 103.39
+        estimated_cost_per_generation: 0.28  # 768p 6 sec
+    minimax_hailuo:
+      name: Minimax Hailuo T2V-01
+      family: hailuo
+      provider: minimax
+      partner_node: true
+      comfyui_node_name: Minimax Text to Video
       capabilities:
         primary:
         - text_to_video
@@ -7459,8 +12698,6 @@ cloud_apis:
         - i2v
         max_duration_seconds: 6
         max_resolution: 1280x720
-        # Source: Hotelemarketer shootout (2024)
-        # Strong realistic motion, budget option
         scores:
           motion_quality: 0.88
           temporal_coherence: 0.85
@@ -7470,8 +12707,16 @@ cloud_apis:
         features:
         - id: realistic_motion
           quality: excellent
+        - id: director_mode
+          quality: good
+          notes: T2V-01-Director variant
       pricing:
-        estimated_cost_per_generation: 0.1
+        partner_node_credits:
+          t2v_01: 90.73
+          t2v_01_director: 90.73
+          i2v_01: 90.73
+          i2v_01_live: 90.73
+        estimated_cost_per_generation: 0.43
     pika_labs_15:
       name: Pika 1.5
       family: pika
@@ -7503,6 +12748,69 @@ cloud_apis:
           quality: good
       pricing:
         estimated_cost_per_generation: 0.08
+    # OpenAI Sora-2 (latest)
+    sora_2:
+      name: OpenAI Sora-2
+      family: sora
+      provider: openai
+      partner_node: true
+      comfyui_node_name: Sora-2
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 20
+        max_resolution: 1280x720
+        scores:
+          motion_quality: 0.94
+          temporal_coherence: 0.92
+          photorealism: 0.90
+          speed: 0.7
+          prompt_adherence: 0.88
+        features:
+        - id: physics_understanding
+          quality: excellent
+      pricing:
+        partner_node_credits: 21.1  # per second, 720p
+        pricing_unit: per_second
+        estimated_cost_per_generation: 0.50  # 5 sec
+    # OpenAI Sora-2 Pro (higher quality)
+    sora_2_pro:
+      name: OpenAI Sora-2 Pro
+      family: sora
+      provider: openai
+      partner_node: true
+      comfyui_node_name: Sora-2 Pro
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 20
+        max_resolution: 1792x1024
+        scores:
+          motion_quality: 0.96
+          temporal_coherence: 0.95
+          photorealism: 0.94
+          speed: 0.55
+          prompt_adherence: 0.92
+        features:
+        - id: physics_understanding
+          quality: excellent
+        - id: high_resolution
+          quality: excellent
+          notes: Up to 1792x1024
+      pricing:
+        partner_node_credits:
+          720p: 63.3  # per second
+          1080p: 105.5  # per second
+        pricing_unit: per_second
+        estimated_cost_per_generation: 1.50  # 5 sec 720p
     sora:
       name: OpenAI Sora
       family: sora
@@ -7519,8 +12827,6 @@ cloud_apis:
         - storyboard
         max_duration_seconds: 20
         max_resolution: 1080p
-        # Source: OpenAI announcement, Skywork comparison (2025)
-        # Long-form leader, excellent physics, premium pricing
         scores:
           motion_quality: 0.95
           temporal_coherence: 0.94
@@ -7616,6 +12922,110 @@ cloud_apis:
       family: pixverse
       provider: pixverse
       partner_node: true
+      comfyui_node_name: PixVerse Text to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        - transition_video
+        video_modes:
+        - t2v
+        - i2v
+        - transition
+        max_duration_seconds: 8
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.78
+          temporal_coherence: 0.75
+          photorealism: 0.72
+          speed: 0.85
+          prompt_adherence: 0.75
+      pricing:
+        partner_node_credits:
+          360p_fast_5s: 189.9
+          360p_normal_5s: 94.95
+          360p_normal_8s: 189.9
+          540p_normal_5s: 94.95
+          540p_normal_8s: 189.9
+          720p_fast_5s: 253.2
+          720p_normal_5s: 126.6
+          720p_normal_8s: 253.2
+          1080p_normal_5s: 253.2
+        estimated_cost_per_generation: 0.45  # 540p normal 5s
+    # LTX Video (Lightricks) - Fast and affordable
+    ltx_2_fast:
+      name: LTX-2 Fast
+      family: ltx
+      provider: lightricks
+      partner_node: true
+      comfyui_node_name: LTX Text to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 10
+        max_resolution: 3840x2160
+        scores:
+          motion_quality: 0.82
+          temporal_coherence: 0.80
+          photorealism: 0.80
+          speed: 0.92
+          prompt_adherence: 0.78
+        features:
+        - id: fast_generation
+          quality: excellent
+        - id: 4k_support
+          quality: excellent
+      pricing:
+        partner_node_credits:
+          1080p: 8.44  # per second
+          1440p: 16.88  # per second
+          4k: 33.76  # per second
+        pricing_unit: per_second
+        estimated_cost_per_generation: 0.20  # 5 sec 1080p
+    ltx_2_pro:
+      name: LTX-2 Pro
+      family: ltx
+      provider: lightricks
+      partner_node: true
+      comfyui_node_name: LTX Text to Video
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 10
+        max_resolution: 3840x2160
+        scores:
+          motion_quality: 0.88
+          temporal_coherence: 0.85
+          photorealism: 0.85
+          speed: 0.8
+          prompt_adherence: 0.84
+        features:
+        - id: higher_quality
+          quality: excellent
+        - id: 4k_support
+          quality: excellent
+      pricing:
+        partner_node_credits:
+          1080p: 12.66  # per second
+          1440p: 25.32  # per second
+          4k: 50.64  # per second
+        pricing_unit: per_second
+        estimated_cost_per_generation: 0.30  # 5 sec 1080p
+    # WAN Video (Alibaba)
+    wan_25_video:
+      name: WAN 2.5 Video
+      family: wan
+      provider: alibaba
+      partner_node: true
+      comfyui_node_name: WAN Text to Video
       capabilities:
         primary:
         - text_to_video
@@ -7625,16 +13035,178 @@ cloud_apis:
         - i2v
         max_duration_seconds: 8
         max_resolution: 1080p
-        # Source: Topview.ai comparison
-        # Budget alternative with decent quality
         scores:
-          motion_quality: 0.78
-          temporal_coherence: 0.75
-          photorealism: 0.72
+          motion_quality: 0.88
+          temporal_coherence: 0.85
+          photorealism: 0.86
+          speed: 0.75
+          prompt_adherence: 0.84
+      pricing:
+        partner_node_credits:
+          480p: 10.55  # per second
+          720p: 21.1  # per second
+          1080p: 31.65  # per second
+        pricing_unit: per_second
+        estimated_cost_per_generation: 0.50  # 5 sec 1080p
+    wan_26_reference:
+      name: WAN 2.6 Reference Video
+      family: wan
+      provider: alibaba
+      partner_node: true
+      comfyui_node_name: WAN Reference Video
+      capabilities:
+        primary:
+        - reference_video
+        - style_transfer
+        video_modes:
+        - r2v
+        max_duration_seconds: 8
+        max_resolution: 1080p
+        scores:
+          style_transfer: 0.90
+          temporal_coherence: 0.85
+      pricing:
+        partner_node_credits:
+          720p: 21.1  # per second (input + output)
+          1080p: 31.65  # per second (input + output)
+        pricing_unit: per_second
+        estimated_cost_per_generation: 0.50
+    # Vidu Video
+    vidu_video:
+      name: Vidu Video
+      family: vidu
+      provider: vidu
+      partner_node: true
+      comfyui_node_name: ViduTextToVideoNode
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        - start_end_to_video
+        - reference_video
+        video_modes:
+        - t2v
+        - i2v
+        - se2v
+        - r2v
+        max_duration_seconds: 8
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.85
+          temporal_coherence: 0.82
+          photorealism: 0.80
+          speed: 0.7
+          prompt_adherence: 0.78
+      pricing:
+        partner_node_credits: 84.4
+        estimated_cost_per_generation: 0.40
+    # ByteDance Seedance (video)
+    bytedance_seedance_lite:
+      name: ByteDance Seedance Lite
+      family: seedance
+      provider: bytedance
+      partner_node: true
+      comfyui_node_name: Video Generation - Lite
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 8
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.82
+          temporal_coherence: 0.80
+          photorealism: 0.78
           speed: 0.85
+          prompt_adherence: 0.76
+      pricing:
+        partner_node_credits: 379.8  # per 1M total tokens
+        pricing_unit: per_1m_tokens
+        estimated_cost_per_generation: 0.20
+    bytedance_seedance_pro:
+      name: ByteDance Seedance Pro
+      family: seedance
+      provider: bytedance
+      partner_node: true
+      comfyui_node_name: Video Generation - Pro
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        video_modes:
+        - t2v
+        - i2v
+        max_duration_seconds: 8
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.88
+          temporal_coherence: 0.85
+          photorealism: 0.84
+          speed: 0.7
+          prompt_adherence: 0.82
+      pricing:
+        partner_node_credits: 527.5  # per 1M total tokens
+        pricing_unit: per_1m_tokens
+        estimated_cost_per_generation: 0.30
+    # Moonvalley Video
+    moonvalley_video:
+      name: Moonvalley Video
+      family: moonvalley
+      provider: moonvalley
+      partner_node: true
+      comfyui_node_name: Moonvalley
+      capabilities:
+        primary:
+        - text_to_video
+        - image_to_video
+        - video_to_video
+        video_modes:
+        - t2v
+        - i2v
+        - v2v
+        max_duration_seconds: 5
+        max_resolution: 1080p
+        scores:
+          motion_quality: 0.82
+          temporal_coherence: 0.78
+          photorealism: 0.76
+          speed: 0.6
           prompt_adherence: 0.75
       pricing:
-        estimated_cost_per_generation: 0.08
+        partner_node_credits:
+          t2v_5s: 316.5
+          i2v_5s: 316.5
+          v2v_5s: 474.75
+        estimated_cost_per_generation: 1.50  # i2v 5s
+    # Topaz Video Enhance
+    topaz_video:
+      name: Topaz Video Enhance
+      family: topaz
+      provider: topaz
+      partner_node: true
+      comfyui_node_name: Topaz Video Enhance
+      capabilities:
+        primary:
+        - video_upscaling
+        - frame_interpolation
+        video_modes:
+        - upscale
+        max_resolution: 4k
+        scores:
+          upscale_quality: 0.95
+          temporal_consistency: 0.92
+      pricing:
+        partner_node_credits:
+          720p_to_720p60: 2.11  # per second
+          720p_to_1080p30: 4.22  # per second
+          720p_to_1080p60: 8.44  # per second
+          720p_to_4k30: 16.88  # per second
+          720p_to_4k60: 31.65  # per second
+        pricing_unit: per_second
+        estimated_cost_per_generation: 0.20  # 5 sec 720p->1080p
     krea_video:
       name: Krea Video
       family: krea
@@ -8364,23 +13936,59 @@ cloud_apis:
       family: tripo
       provider: tripo
       partner_node: true
+      comfyui_node_name: Tripo Text to Model
       capabilities:
         primary:
         - text_to_3d
         - image_to_3d
+        - multiview_to_3d
         output_formats:
         - glb
         - obj
         features:
         - id: fast_generation
           quality: excellent
+        - id: quad_remeshing
+          quality: excellent
+          notes: Clean topology option
+        - id: rigging
+          quality: good
+          notes: Automatic character rigging
+        - id: retargeting
+          quality: good
+          notes: Animation retargeting
       pricing:
-        estimated_cost_per_generation: 0.1
+        partner_node_credits:
+          # Text to Model
+          t2m_basic: 21.1
+          t2m_basic_detailed: 31.65
+          t2m_styled: 31.65
+          t2m_styled_detailed: 42.2
+          t2m_quad: 42.2  # with quad remeshing
+          t2m_quad_detailed: 52.75
+          t2m_styled_quad: 52.75
+          t2m_styled_quad_detailed: 63.3
+          # Image/Multiview to Model
+          i2m_basic: 42.2
+          i2m_basic_detailed: 52.75
+          i2m_styled: 52.75
+          i2m_styled_detailed: 63.3
+          i2m_quad: 63.3
+          i2m_quad_detailed: 73.85
+          # Additional operations
+          convert: 21.1
+          refine_draft: 63.3
+          retarget_rigged: 21.1
+          rig_model: 52.75
+          texture_standard: 21.1
+          texture_detailed: 42.2
+        estimated_cost_per_generation: 0.15  # t2m basic
     rodin_api:
       name: Rodin Gen-1
       family: rodin
       provider: hyperhuman
       partner_node: true
+      comfyui_node_name: Rodin 3D Generate
       capabilities:
         primary:
         - text_to_3d
@@ -8390,8 +13998,18 @@ cloud_apis:
         - obj
         - fbx
         pbr_materials: true
+        modes:
+        - regular_generate
+        - detail_generate
+        - sketch_generate
+        - smooth_generate
       pricing:
-        estimated_cost_per_generation: 0.2
+        partner_node_credits:
+          regular_generate: 84.4
+          detail_generate: 84.4
+          sketch_generate: 84.4
+          smooth_generate: 84.4
+        estimated_cost_per_generation: 0.40
   image_interrogation:
     openai_vision:
       name: GPT-4 Vision

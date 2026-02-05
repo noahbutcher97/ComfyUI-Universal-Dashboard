@@ -13,6 +13,7 @@ from typing import Optional, Callable, List
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.utils.logger import log
+from src.config.manager import config_manager
 
 
 class DownloadError(Exception):
@@ -108,6 +109,13 @@ class DownloadService:
         for attempt in range(DownloadService.MAX_RETRIES):
             try:
                 headers = {}
+                
+                # Hugging Face Auth
+                if "huggingface.co" in url:
+                    token = config_manager.get_secure("HF_TOKEN")
+                    if token:
+                        headers["Authorization"] = f"Bearer {token}"
+
                 # Resume support if temp file exists
                 if os.path.exists(temp_path):
                     current_size = os.path.getsize(temp_path)
@@ -122,6 +130,19 @@ class DownloadService:
                     stream=True,
                     timeout=timeout
                 ) as response:
+                    # Handle 429 Rate Limit specifically
+                    if response.status_code == 429:
+                        retry_after = int(response.headers.get("Retry-After", 5))
+                        retry_after = min(retry_after, 60) # Cap wait at 60s
+                        log.warning(f"Rate limited. Waiting {retry_after}s...")
+                        time.sleep(retry_after)
+                        continue # Retry loop
+                        
+                    # Handle 401 Unauthorized
+                    if response.status_code == 401:
+                        log.error(f"Authentication failed for {url}. Please check your HF_TOKEN.")
+                        return False
+
                     response.raise_for_status()
 
                     # Calculate total size

@@ -33,18 +33,11 @@ log = get_logger(__name__)
 
 class ScoringService:
     """
-    DEPRECATED: Implements the Weighted Scoring Algorithm defined in Spec Section 13.5.
+    LEGACY / DEPRECATED: Implements the Weighted Scoring Algorithm.
 
-    This class is deprecated and will be removed. Use the 3-layer recommendation
-    engine instead:
-    - ConstraintSatisfactionLayer (CSP binary elimination)
-    - ContentBasedLayer (cosine similarity scoring)
-    - TOPSISRanker (multi-criteria ranking)
-
-    Calculates fit scores for Models and CLI providers based on:
-    1. Hardware Capabilities (50%)
-    2. User Preferences (35%)
-    3. Approach/Workflow Fit (15%)
+    DO NOT USE for new features. Use the 3-layer recommendation engine instead.
+    This class is preserved only for backward compatibility during the Phase 1-3
+    refactoring cycle.
     """
 
     def __init__(self, resources: Dict[str, Any]):

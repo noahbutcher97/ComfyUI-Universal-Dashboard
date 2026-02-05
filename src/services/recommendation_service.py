@@ -32,8 +32,14 @@ class RecommendationService:
     Generates configuration recommendations for modules based on
     User Profile and Hardware Environment.
 
-    Model data is loaded from models_database.yaml via ModelDatabase.
-    Non-model config (use_cases, modules) comes from resources.json.
+    CORE DATA SOURCES (Source of Truth):
+    - Models: models_database.yaml via ModelDatabase (Phase 1-3 target: models.db)
+    - System Tools & Use Cases: resources.json (v2.0+)
+    - Preferences: UserProfile schema
+
+    LEGACY NOTE:
+    This service is in transition from ScoringService (weighted) to the
+    3-layer TOPSIS recommendation engine (RecommendationOrchestrator).
     """
 
     def __init__(self, resources: Dict[str, Any], model_db: Optional[ModelDatabase] = None):
@@ -46,7 +52,19 @@ class RecommendationService:
         """
         self.resources = resources
         self.model_db = model_db or get_model_database()
+        
+        # LEGACY: To be removed once _run_local_pipeline is refactored
         self.scoring_service = ScoringService(resources)
+        
+        # MODERN: 3-layer architecture components
+        from src.services.recommendation.constraint_layer import ConstraintSatisfactionLayer
+        from src.services.recommendation.content_layer import ContentBasedLayer
+        from src.services.recommendation.topsis_layer import TOPSISLayer
+        
+        self.constraint_layer = ConstraintSatisfactionLayer(self.model_db)
+        self.content_layer = ContentBasedLayer()
+        self.topsis_layer = TOPSISLayer()
+        
         self.cloud_layer = CloudRecommendationLayer(model_db=self.model_db)
 
     def generate_recommendations(
@@ -320,8 +338,8 @@ class RecommendationService:
         user_profile: UserProfile
     ) -> ModuleRecommendation:
         
-        # Simple selection for now, expandable later with ScoringService.score_cli_candidates
-        # Default to Gemini for now as per project preference/availability
+        # Simple selection for now.
+        # TODO: Migrate to RecommendationOrchestrator (3-layer)
         
         return ModuleRecommendation(
             module_id="cli_provider",
@@ -489,57 +507,6 @@ class RecommendationService:
 
         # Default to minimal for simpler setups
         return "minimal"
-
-    def _generate_model_candidates_legacy(self) -> List[ModelCandidate]:
-        """
-        Legacy method - loads from resources.json.
-
-        DEPRECATED: Use _generate_model_candidates() instead.
-        Kept for backward compatibility during migration.
-        """
-        candidates = []
-        models_res = self.resources.get("comfyui_components", {}).get("models", {})
-
-        # Process Checkpoints
-        checkpoints = models_res.get("checkpoints", {})
-        for key, data in checkpoints.items():
-            caps = data.get("capabilities", {})
-            cap_scores = ModelCapabilityScores()
-            if isinstance(caps, dict):
-                for k, v in caps.items():
-                    if hasattr(cap_scores, k):
-                        setattr(cap_scores, k, float(v))
-
-            cand = ModelCandidate(
-                id=key,
-                display_name=data.get("display_name", key),
-                tier=data.get("tier", "sd15"),
-                capabilities=cap_scores,
-                requirements={
-                    "url": data.get("url"),
-                    "size_gb": data.get("size_gb", 0),
-                    "hash": data.get("hash")
-                },
-                approach="minimal"
-            )
-            candidates.append(cand)
-
-        # Process GGUF/UNETs
-        unets = models_res.get("unet_gguf", {})
-        for key, data in unets.items():
-            cand = ModelCandidate(
-                id=key,
-                display_name=data.get("display_name", key),
-                tier=data.get("tier", "gguf"),
-                requirements={
-                    "url": data.get("url"),
-                    "size_gb": data.get("size_gb", 0)
-                },
-                required_nodes=["ComfyUI-GGUF"]
-            )
-            candidates.append(cand)
-
-        return candidates
 
     def _normalize_hardware(self, env: EnvironmentReport) -> HardwareConstraints:
         """

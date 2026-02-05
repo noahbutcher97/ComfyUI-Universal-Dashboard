@@ -57,6 +57,18 @@ class App(ctk.CTk):
         if not config_manager.get("wizard_completed", False):
             self.after(500, self.show_setup_wizard)
 
+        # Handle Shutdown
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def on_close(self):
+        """Handle application shutdown."""
+        # Cleanup Settings Frame (Cancel clip monitor)
+        if "settings" in self.frames and hasattr(self.frames["settings"], "cleanup"):
+            self.frames["settings"].cleanup()
+            
+        # Destroy
+        self.destroy()
+
     def show_setup_wizard(self):
         """Launch the setup wizard."""
         # Use grab_set to make it modal

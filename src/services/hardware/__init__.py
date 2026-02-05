@@ -14,7 +14,7 @@ Usage:
     profile = detect_hardware()
 
 NEW in Phase 1 - does not replace existing code.
-See: docs/MIGRATION_PROTOCOL.md Section 3
+See: docs/spec/MIGRATION_PROTOCOL.md Section 3
 """
 
 import platform
@@ -227,7 +227,7 @@ def get_legacy_gpu_info() -> tuple:
     Legacy-compatible function returning (gpu_vendor, gpu_name, vram_gb).
 
     Used by SystemService.get_gpu_info() during migration.
-    See: docs/MIGRATION_PROTOCOL.md Pattern B
+    See: docs/spec/MIGRATION_PROTOCOL.md Pattern B
     """
     try:
         profile = detect_hardware()

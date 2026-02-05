@@ -8,7 +8,7 @@ Phase 1 Week 2a: Extended with CPUProfile, StorageProfile, RAMProfile,
 FormFactorProfile for comprehensive hardware detection.
 
 See: docs/spec/HARDWARE_DETECTION.md Sections 2-5
-See: docs/MIGRATION_PROTOCOL.md Section 3
+See: docs/spec/MIGRATION_PROTOCOL.md Section 3
 """
 
 from dataclasses import dataclass, field

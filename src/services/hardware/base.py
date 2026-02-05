@@ -4,7 +4,7 @@ Hardware detection base class per SPEC_v3 Section 4.1.
 Provides abstract interface for platform-specific detection strategies.
 
 NEW in Phase 1 - does not replace existing code.
-See: docs/MIGRATION_PROTOCOL.md Section 3
+See: docs/spec/MIGRATION_PROTOCOL.md Section 3
 """
 
 from abc import ABC, abstractmethod

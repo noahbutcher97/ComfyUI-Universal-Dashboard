@@ -33,21 +33,228 @@
       "optional_modules": ["mcp_servers"]
     }
   },
+  "system_tools": {
+    "categories": {
+      "package_managers": ["winget", "chocolatey", "scoop", "brew", "uv"],
+      "runtimes": ["python", "node", "npm", "go", "rust", "java", "bun"],
+      "containers": ["docker", "podman"],
+      "build_tools": ["make", "cmake", "gcc"],
+      "cloud_clis": ["aws", "gcloud", "azure"]
+    },
+    "definitions": {
+      "uv": {
+        "name": "uv", "desc": "Fast Python Package Manager", "bin": "uv",
+        "install": {
+          "windows": "powershell -c \"irm https://astral.sh/uv/install.ps1 | iex\"",
+          "darwin": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+          "linux": "curl -LsSf https://astral.sh/uv/install.sh | sh"
+        }
+      },
+      "npm": {
+        "name": "NPM", "desc": "Node Package Manager", "bin": "npm",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "OpenJS.NodeJS"],
+          "darwin": ["brew", "install", "node"],
+          "linux": ["sudo", "apt", "install", "-y", "npm"]
+        }
+      },
+      "winget": {
+        "name": "Winget", "desc": "Windows Package Manager", "bin": "winget",
+        "install": { "windows": "https://github.com/microsoft/winget-cli/releases" }
+      },
+      "chocolatey": {
+        "name": "Chocolatey", "desc": "Windows Package Manager", "bin": "choco",
+        "install": { "windows": "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))" }
+      },
+      "scoop": {
+        "name": "Scoop", "desc": "Command-line Installer", "bin": "scoop",
+        "install": { "windows": "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression" }
+      },
+      "brew": {
+        "name": "Homebrew", "desc": "macOS Package Manager", "bin": "brew",
+        "install": { "darwin": "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"" }
+      },
+      "python": {
+        "name": "Python", "desc": "Python 3.10+", "bin": "python",
+        "install": { 
+          "windows": ["winget", "install", "-e", "--id", "Python.Python.3.11", "--source", "winget"],
+          "darwin": ["brew", "install", "python"],
+          "linux": ["sudo", "apt", "install", "-y", "python3"]
+        }
+      },
+      "node": {
+        "name": "Node.js", "desc": "JavaScript Runtime", "bin": "node",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "OpenJS.NodeJS", "--source", "winget"],
+          "darwin": ["brew", "install", "node"],
+          "linux": ["sudo", "apt", "install", "-y", "nodejs", "npm"]
+        }
+      },
+      "npm": {
+        "name": "NPM", "desc": "Node Package Manager", "bin": "npm",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "OpenJS.NodeJS", "--source", "winget"],
+          "darwin": ["brew", "install", "node"],
+          "linux": ["sudo", "apt", "install", "-y", "npm"]
+        }
+      },
+      "go": {
+        "name": "Go", "desc": "Go Programming Language", "bin": "go",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "Go.GoLang", "--source", "winget"],
+          "darwin": ["brew", "install", "go"],
+          "linux": ["sudo", "apt", "install", "-y", "golang-go"]
+        }
+      },
+      "rust": {
+        "name": "Rust", "desc": "Rust Toolchain", "bin": "rustc",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "Rustlang.Rustup", "--source", "winget"],
+          "darwin": ["brew", "install", "rust"],
+          "linux": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+        }
+      },
+      "java": {
+        "name": "Java (JDK)", "desc": "OpenJDK 17", "bin": "java",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "Microsoft.OpenJDK.17", "--source", "winget"],
+          "darwin": ["brew", "install", "openjdk@17"],
+          "linux": ["sudo", "apt", "install", "-y", "openjdk-17-jdk"]
+        }
+      },
+      "bun": {
+        "name": "Bun", "desc": "Fast JS Runtime", "bin": "bun",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "Oven-sh.Bun", "--source", "winget"],
+          "darwin": ["brew", "install", "bun"],
+          "linux": "curl -fsSL https://bun.sh/install | bash"
+        }
+      },
+      "docker": {
+        "name": "Docker", "desc": "Container Platform", "bin": "docker",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "Docker.DockerDesktop", "--source", "winget"],
+          "darwin": ["brew", "install", "--cask", "docker"],
+          "linux": "curl -fsSL https://get.docker.com | sh"
+        }
+      },
+      "podman": {
+        "name": "Podman", "desc": "Daemonless Containers", "bin": "podman",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "RedHat.Podman", "--source", "winget"],
+          "darwin": ["brew", "install", "podman"],
+          "linux": ["sudo", "apt", "install", "-y", "podman"]
+        }
+      },
+      "make": {
+        "name": "Make", "desc": "Build Automation", "bin": "make",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "GnuWin32.Make", "--source", "winget"],
+          "darwin": ["brew", "install", "make"],
+          "linux": ["sudo", "apt", "install", "-y", "make"]
+        }
+      },
+      "cmake": {
+        "name": "CMake", "desc": "Build System", "bin": "cmake",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "Kitware.CMake", "--source", "winget"],
+          "darwin": ["brew", "install", "cmake"],
+          "linux": ["sudo", "apt", "install", "-y", "cmake"]
+        }
+      },
+      "gcc": {
+        "name": "GCC", "desc": "GNU Compiler Collection", "bin": "gcc",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "GNU.GCC", "--source", "winget"], 
+          "darwin": ["brew", "install", "gcc"],
+          "linux": ["sudo", "apt", "install", "-y", "build-essential"]
+        }
+      },
+      "aws": {
+        "name": "AWS CLI", "desc": "Amazon Web Services", "bin": "aws",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "Amazon.AWSCLI", "--source", "winget"],
+          "darwin": ["brew", "install", "awscli"],
+          "linux": "curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip' && unzip awscliv2.zip && sudo ./aws/install"
+        }
+      },
+      "gcloud": {
+        "name": "Google Cloud", "desc": "GCloud SDK", "bin": "gcloud",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "Google.CloudSDK", "--source", "winget"],
+          "darwin": ["brew", "install", "--cask", "google-cloud-sdk"],
+          "linux": "curl https://sdk.cloud.google.com | bash"
+        }
+      },
+      "azure": {
+        "name": "Azure CLI", "desc": "Microsoft Azure", "bin": "az",
+        "install": {
+          "windows": ["winget", "install", "-e", "--id", "Microsoft.AzureCLI", "--source", "winget"],
+          "darwin": ["brew", "install", "azure-cli"],
+          "linux": "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"
+        }
+      }
+    }
+  },
   "modules": {
     "cli_provider": {
       "display_name": "AI Assistant CLI",
       "providers": {
         "claude": {
-          "display_name": "Claude (Anthropic)",
+          "display_name": "Claude Code",
+          "api_key_name": "ANTHROPIC_API_KEY",
           "package": "@anthropic-ai/claude-code",
+          "package_type": "npm",
           "bin": "claude",
           "capabilities": { "coding": 0.95, "creative_writing": 0.9, "analysis": 0.9, "multimodal": 0.5 }
         },
         "gemini": {
-          "display_name": "Gemini (Google)",
+          "display_name": "Gemini CLI",
+          "api_key_name": "GEMINI_API_KEY",
           "package": "@google/gemini-cli",
+          "package_type": "npm",
           "bin": "gemini",
           "capabilities": { "coding": 0.8, "creative_writing": 0.85, "analysis": 0.9, "multimodal": 0.95 }
+        },
+        "openai": {
+          "display_name": "OpenAI Codex",
+          "api_key_name": "OPENAI_API_KEY",
+          "package": "@openai/codex",
+          "package_type": "npm",
+          "bin": "codex",
+          "capabilities": { "coding": 0.9, "creative_writing": 0.9, "analysis": 0.9, "multimodal": 0.8 }
+        },
+        "grok": {
+          "display_name": "Grok CLI",
+          "api_key_name": "GROK_API_KEY",
+          "package": "@vibe-kit/grok-cli",
+          "package_type": "npm",
+          "bin": "grok",
+          "capabilities": { "coding": 0.8, "creative_writing": 0.85, "analysis": 0.85, "multimodal": 0.5 }
+        },
+        "deepseek": {
+          "display_name": "DeepSeek CLI",
+          "api_key_name": "DEEPSEEK_API_KEY",
+          "package": "run-deepseek-cli",
+          "package_type": "npm",
+          "bin": "deepseek",
+          "capabilities": { "coding": 0.9, "creative_writing": 0.8, "analysis": 0.85, "multimodal": 0.5 }
+        },
+        "ollama": {
+          "display_name": "Ollama (Local AI)",
+          "api_key_name": null,
+          "package": "Ollama.Ollama",
+          "package_type": "system",
+          "bin": "ollama",
+          "capabilities": { "local_inference": 1.0, "privacy": 1.0 }
+        },
+        "huggingface": {
+          "display_name": "Hugging Face CLI",
+          "api_key_name": "HF_TOKEN",
+          "package": "huggingface_hub[cli]>=0.20.0",
+          "package_type": "pip",
+          "bin": "huggingface-cli",
+          "capabilities": { "coding": 0.5, "creative_writing": 0.5, "analysis": 0.8, "multimodal": 0.5 }
         }
       },
       "shortcut_templates": {
@@ -103,42 +310,7 @@
       "sd15": { "min_vram": 4, "min_ram": 8 },
       "gguf": { "min_vram": 0, "min_ram": 16 }
     },
-    "models": {
-      "checkpoints": {
-        "flux_schnell": {
-          "display_name": "Flux.1 Schnell",
-          "url": "https://huggingface.co/black-forest-labs/FLUX.1-schnell/resolve/main/flux1-schnell.safetensors",
-          "size_gb": 23.8,
-          "hash": "a9e1e277",
-          "tier": "flux",
-          "capabilities": { "t2i": 1.0, "photorealism": 0.9, "speed": 0.8 }
-        },
-        "sdxl_juggernaut": {
-          "display_name": "Juggernaut XL v9",
-          "url": "https://civitai.com/api/download/models/240840",
-          "size_gb": 6.5,
-          "hash": "cc6cb271",
-          "tier": "sdxl",
-          "capabilities": { "t2i": 0.9, "photorealism": 0.95, "speed": 0.6 }
-        }
-      },
-      "unet_gguf": {
-        "wan_i2v_high_q5": {
-          "display_name": "Wan 2.2 I2V High Noise (Q5)",
-          "url": "https://huggingface.co/QuantStack/Wan2.2-I2V-A14B-GGUF/resolve/main/HighNoise/Wan2.2-I2V-A14B-HighNoise-Q5_K_M.gguf",
-          "size_gb": 9.8,
-          "tier": "gguf",
-          "capabilities": { "i2v": 1.0, "motion_subtlety": 0.8, "temporal_coherence": 0.9 }
-        },
-        "wan_i2v_low_q5": {
-          "display_name": "Wan 2.2 I2V Low Noise (Q5)",
-          "url": "https://huggingface.co/QuantStack/Wan2.2-I2V-A14B-GGUF/resolve/main/LowNoise/Wan2.2-I2V-A14B-LowNoise-Q5_K_M.gguf",
-          "size_gb": 9.8,
-          "tier": "gguf",
-          "capabilities": { "i2v": 1.0, "motion_subtlety": 0.8, "temporal_coherence": 0.9 }
-        }
-      }
-    },
+    "__comment": "Models migrated to models_database.yaml. Use that as Source of Truth.",
     "workflows": {
       "wan_i2v_basic": {
         "id": "wan_i2v_basic",

@@ -592,7 +592,7 @@ Before submitting code, verify:
 - [ ] **Nested Profiles**: Complex data uses dataclasses with helper methods
 - [ ] **Explicit Failure**: Detection failures raise errors, not silent defaults
 
-For business/architectural decisions (e.g., tier calculation rules), see `docs/plan/PLAN_v3.md` Section 1 Decision Log.
+For business/architectural decisions (e.g., tier calculation rules), see `docs/plans/PLAN_v3.md` Section 1 Decision Log.
 
 ---
 

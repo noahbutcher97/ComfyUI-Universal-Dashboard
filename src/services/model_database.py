@@ -37,6 +37,7 @@ class ModelVariant:
     download_size_gb: float
     quality_retention_percent: int = 100
     download_url: Optional[str] = None
+    sha256: Optional[str] = None  # SHA256 checksum for download verification
     platform_support: Dict[str, PlatformSupport] = field(default_factory=dict)
     requires_nodes: List[str] = field(default_factory=list)
     notes: Optional[str] = None
@@ -94,6 +95,28 @@ class CloudInfo:
 
 
 @dataclass
+class HardwareInfo:
+    """
+    Hardware requirements and compatibility per SPEC Section 7.2.
+
+    These values are used by:
+    - SpaceConstrainedAdjustment: total_size_gb
+    - TOPSIS form factor penalty: compute_intensity
+    - ResolutionCascade: supports_cpu_offload, ram_for_offload_gb
+    - speed_fit criterion: supports_tensorrt
+    - Apple Silicon recommendations: mps_performance_penalty
+
+    Values can be explicitly set in YAML or derived from existing model data.
+    """
+    total_size_gb: float = 0.0           # Total disk space needed (model + VAE + aux)
+    compute_intensity: str = "medium"    # "high", "medium", "low" - affects laptop penalty
+    supports_cpu_offload: bool = True    # Can offload layers to RAM
+    ram_for_offload_gb: float = 0.0      # RAM needed for full model offload
+    supports_tensorrt: bool = False      # TensorRT optimization available
+    mps_performance_penalty: float = 1.0 # 0.0-1.0, penalty on Apple Silicon (1.0 = not supported)
+
+
+@dataclass
 class ModelEntry:
     """
     Complete model entry from the database.
@@ -114,10 +137,14 @@ class ModelEntry:
     dependencies: ModelDependencies = field(default_factory=ModelDependencies)
     explanation: ModelExplanation = field(default_factory=ModelExplanation)
     cloud: CloudInfo = field(default_factory=CloudInfo)
+    hardware: HardwareInfo = field(default_factory=HardwareInfo)
 
     # Cloud-only models (no local variants)
     provider: Optional[str] = None
     pricing: Dict[str, float] = field(default_factory=dict)
+
+    # Source classification (two-tier architecture)
+    is_cloud_api: bool = False  # True if from cloud_apis section
 
 
 # =============================================================================
@@ -191,15 +218,27 @@ class ModelDatabase:
     # Default path relative to project root
     DEFAULT_PATH = Path(__file__).parent.parent.parent / "data" / "models_database.yaml"
 
-    # Categories in the YAML file
-    CATEGORIES = [
+    # Primary categories in the YAML file (two-tier architecture)
+    PRIMARY_CATEGORIES = ["local_models", "cloud_apis"]
+
+    # Subcategories within each primary category
+    SUBCATEGORIES = [
+        "custom_nodes",
         "image_generation",
+        "image_editing",
+        "image_interrogation",
+        "image_upscaling",
+        "controlnet",
+        "text_encoders",
+        "text_generation",
         "video_generation",
         "audio_generation",
         "3d_generation",
         "lip_sync",
-        "cloud_apis",
     ]
+
+    # For backwards compatibility
+    CATEGORIES = SUBCATEGORIES
 
     def __init__(self, yaml_path: Optional[Path] = None):
         """
@@ -240,20 +279,90 @@ class ModelDatabase:
             return False
 
     def _parse_models(self) -> None:
-        """Parse raw YAML data into ModelEntry objects."""
+        """Parse raw YAML data into ModelEntry objects.
+
+        Supports both two-tier structure (local_models/cloud_apis with subcategories)
+        and legacy flat structure for backwards compatibility.
+        """
         self._models.clear()
 
-        for category in self.CATEGORIES:
+        # Check if using new two-tier structure
+        # The new structure has "local_models" at top level, or "cloud_apis" with subcategories
+        if "local_models" in self._raw_data:
+            self._parse_two_tier_structure()
+        elif "cloud_apis" in self._raw_data and self._is_two_tier_cloud_apis():
+            self._parse_two_tier_structure()
+        else:
+            # Legacy flat structure
+            self._parse_flat_structure()
+
+    def _is_two_tier_cloud_apis(self) -> bool:
+        """Check if cloud_apis contains subcategories (new) vs direct models (legacy)."""
+        cloud_data = self._raw_data.get("cloud_apis", {})
+        if not cloud_data:
+            return False
+
+        # Check the first entry - if it's a subcategory name, it's new structure
+        # In new structure, values are dicts of models (no 'name' field directly)
+        # In legacy structure, values are model dicts (have 'name' field)
+        for key, value in cloud_data.items():
+            if isinstance(value, dict):
+                # If the value has a 'name' field, it's a direct model definition (legacy)
+                if "name" in value:
+                    return False
+                # If the value is a dict of dicts (models), it's a subcategory (new)
+                if any(isinstance(v, dict) for v in value.values()):
+                    return True
+            break
+
+        return False
+
+    def _parse_two_tier_structure(self) -> None:
+        """Parse the new two-tier category structure."""
+        for primary_cat in self.PRIMARY_CATEGORIES:
+            primary_data = self._raw_data.get(primary_cat, {})
+            if not isinstance(primary_data, dict):
+                continue
+
+            is_cloud = primary_cat == "cloud_apis"
+
+            for subcategory, subcat_data in primary_data.items():
+                if not isinstance(subcat_data, dict):
+                    continue
+
+                for model_id, model_data in subcat_data.items():
+                    if not isinstance(model_data, dict):
+                        continue
+
+                    try:
+                        entry = self._parse_model_entry(
+                            model_id, subcategory, model_data, is_cloud=is_cloud
+                        )
+                        self._models[model_id] = entry
+                    except Exception as e:
+                        log.warning(f"Failed to parse model {model_id}: {e}")
+
+    def _parse_flat_structure(self) -> None:
+        """Parse legacy flat category structure."""
+        # Include cloud_apis for backwards compatibility with legacy structure
+        all_categories = self.SUBCATEGORIES + ["cloud_apis"]
+
+        for category in all_categories:
             category_data = self._raw_data.get(category, {})
             if not isinstance(category_data, dict):
                 continue
+
+            # Legacy cloud_apis at top level are treated as cloud models
+            is_cloud = category == "cloud_apis"
 
             for model_id, model_data in category_data.items():
                 if not isinstance(model_data, dict):
                     continue
 
                 try:
-                    entry = self._parse_model_entry(model_id, category, model_data)
+                    entry = self._parse_model_entry(
+                        model_id, category, model_data, is_cloud=is_cloud
+                    )
                     self._models[model_id] = entry
                 except Exception as e:
                     log.warning(f"Failed to parse model {model_id}: {e}")
@@ -262,7 +371,8 @@ class ModelDatabase:
         self,
         model_id: str,
         category: str,
-        data: Dict[str, Any]
+        data: Dict[str, Any],
+        is_cloud: bool = False
     ) -> ModelEntry:
         """Parse a single model entry from YAML data."""
 
@@ -317,6 +427,9 @@ class ModelDatabase:
             estimated_cost_per_generation=cloud_data.get("estimated_cost_per_generation"),
         )
 
+        # Parse hardware info (with computed defaults)
+        hardware = self._parse_hardware(data, variants)
+
         # Handle cloud-only models (no variants)
         pricing_data = data.get("pricing", {})
 
@@ -334,8 +447,10 @@ class ModelDatabase:
             dependencies=dependencies,
             explanation=explanation,
             cloud=cloud,
+            hardware=hardware,
             provider=data.get("provider"),
             pricing=pricing_data,
+            is_cloud_api=is_cloud,
         )
 
     def _parse_variant(self, data: Dict[str, Any]) -> ModelVariant:
@@ -362,10 +477,107 @@ class ModelDatabase:
             download_size_gb=data.get("download_size_gb", 0),
             quality_retention_percent=data.get("quality_retention_percent", 100),
             download_url=data.get("download_url"),
+            sha256=data.get("sha256"),
             platform_support=platform_support,
             requires_nodes=data.get("requires_nodes", []),
             notes=data.get("notes"),
         )
+
+    def _parse_hardware(
+        self,
+        data: Dict[str, Any],
+        variants: List[ModelVariant]
+    ) -> HardwareInfo:
+        """
+        Parse hardware info with computed defaults.
+
+        Explicit values in YAML override computed defaults.
+        Derivation logic per SPEC Section 7.2:
+        - total_size_gb: max(variant.download_size_gb) * 1.1 (for VAE/aux)
+        - compute_intensity: based on architecture.parameters_b
+        - ram_for_offload_gb: max(variant.download_size_gb)
+        - mps_performance_penalty: 1.0 if no MPS support, else 0.3-0.5
+        - supports_cpu_offload: true for most diffusion models
+        - supports_tensorrt: depends on architecture type
+        """
+        hw_data = data.get("hardware", {})
+        arch = data.get("architecture", {})
+
+        # Compute defaults from existing data
+        defaults = self._compute_hardware_defaults(arch, variants)
+
+        return HardwareInfo(
+            total_size_gb=hw_data.get("total_size_gb", defaults["total_size_gb"]),
+            compute_intensity=hw_data.get("compute_intensity", defaults["compute_intensity"]),
+            supports_cpu_offload=hw_data.get("supports_cpu_offload", defaults["supports_cpu_offload"]),
+            ram_for_offload_gb=hw_data.get("ram_for_offload_gb", defaults["ram_for_offload_gb"]),
+            supports_tensorrt=hw_data.get("supports_tensorrt", defaults["supports_tensorrt"]),
+            mps_performance_penalty=hw_data.get("mps_performance_penalty", defaults["mps_performance_penalty"]),
+        )
+
+    def _compute_hardware_defaults(
+        self,
+        arch: Dict[str, Any],
+        variants: List[ModelVariant]
+    ) -> Dict[str, Any]:
+        """
+        Compute default hardware values from existing model data.
+
+        This avoids magic numbers by deriving values from source data.
+        Explicit YAML values can override these defaults.
+        """
+        # Get max variant size
+        max_size = max([v.download_size_gb for v in variants], default=0)
+
+        # Get parameter count for intensity
+        params_b = arch.get("parameters_b", 0)
+        arch_type = arch.get("type", "").lower()
+
+        # Compute intensity from parameters
+        # Thresholds: >=10B = high, >=3B = medium, <3B = low
+        if params_b >= 10:
+            intensity = "high"
+        elif params_b >= 3:
+            intensity = "medium"
+        else:
+            intensity = "low"
+
+        # Check MPS support across variants
+        mps_supported = False
+        for v in variants:
+            mps_ps = v.platform_support.get("mac_mps")
+            if mps_ps and mps_ps.supported:
+                mps_supported = True
+                break
+
+        # MPS penalty: 1.0 if not supported, lower if supported
+        # Penalty scale based on architecture complexity
+        if not mps_supported:
+            mps_penalty = 1.0
+        elif "moe" in arch_type:
+            mps_penalty = 0.7  # MoE models run slower on MPS
+        elif params_b >= 10:
+            mps_penalty = 0.5  # Large models have some penalty
+        else:
+            mps_penalty = 0.3  # Smaller models run well
+
+        # TensorRT support based on architecture
+        # Standard UNet and DiT support TensorRT, MoE doesn't
+        supports_trt = arch_type in ("unet", "dit", "mmdit", "rectified_flow_transformer")
+        if "moe" in arch_type:
+            supports_trt = False
+
+        # CPU offload: most diffusion models support it, small models don't need it
+        supports_offload = params_b >= 1.0  # Models under 1B don't benefit from offload
+
+        return {
+            "total_size_gb": round(max_size * 1.1, 1),  # Add 10% for VAE/aux
+            "compute_intensity": intensity,
+            "supports_cpu_offload": supports_offload,
+            "ram_for_offload_gb": round(max_size, 1),  # Model needs to fit in RAM
+            "supports_tensorrt": supports_trt,
+            "mps_performance_penalty": mps_penalty,
+        }
 
     # =========================================================================
     # Query Methods
@@ -400,15 +612,16 @@ class ModelDatabase:
         ]
 
     def get_local_models(self) -> List[ModelEntry]:
-        """Get models that can run locally (have variants)."""
-        return [m for m in self._models.values() if m.variants]
+        """Get models from the local_models section (run locally on user hardware)."""
+        return [m for m in self._models.values() if not m.is_cloud_api]
 
     def get_cloud_models(self) -> List[ModelEntry]:
-        """Get cloud-only models."""
-        return [
-            m for m in self._models.values()
-            if m.category == "cloud_apis" or (m.cloud.partner_node and not m.variants)
-        ]
+        """Get models from the cloud_apis section (cloud-based API models)."""
+        return [m for m in self._models.values() if m.is_cloud_api]
+
+    def get_models_with_variants(self) -> List[ModelEntry]:
+        """Get all models that have downloadable variants (for backwards compatibility)."""
+        return [m for m in self._models.values() if m.variants]
 
     def get_compatible_variants(
         self,

@@ -1,6 +1,6 @@
 # Outstanding Issues (Archived)
 
-> **⚠️ ARCHIVED**: This document was superseded by `docs/plan/PLAN_v3.md` Section 9 "Issue Tracker (Integrated)" on 2026-01-06.
+> **⚠️ ARCHIVED**: This document was superseded by `docs/plans/PLAN_v3.md` Section 9 "Issue Tracker (Integrated)" on 2026-01-06.
 > All issues are now tracked in the plan with full context, spec references, and plan task mappings.
 > This file is retained in `docs/archived/audits/` for historical reference only.
 

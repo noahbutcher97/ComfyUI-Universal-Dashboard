@@ -38,6 +38,9 @@ class ConfigManager:
         "GEMINI_API_KEY",
         "GROK_API_KEY",
         "DEEPSEEK_API_KEY",
+        "HF_TOKEN",
+        "COMFYUI_MANAGER_TOKEN",
+        "CIVITAI_API_KEY",
     ]
 
     # Default v3 config structure

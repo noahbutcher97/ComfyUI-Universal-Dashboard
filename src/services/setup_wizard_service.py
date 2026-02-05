@@ -72,10 +72,10 @@ class SetupWizardService:
         for mod in self.accepted_modules:
             if mod.module_id == "comfyui":
                 # Get Items
-                install_path = config_manager.get("comfy_path")
+                install_path = config_manager.get_comfyui_path()
                 items = ComfyService.generate_manifest(mod, install_path)
                 manifest.items.extend(items)
-                
+
                 # Platform Mapping for Templates
                 if sys.platform == "win32":
                     plat_key = "windows"
@@ -83,9 +83,11 @@ class SetupWizardService:
                     plat_key = "darwin"
                 else:
                     plat_key = "linux"
-                
+
+                # Get shortcut templates from resources
+                shortcut_tmpl = resources.get("modules", {}).get("comfyui", {}).get("shortcut_templates", {})
                 template = shortcut_tmpl.get(plat_key)
-                
+
                 if template:
                     # Fill template placeholders
                     cmd = template.replace("{path}", install_path)
@@ -98,7 +100,11 @@ class SetupWizardService:
             elif mod.module_id == "cli_provider":
                 provider = mod.config.get("provider")
                 install_cmd = DevService.get_install_cmd(provider)
-                
+
+                if not install_cmd:
+                    log.warning(f"No install command found for CLI provider: {provider}")
+                    continue
+
                 manifest.items.append(InstallationItem(
                     item_id=f"cli_{provider}",
                     item_type="npm" if "npm" in install_cmd[0] else "pip",

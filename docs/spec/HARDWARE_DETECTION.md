@@ -747,8 +747,10 @@ def detect_ram() -> RAMProfile:
     total_gb = mem.total / (1024**3)
     available_gb = mem.available / (1024**3)
     
-    # Conservative estimate: leave 4GB for OS, use 80% of remainder
-    usable = max(0, (available_gb - 4) * 0.8)
+    # Conservative estimate: leave space for OS, use safety factor for remainder
+    # OS_RESERVED_RAM_GB = 4.0
+    # OFFLOAD_SAFETY_FACTOR = 0.8
+    usable = max(0, (available_gb - OS_RESERVED_RAM_GB) * OFFLOAD_SAFETY_FACTOR)
     
     return RAMProfile(
         total_gb=total_gb,

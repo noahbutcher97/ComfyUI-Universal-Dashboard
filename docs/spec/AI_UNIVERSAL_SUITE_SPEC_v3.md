@@ -58,10 +58,10 @@ AI Universal Suite is a cross-platform desktop application that transforms a use
 
 | Document | Location | Purpose |
 |----------|----------|---------|
-| Implementation Plan | `docs/plan/PLAN_v3.md` | Task tracker, decisions, issue tracking |
+| Implementation Plan | `docs/plans/PLAN_v3.md` | Task tracker, decisions, issue tracking |
 | Hardware Detection Spec | `docs/spec/HARDWARE_DETECTION.md` | Detailed hardware detection requirements |
 | CUDA/PyTorch Installation | `docs/spec/CUDA_PYTORCH_INSTALLATION.md` | PyTorch auto-installation logic |
-| Architecture Principles | `docs/ARCHITECTURE_PRINCIPLES.md` | Coding patterns and standards |
+| Architecture Principles | `docs/spec/ARCHITECTURE_PRINCIPLES.md` | Coding patterns and standards |
 | Model Database | `data/models_database.yaml` | Model entries with variants |
 
 ---
@@ -117,12 +117,13 @@ AI Universal Suite provides:
 │                        Service Layer                                     │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐   │
 │  │ Recommendation   │  │    Hardware      │  │   Cloud Offload      │   │
-│  │    Engine        │  │    Detection     │  │     Strategy         │   │
-│  │  (3-Layer)       │  │   (Platform)     │  │                      │   │
+│  │    Orchestrator  │  │    Detection     │  │     Strategy         │   │
+│  │  (PAT-01 Facade) │  │   (Platform)     │  │                      │   │
 │  └──────────────────┘  └──────────────────┘  └──────────────────────┘   │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐   │
-│  │    Download      │  │     Model        │  │    Workflow          │   │
-│  │    Service       │  │    Manager       │  │     Service          │   │
+│  │    Download      │  │     Model        │  │    Local HTTP        │   │
+│  │    Service       │  │    Database      │  │      Agent           │   │
+│  │  (Multiprocess)  │  │    (Relational)  │  │    (SYS-04)          │   │
 │  └──────────────────┘  └──────────────────┘  └──────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
                                 │
@@ -130,8 +131,8 @@ AI Universal Suite provides:
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                      Configuration Layer                                 │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐   │
-│  │  ConfigManager   │  │   models.yaml    │  │    OS Keyring        │   │
-│  │   (config.json)  │  │ (Model Database) │  │   (API Keys)         │   │
+│  │  ConfigManager   │  │    models.db     │  │    OS Keyring        │   │
+│  │   (config.json)  │  │ (SQLite / DB-01) │  │   (API Keys)         │   │
 │  └──────────────────┘  └──────────────────┘  └──────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
                                 │
@@ -3596,6 +3597,62 @@ Terminal=true
   
         desktop_path.write_text(desktop_content)
         os.chmod(desktop_path, 0o755)
+
+### 11.6 Developer Environment Service
+
+```python
+class DevService:
+    """
+    Manages the installation and configuration of developer tools and AI CLIs.
+    Implements the 'Safe Install, Global Access' strategy.
+    """
+
+    STRATEGY = {
+        "python_tools": {
+            "install_target": "app_venv",  # Always install to App's Virtual Environment
+            "reason": "Prevents conflict with system Python or other projects"
+        },
+        "npm_tools": {
+            "install_target": "global",    # Always install with -g
+            "reason": "NPM CLIs are designed for global scope; local installs are hidden"
+        },
+        "visibility": {
+            "default": "isolated",         # Tool works only within App context
+            "opt_in": "system_path"        # User explicitly adds to System PATH
+        }
+    }
+
+    def install_tool(self, tool_id: str, add_to_path: bool = False) -> None:
+        """
+        Install a tool according to strategy.
+        """
+        config = self._get_tool_config(tool_id)
+        
+        if config.type == "pip":
+            # Install to internal venv
+            self._pip_install(config.package)
+            if add_to_path:
+                self._add_venv_to_user_path()
+                
+        elif config.type == "npm":
+            # Install globally
+            self._npm_install_global(config.package)
+            if add_to_path:
+                self._ensure_npm_in_user_path()
+
+    def _add_venv_to_user_path(self) -> None:
+        """
+        Append app's venv/Scripts to User PATH via platform-specific API.
+        Windows: [Environment]::SetEnvironmentVariable(..., "User")
+        Mac/Linux: Update .bashrc / .zshrc
+        """
+        pass
+```
+
+**Justification for Strategy**:
+1.  **Safety**: We never touch the user's "System Python". Broken Python installations are a top support request. By using our own venv, we guarantee dependencies (like `huggingface_hub`) match our requirements.
+2.  **Usability**: Users expect "installing Gemini" to make `gemini` available in their terminal. The "Add to Path" checkbox bridges the gap between isolation and usability.
+3.  **Consistency**: Removing the "User vs Global" toggle (which is confusing for venvs) reduces cognitive load. "Make it work everywhere" is the only choice that matters.
 ```
 
 ---
@@ -3960,88 +4017,42 @@ class ReasoningDisplay(QWidget):
 ```
 ai-universal-suite/
 ├── src/
-│   ├── __init__.py
 │   ├── main.py                      # Application entry point
+│   ├── main_api.py                  # Local Agent API (SYS-04)
 │   │
 │   ├── services/
-│   │   ├── __init__.py
-│   │   ├── setup_wizard_service.py  # Wizard orchestration
-│   │   ├── recommendation_engine.py # 3-layer recommendation
-│   │   ├── constraint_layer.py      # Layer 1: CSP
-│   │   ├── content_layer.py         # Layer 2: Content-based
-│   │   ├── topsis_layer.py          # Layer 3: TOPSIS
-│   │   ├── resolution_cascade.py    # Hardware resolution
-│   │   ├── hardware_detector.py     # Platform-specific detection
-│   │   ├── download_service.py      # Download with retry/progress
-│   │   ├── model_manager_service.py # Model management
-│   │   ├── cloud_offload_service.py # Cloud API strategy
+│   │   ├── hardware/                # Platform-specific detection
+│   │   │   ├── nvidia.py
+│   │   │   ├── apple_silicon.py
+│   │   │   └── amd_rocm.py
+│   │   ├── recommendation/          # 3-layer engine logic
+│   │   │   ├── constraint_layer.py
+│   │   │   ├── content_layer.py
+│   │   │   └── topsis_layer.py
+│   │   ├── model_database.py        # SQLite/YAML DB access
+│   │   ├── download_service.py      # Multiprocess downloads
 │   │   ├── comfy_service.py         # ComfyUI management
-│   │   ├── shortcut_service.py      # Desktop shortcuts
 │   │   └── config_manager.py        # Configuration persistence
 │   │
-│   ├── ui/
-│   │   ├── __init__.py
-│   │   ├── main_window.py           # Main application window
-│   │   │
-│   │   ├── wizard/
-│   │   │   ├── __init__.py
-│   │   │   ├── setup_wizard.py      # Main wizard window
-│   │   │   ├── path_selector.py     # Quick/Comprehensive selection
-│   │   │   ├── hardware_display.py  # Hardware confirmation
-│   │   │   ├── tiered_flow.py       # Tiered question flow
-│   │   │   └── components/
-│   │   │       ├── question_card.py
-│   │   │       ├── option_grid.py
-│   │   │       ├── slider_input.py
-│   │   │       ├── api_key_input.py
-│   │   │       └── recommendation_preview.py
-│   │   │
-│   │   ├── views/
-│   │   │   ├── __init__.py
-│   │   │   ├── overview.py          # Dashboard overview
-│   │   │   ├── comfyui.py           # ComfyUI management
-│   │   │   ├── models.py            # Model manager
-│   │   │   ├── cloud_apis.py        # Cloud API config
-│   │   │   └── settings.py          # Application settings
-│   │   │
-│   │   └── components/
-│   │       ├── __init__.py
-│   │       ├── model_card.py
-│   │       ├── download_progress.py
-│   │       ├── reasoning_display.py
-│   │       ├── hardware_badge.py
-│   │       └── warning_banner.py
+│   ├── ui/                          # CustomTkinter GUI
+│   │   ├── app.py                   # Main window
+│   │   ├── wizard/                  # Setup wizard
+│   │   └── views/                   # Dashboard tabs
 │   │
-│   ├── config/
-│   │   ├── __init__.py
-│   │   ├── defaults.py              # Default configuration
-│   │   └── schema.py                # Configuration schemas
-│   │
-│   └── utils/
-│       ├── __init__.py
-│       ├── async_utils.py
-│       ├── hash_utils.py
-│       └── platform_utils.py
+│   ├── schemas/                     # Unified dataclasses
+│   └── utils/                       # Subprocess & I/O utils
 │
 ├── data/
-│   ├── models.yaml                  # Model database (external ref)
-│   ├── onboarding_questions.yaml    # Question definitions
-│   └── workflows/                   # Bundled workflow templates
-│       ├── wan_i2v_basic.json
-│       ├── flux_t2i_basic.json
-│       └── previews/
-│           ├── wan_i2v_basic.png
-│           └── flux_t2i_basic.png
+│   ├── models_database.yaml         # Source of truth
+│   └── models.db                    # Relational cache (SQLite)
 │
-├── tests/
-│   ├── __init__.py
-│   ├── test_constraint_layer.py
-│   ├── test_content_layer.py
-│   ├── test_topsis_layer.py
-│   ├── test_recommendation_engine.py
-│   ├── test_hardware_detection.py
-│   └── test_integration.py
+├── docs/
+│   ├── spec/                        # Core specifications
+│   ├── plans/                       # Active roadmap
+│   └── audits/2_4_26/               # 2026-02-04 review
 │
+├── tests/                           # Pytest suite
+```
 ├── docs/
 │   ├── SPEC_v3.md                   # This document
 │   └── models_database.yaml         # Complete model reference

@@ -6,7 +6,7 @@ The GPU detection in get_gpu_info() now delegates to the new platform-specific
 detectors in src/services/hardware/. The old implementation is preserved below
 for reference but no longer executes.
 
-See: docs/MIGRATION_PROTOCOL.md Section 3
+See: docs/spec/MIGRATION_PROTOCOL.md Section 3
 """
 
 import shutil
@@ -39,7 +39,7 @@ class SystemService:
                 profile = detect_hardware()
 
             This function will be simplified in v1.0.
-            See: docs/MIGRATION_PROTOCOL.md Section 3
+            See: docs/spec/MIGRATION_PROTOCOL.md Section 3
         """
         if USE_NEW_HARDWARE_DETECTION:
             # NEW: Delegate to platform-specific detectors
@@ -309,6 +309,197 @@ class SystemService:
         except Exception as e:
             log.warning(f"Linux power state detection failed: {e}")
             return "unknown", False
+
+    @staticmethod
+    def get_running_processes(names: list[str]) -> list[dict]:
+        """
+        Returns a list of running processes matching the given names (case-insensitive).
+        Returns: [{'pid': int, 'name': str}, ...]
+        """
+        matches = []
+        names_lower = [n.lower() for n in names]
+        
+        if platform.system() == "Windows":
+            try:
+                # Use CSV format for easier parsing
+                output = subprocess.check_output(
+                    ["tasklist", "/FO", "CSV"], 
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                ).decode(errors='ignore')
+                
+                import csv
+                import io
+                reader = csv.reader(io.StringIO(output))
+                next(reader, None) # Skip header
+                
+                for row in reader:
+                    if len(row) >= 2:
+                        pname = row[0]
+                        pid = row[1]
+                        if pname.lower() in names_lower:
+                            matches.append({'pid': int(pid), 'name': pname})
+            except Exception as e:
+                log.warning(f"Process check failed: {e}")
+        
+        return matches
+
+    @staticmethod
+    def kill_processes(process_list: list[dict]) -> bool:
+        """
+        Terminates the specified processes.
+        """
+        if platform.system() != "Windows":
+            return False
+            
+        success = True
+        for p in process_list:
+            try:
+                subprocess.check_call(
+                    ["taskkill", "/F", "/PID", str(p['pid'])],
+                    stdout=subprocess.DEVNULL, 
+                    stderr=subprocess.DEVNULL
+                )
+            except Exception:
+                success = False
+        return success
+
+    @staticmethod
+    def ensure_no_locks(tool_id: str, confirmation_callback=None) -> bool:
+        """
+        Generic helper to check for and kill locking processes for a given tool.
+        Returns True if safe to proceed, False if cancelled.
+        """
+        if platform.system() != "Windows":
+            return True
+            
+        # Map tool IDs to typical locking process names
+        lock_map = {
+            "winget": ["winget.exe", "AppInstaller.exe"],
+            "docker": ["docker.exe", "Docker Desktop.exe", "com.docker.backend.exe"],
+            "node": ["node.exe"],
+            "npm": ["node.exe"],
+            "python": ["python.exe", "pythonw.exe"],
+            "git": ["git.exe"],
+            "ollama": ["ollama.exe", "ollama_llama_server.exe"]
+        }
+        
+        # Check standard and provided ID
+        names = lock_map.get(tool_id.lower(), [f"{tool_id}.exe"])
+        
+        running = SystemService.get_running_processes(names)
+        if running:
+            if confirmation_callback:
+                if confirmation_callback(running):
+                    return SystemService.kill_processes(running)
+                else:
+                    return False
+            else:
+                log.warning(f"Locks found for {tool_id}: {running}. No callback provided. Proceeding with caution.")
+        
+        return True
+
+    @staticmethod
+    def install_winget(confirmation_callback=None) -> bool:
+        """
+        Attempts to install Winget (App Installer) on Windows.
+        Returns True if successful (or already present), False otherwise.
+        
+        Args:
+            confirmation_callback: A function(processes) -> bool that asks user to kill processes.
+        """
+        if platform.system() != "Windows":
+            return False
+            
+        # 1. Check existing (PATH)
+        if shutil.which("winget"):
+            return True
+
+        # 2. Check existing (Standard Location) - Avoid reinstall if just missing from PATH
+        local_app_data = os.environ.get("LOCALAPPDATA", "")
+        winget_path_dir = os.path.join(local_app_data, "Microsoft", "WindowsApps")
+        winget_exe = os.path.join(winget_path_dir, "winget.exe")
+        
+        if os.path.exists(winget_exe):
+            log.info(f"Winget found at {winget_exe} (missing from PATH). Patching...")
+            new_path = f"{os.environ['PATH']}{os.pathsep}{winget_path_dir}"
+            os.environ["PATH"] = new_path
+            
+            # Persist to User PATH
+            try:
+                ps_cmd = f'[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";{winget_path_dir}", "User")'
+                subprocess.check_call(["powershell", "-NoProfile", "-Command", ps_cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception as e:
+                log.warning(f"Failed to persist Winget to PATH: {e}")
+
+            if shutil.which("winget"):
+                log.info("Winget path patched and verified successfully.")
+                return True
+            else:
+                log.warning("Winget path patched but 'winget' command still not found.")
+            
+        log.info("Attempting to install Winget...")
+        
+        # 3. Check for conflicts
+        if not SystemService.ensure_no_locks("winget", confirmation_callback):
+            log.warning("User cancelled Winget install due to locking processes.")
+            return False
+
+        # Latest Stable Release
+        url = "https://github.com/microsoft/winget-cli/releases/download/v1.9.25180/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+        import uuid
+        dest = os.path.join(os.environ["TEMP"], f"winget_{uuid.uuid4().hex[:8]}.msixbundle")
+        
+        try:
+            import requests
+            import time
+            
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+            
+            with open(dest, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            log.info(f"Winget bundle downloaded to {dest}. Installing...")
+            
+            # Use ForceUpdateFromAnyVersion to handle re-installs/upgrades
+            cmd = f"Add-AppxPackage -Path '{dest}' -ForceUpdateFromAnyVersion"
+            subprocess.check_call(
+                ["powershell", "-NoProfile", "-Command", cmd]
+            )
+            
+            log.info("Installation command finished. Verifying...")
+
+            # 4. Path Patching & Polling
+            # Poll for file existence (up to 15s)
+            for _ in range(15):
+                if os.path.exists(winget_exe):
+                    break
+                time.sleep(1)
+            
+            # Patch PATH if found but not detected
+            if os.path.exists(winget_exe) and not shutil.which("winget"):
+                log.info(f"Winget found at {winget_exe}, adding to PATH...")
+                os.environ["PATH"] += os.pathsep + winget_path_dir
+                
+            # Final Check
+            if shutil.which("winget"):
+                log.info("Winget detected successfully.")
+                return True
+            else:
+                log.warning("Winget installed but not found in PATH.")
+                return False
+            
+        except Exception as e:
+            log.error(f"Failed to install Winget: {e}")
+            return False
+        finally:
+            # Cleanup
+            if os.path.exists(dest):
+                try:
+                    os.remove(dest)
+                except:
+                    pass
 
     @staticmethod
     def scan_full_environment() -> EnvironmentReport:

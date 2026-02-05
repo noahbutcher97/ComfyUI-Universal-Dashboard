@@ -10,7 +10,7 @@ Read these files in order:
 1. `docs/spec/AI_UNIVERSAL_SUITE_SPEC_v3.md` - Complete technical specification
 2. `docs/spec/HARDWARE_DETECTION.md` - GPU, CPU, Storage, RAM detection methods
 3. `docs/spec/CUDA_PYTORCH_INSTALLATION.md` - PyTorch/CUDA installation logic
-4. `docs/plan/PLAN_v3.md` - Decision log, task tracker, current phase (see Section 0 for gaps)
+4. `docs/plans/PLAN_v3.md` - Decision log, task tracker, current phase (see Section 0 for gaps)
 5. `data/models_database.yaml` - Model definitions with variants and hardware requirements
 
 If code contradicts the spec, the spec is correct (unless the spec has an obvious error, in which case flag it).
@@ -23,48 +23,24 @@ If code contradicts the spec, the spec is correct (unless the spec has an obviou
 
 **Core Principle:** Zero terminal interaction - every action achievable through GUI.
 
-**Current Phase:** See `docs/plan/PLAN_v3.md` for current status
+## Current Status (2026-02-04 Audit Review)
 
----
+The project has transitioned to a **Hybrid Edge-Cloud Roadmap**. Recent audits identified critical vulnerabilities in GIL-locked concurrency and YAML-based data scaling.
 
-## Architecture Overview
+### Target Architecture (Phase 1-3 Focus)
+- **Data Layer**: Relational SQLite core (`data/models.db`) to replace legacy YAML.
+- **Concurrency**: `ProcessPoolExecutor` for all heavy I/O and hashing.
+- **Persistence**: Persistent installation and task queues.
+- **Security**: Bearer Token (JWT) auth for local agent endpoints.
 
-The spec defines these key architectural decisions:
+### Prioritized Task List (Top 5)
+1. **DB-01**: YAML to SQLite Migration (Startup latency < 50ms)
+2. **SYS-01**: Multiprocessing Download Handler (Fix UI freezes)
+3. **SYS-05**: Dynamic Storage Headroom Calculation (OS stability)
+4. **API-04**: Bearer Token Auth Implementation (Security hardening)
+5. **PAT-01**: Extract Recommendation Orchestrator Facade (Decoupling)
 
-### Recommendation Engine (SPEC Section 6)
-The spec requires a **three-layer architecture**:
-- Layer 1: Constraint Satisfaction Programming (binary elimination)
-- Layer 2: Content-Based Filtering with **Modular Modality Architecture**:
-  - Modality-specific scorers (ImageScorer, VideoScorer, etc.)
-  - Cosine similarity per modality, not flat vector
-  - UseCaseDefinition composes required modalities for multi-modal workflows
-- Layer 3: TOPSIS Multi-Criteria Ranking (5 criteria: content_similarity, hardware_fit, speed_fit, ecosystem_maturity, approach_fit)
-- Resolution Cascade: quantization → cpu_offload → substitution → workflow → cloud
-
-**Compare this against `src/services/scoring_service.py` and `src/services/recommendation_service.py` to understand current state.**
-
-### Hardware Detection (SPEC Section 4 + HARDWARE_DETECTION.md)
-The spec requires **platform-specific detection** with particular rules for:
-- Apple Silicon (memory ceiling, GGUF restrictions, excluded models, memory bandwidth)
-- NVIDIA (CUDA compute capability for FP8, form factor/power detection)
-- AMD ROCm (experimental status)
-- CPU (tier classification, AVX support for GGUF)
-- Storage (speed tier for load times, space for model fitting)
-- RAM (offload capacity calculation)
-
-**Compare this against `src/services/system_service.py` to understand current state.**
-
-### Onboarding Flow (SPEC Section 5)
-The spec requires **dual-path onboarding**:
-- Quick path: 5 questions, ~2 minutes
-- Comprehensive path: 15-20 tiered questions, ~6 minutes
-
-**Compare this against `src/ui/wizard/setup_wizard.py` to understand current state.**
-
-### Model Database (SPEC Section 7)
-The spec defines `data/models_database.yaml` as the source of truth for model data.
-
-**Check where `src/services/recommendation_service.py` actually gets model data.**
+See `docs/audits/2_4_26/Executive_Refactoring_Report_2026-02-04.md` for the full 20-item roadmap.
 
 ---
 
@@ -73,44 +49,25 @@ The spec defines `data/models_database.yaml` as the source of truth for model da
 ```
 AI-Universal-Suite/
 ├── data/
-│   └── models_database.yaml     # Model definitions (spec Section 7)
+│   ├── models_database.yaml     # Source of Truth
+│   └── models.db                # Target Relational DB (DB-01)
 ├── docs/
-│   ├── spec/AI_UNIVERSAL_SUITE_SPEC_v3.md  # SOURCE OF TRUTH
-│   ├── plan/PLAN_v3.md          # Task tracker & decisions
-│   ├── CLI_AGENT_ONBOARDING.md  # Detailed onboarding prompt
-│   └── archived/                # Historical documents
+│   ├── spec/AI_UNIVERSAL_SUITE_SPEC_v3.md
+│   ├── plans/PLAN_v3.md
+│   └── audits/2_4_26/           # 2026-02-04 Architectural Audits
 ├── src/
-│   ├── config/
-│   │   ├── manager.py           # Config read/write
-│   │   └── resources.json       # Static resources
-│   ├── schemas/                 # Dataclasses
-│   │   ├── environment.py       
-│   │   ├── recommendation.py    
-│   │   └── installation.py      
-│   ├── services/                # Business logic
-│   │   ├── system_service.py    # Hardware detection
-│   │   ├── scoring_service.py   # Recommendation scoring
-│   │   ├── recommendation_service.py  
-│   │   ├── comfy_service.py     
-│   │   ├── download_service.py  
-│   │   └── shortcut_service.py  
-│   ├── ui/
-│   │   ├── app.py               # Main window
-│   │   ├── wizard/              # Setup wizard
-│   │   ├── views/               # Module dashboards
-│   │   └── components/          
-│   └── utils/
-│       └── logger.py
-├── CLAUDE.md                    # Claude Code specific context
-├── AGENTS.md                    # This file (general agent context)
-└── requirements.txt
+│   ├── schemas/hardware.py      # Normalized HardwareProfile
+│   ├── services/
+│   │   ├── hardware/            # Platform Strategies
+│   │   └── recommendation/      # 3-Layer Logic (CSP->Content->TOPSIS)
+│   └── main_api.py              # Local Agent Server (SYS-04)
 ```
 
 ---
 
 ## Locked Decisions
 
-These decisions are documented in `docs/plan/PLAN_v3.md` and should not be relitigated:
+These decisions are documented in `docs/plans/PLAN_v3.md` and should not be relitigated:
 
 | Area | Decision | Rationale |
 |------|----------|-----------|
@@ -218,6 +175,6 @@ source .dashboard_env/venv/bin/activate
 ## When Something Seems Wrong
 
 1. Check if the spec addresses it (search the spec document)
-2. Check `docs/plan/PLAN_v3.md` for decision history
+2. Check `docs/plans/PLAN_v3.md` for decision history
 3. Check `docs/archived/` for context on past iterations
 4. If spec seems incorrect, flag it rather than silently diverging
