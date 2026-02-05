@@ -187,7 +187,8 @@ def normalize_platform(gpu_vendor: str, os_platform: Any) -> str:
         elif os_platform in (PlatformType.WINDOWS_NVIDIA, PlatformType.LINUX_NVIDIA, PlatformType.WSL2_NVIDIA):
             return "windows_nvidia"
         elif os_platform == PlatformType.CPU_ONLY:
-            return "windows_nvidia" # Fallback for now
+            # CPU only currently uses the windows_nvidia model set (mostly GGUF/standard)
+            return "windows_nvidia"
         return os_platform.value
 
     os_str = str(os_platform)
@@ -926,3 +927,118 @@ class SQLiteModelDatabase:
 
         finally:
             session.close()
+
+    def iter_models(self) -> Iterator[ModelEntry]:
+        """
+        Iterate over all models in the database.
+        
+        Performs a full load of all models into memory for the recommendation pipeline.
+        This provides compatibility with Layer 1 filtering logic.
+        """
+        session = self.db_manager.get_session()
+        try:
+            db_models = session.query(self.DBModel).all()
+            for db_model in db_models:
+                yield self._to_model_entry(db_model)
+        finally:
+            session.close()
+
+    def get_required_nodes(self, model: ModelEntry, variant: ModelVariant) -> List[str]:
+        """
+        Get list of required node IDs for a specific model and variant.
+        
+        Combines model-level and variant-level node requirements.
+        """
+        nodes = set()
+        
+        # From Model Entry
+        for node in model.dependencies.required_nodes:
+            if isinstance(node, dict) and "id" in node:
+                nodes.add(node["id"])
+            elif isinstance(node, str):
+                nodes.add(node)
+                
+        # From Variant
+        for node in variant.requires_nodes:
+            nodes.add(node)
+            
+        return list(nodes)
+
+    def get_compatible_variants(
+        self,
+        model: ModelEntry,
+        platform: str,
+        vram_mb: int,
+        compute_capability: Optional[float] = None,
+    ) -> List[ModelVariant]:
+        """
+        Relational-aware version of variant filtering.
+        """
+        compatible = []
+
+        for variant in model.variants:
+            # Check VRAM requirement
+            if variant.vram_min_mb > vram_mb:
+                continue
+
+            # Check platform support
+            # Note: DB stores platform_support as a Dict[str, dict]
+            ps = variant.platform_support.get(platform)
+            if not ps or not ps.get("supported"):
+                continue
+
+            # Check compute capability for FP8 variants
+            min_cc = ps.get("cc")
+            if min_cc:
+                if compute_capability is None or compute_capability < min_cc:
+                    continue
+
+            compatible.append(variant)
+
+        # Sort by quality retention (prefer higher quality)
+        compatible.sort(key=lambda v: v.quality_retention_percent, reverse=True)
+        return compatible
+
+    def _to_model_entry(self, db_model) -> ModelEntry:
+        """Helper to convert DB Model to ModelEntry dataclass."""
+        from src.services.database.models import (
+            ModelCapabilities as DBModelCapabilities,
+            ModelDependencies as DBModelDependencies,
+            ModelExplanation as DBModelExplanation,
+            CloudInfo as DBCloudInfo
+        )
+        
+        # Parse nested dataclasses from DB models
+        # Note: In a production refactor, this mapping logic should move to a dedicated Mapper.
+        return ModelEntry(
+            id=db_model.id,
+            name=db_model.name,
+            description=db_model.description,
+            family=db_model.family,
+            category=db_model.category,
+            commercial_use=db_model.commercial_use,
+            capabilities=db_model.capabilities,
+            dependencies=db_model.dependencies,
+            explanation=db_model.explanation,
+            cloud_info=db_model.cloud_info,
+            # Populate variants for iter_models usage
+            variants=[self._to_model_variant(v) for v in db_model.variants]
+        )
+
+    def _to_model_variant(self, db_variant) -> ModelVariant:
+        """Helper to convert DB ModelVariant to ModelVariant dataclass."""
+        from src.services.database.models import PlatformSupport as DBPlatformSupport
+        
+        return ModelVariant(
+            id=db_variant.id,
+            precision=db_variant.precision,
+            vram_min_mb=db_variant.vram_min_mb,
+            vram_recommended_mb=db_variant.vram_recommended_mb,
+            download_size_gb=db_variant.download_size_gb,
+            quality_retention_percent=db_variant.quality_retention_percent,
+            download_url=db_variant.download_url,
+            sha256=db_variant.sha256,
+            platform_support=db_variant.platform_support,
+            requires_nodes=db_variant.requires_nodes,
+            notes=db_variant.notes
+        )

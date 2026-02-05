@@ -422,38 +422,76 @@ class SetupWizard(ctk.CTkToplevel):
 
     def _run_recommendations(self):
         """Generate recommendations in background."""
-        log.info(
-            f"Generating parallel recommendations for modalities: "
-            f"{self.selected_modalities}"
-        )
+        try:
+            log.info(
+                f"Generating parallel recommendations for modalities: "
+                f"{self.selected_modalities}"
+            )
 
-        # Map modalities to categories for the recommendation engine
-        category_map = {
-            "image": ["image_generation", "image_editing"],
-            "video": ["video_generation"],
-            "audio": ["audio_generation"],
-            "text": ["text_generation"],
-            "3d": ["3d_generation"],
-        }
+            # Map modalities to categories for the recommendation engine
+            category_map = {
+                "image": ["image_generation", "image_editing"],
+                "video": ["video_generation"],
+                "audio": ["audio_generation"],
+                "text": ["text_generation"],
+                "3d": ["3d_generation"],
+            }
 
-        categories = []
-        for modality in self.selected_modalities:
-            categories.extend(category_map.get(modality, []))
+            categories = []
+            for modality in self.selected_modalities:
+                for cat in category_map.get(modality, []):
+                    if cat not in categories:
+                        categories.append(cat)
 
-        # Generate recommendations using new parallel pathway
-        self.recommendation_results = self.service.recommendation_service.generate_parallel_recommendations(
-            user_profile=self.user_profile,
-            env=self.service.env_report,
-            categories=categories if categories else None
-        )
+            # Generate recommendations using new parallel pathway
+            self.recommendation_results = self.service.recommendation_service.generate_parallel_recommendations(
+                user_profile=self.user_profile,
+                env=self.service.env_report,
+                categories=categories if categories else None
+            )
 
-        log.info(
-            f"Generated {len(self.recommendation_results.local_recommendations)} local "
-            f"and {len(self.recommendation_results.cloud_recommendations)} cloud recommendations"
-        )
+            log.info(
+                f"Generated {len(self.recommendation_results.local_recommendations)} local "
+                f"and {len(self.recommendation_results.cloud_recommendations)} cloud recommendations"
+            )
 
-        # Move to model selection
-        self.after(0, self.show_model_selection_stage)
+            # Move to model selection
+            self.after(0, self.show_model_selection_stage)
+        except Exception as e:
+            log.exception(f"Error in recommendation thread: {e}")
+            self.after(0, lambda: self._show_recommendation_error(str(e)))
+
+    def _show_recommendation_error(self, error_msg: str):
+        """Show error message if recommendation fails."""
+        self.clear_container()
+        
+        ctk.CTkLabel(
+            self.container,
+            text="Oops! Something went wrong while finding models.",
+            font=("Arial", 18, "bold"),
+            text_color="#ff4444"
+        ).pack(pady=(50, 20))
+        
+        ctk.CTkLabel(
+            self.container,
+            text=f"Error details: {error_msg}",
+            text_color="gray70",
+            wraplength=600
+        ).pack(pady=10)
+        
+        ctk.CTkButton(
+            self.container,
+            text="Try Again",
+            command=self.show_loading_recommendations
+        ).pack(pady=30)
+        
+        ctk.CTkButton(
+            self.container,
+            text="Back",
+            fg_color="gray30",
+            hover_color="gray40",
+            command=self.show_capability_stage
+        ).pack()
 
     # --- Stage 5: Model Selection ---
     def show_model_selection_stage(self):
