@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Iterator
 from pathlib import Path
 import yaml
+import threading
 
 from src.utils.logger import log
 
@@ -798,53 +799,58 @@ class ModelDatabase:
 # Module-level singleton for convenience
 # =============================================================================
 
-_default_database: Optional[ModelDatabase] = None
+_default_database: Optional['SQLiteModelDatabase'] = None
 
 
-def get_model_database() -> ModelDatabase:
+def get_model_database() -> 'SQLiteModelDatabase':
     """
-    Get the default model database instance.
-
+    Get the default relational model database instance (Singleton).
     Loads the database on first call.
-
-    Returns:
-        The ModelDatabase singleton instance
     """
     global _default_database
 
     if _default_database is None:
-        _default_database = ModelDatabase()
-        _default_database.load()
+        _default_database = SQLiteModelDatabase()
 
     return _default_database
 
 
-def reload_model_database() -> ModelDatabase:
+def reload_model_database() -> 'SQLiteModelDatabase':
     """
-    Reload the model database from disk.
-
-    Returns:
-        The reloaded ModelDatabase instance
+    Force clear and re-initialize the model database singleton.
     """
     global _default_database
-
-    _default_database = ModelDatabase()
-    _default_database.load()
-
-    return _default_database
+    _default_database = None
+    return get_model_database()
 
 
 class SQLiteModelDatabase:
     """
     Relational implementation of the Model Database using SQLite.
-    Optimized for Task DB-01.
+    Implemented as a thread-safe Singleton (PAT-05).
     """
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super(SQLiteModelDatabase, cls).__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+
     def __init__(self, db_manager=None):
+        if getattr(self, '_initialized', False):
+            return
+            
         from src.services.database.engine import db_manager as default_manager
         from src.services.database.models import Model as DBModel, ModelVariant as DBModelVariant
         self.db_manager = db_manager or default_manager
         self.DBModel = DBModel
         self.DBModelVariant = DBModelVariant
+        self._initialized = True
+        
+        log.info("Initialized SQLiteModelDatabase Singleton")
 
     def get_compatible_models(
         self,

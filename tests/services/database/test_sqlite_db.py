@@ -102,3 +102,20 @@ def test_relational_queries(test_db_manager):
     assert results_high_vram[0][1].variant_id == "fp16"
     
     session.close()
+
+def test_singleton_integrity():
+    """Verify PAT-05: SQLiteModelDatabase is a true Singleton."""
+    from src.services.model_database import SQLiteModelDatabase, get_model_database
+    
+    # Force reset for clean test
+    import src.services.model_database as mb_module
+    mb_module._default_database = None
+    SQLiteModelDatabase._instance = None
+    
+    db1 = SQLiteModelDatabase()
+    db2 = SQLiteModelDatabase()
+    db3 = get_model_database()
+    
+    assert db1 is db2
+    assert db2 is db3
+    assert db1._initialized is True
