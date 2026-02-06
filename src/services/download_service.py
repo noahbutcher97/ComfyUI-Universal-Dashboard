@@ -114,6 +114,18 @@ class DownloadService:
             session.close()
 
     @staticmethod
+    def _get_proxies() -> Optional[dict]:
+        """Get proxy configuration from ConfigManager."""
+        proxies = {}
+        http = config_manager.get("network.http_proxy")
+        https = config_manager.get("network.https_proxy")
+        
+        if http: proxies["http"] = http
+        if https: proxies["https"] = https
+        
+        return proxies if proxies else None
+
+    @staticmethod
     def download_file(
         url: str,
         dest_path: str,
@@ -144,6 +156,7 @@ class DownloadService:
 
         temp_path = str(dest) + ".tmp"
         last_error = None
+        proxies = DownloadService._get_proxies()
 
         for attempt in range(DownloadService.MAX_RETRIES):
             try:
@@ -167,7 +180,8 @@ class DownloadService:
                     url,
                     headers=headers,
                     stream=True,
-                    timeout=timeout
+                    timeout=timeout,
+                    proxies=proxies
                 ) as response:
                     # Handle 429 Rate Limit specifically
                     if response.status_code == 429:
@@ -290,8 +304,9 @@ class DownloadService:
 
         Per ARCHITECTURE_PRINCIPLES: Explicit failure, no silent exceptions.
         """
+        proxies = DownloadService._get_proxies()
         try:
-            response = requests.head(url, allow_redirects=True, timeout=timeout)
+            response = requests.head(url, allow_redirects=True, timeout=timeout, proxies=proxies)
             response.raise_for_status()
 
             content_length = response.headers.get('content-length')

@@ -63,6 +63,12 @@ class ConfigManager:
             "onboarding_path": None,  # "quick" or "comprehensive"
         },
 
+        "network": {
+            "http_proxy": None,
+            "https_proxy": None,
+            "no_proxy": None,
+        },
+
         "user_profile": {
             "ai_experience": 1,
             "technical_experience": 1,
