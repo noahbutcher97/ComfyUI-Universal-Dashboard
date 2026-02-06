@@ -26,10 +26,29 @@ class DatabaseManager:
 
     def init_db(self):
         """
-        Create all tables if they don't exist.
+        Initialize database and run migrations.
         """
         try:
+            # 1. Ensure tables are created (Legacy fallback)
             Base.metadata.create_all(bind=self.engine)
+            
+            # 2. Run Alembic migrations
+            from alembic.config import Config
+            from alembic import command
+            
+            # Find alembic.ini relative to this file
+            base_dir = Path(__file__).parent.parent.parent.parent
+            ini_path = base_dir / "alembic.ini"
+            
+            if ini_path.exists():
+                log.info("Running database migrations...")
+                alembic_cfg = Config(str(ini_path))
+                # Ensure it uses the correct DB path
+                alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
+                command.upgrade(alembic_cfg, "head")
+            else:
+                log.warning(f"alembic.ini not found at {ini_path}, skipping migrations.")
+
             log.info(f"Database initialized at {self.db_path}")
         except Exception as e:
             log.error(f"Failed to initialize database: {e}")

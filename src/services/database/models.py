@@ -5,10 +5,20 @@ Part of Task DB-01: YAML to SQLite Migration.
 
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, JSON, MetaData
 from sqlalchemy.orm import declarative_base, relationship
 
-Base = declarative_base()
+# Define naming convention for SQLite compatibility
+convention = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s"
+}
+
+metadata = MetaData(naming_convention=convention)
+Base = declarative_base(metadata=metadata)
 
 class Model(Base):
     """
@@ -28,7 +38,7 @@ class Model(Base):
     is_cloud_api = Column(Boolean, default=False, index=True)
     provider = Column(String(100))
     
-    # Nested data as JSON (for simplicity in v1, can be normalized later if needed)
+    # Nested data as JSON
     architecture = Column(JSON)
     capabilities = Column(JSON)
     dependencies = Column(JSON)
